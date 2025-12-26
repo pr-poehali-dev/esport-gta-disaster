@@ -16,6 +16,7 @@ import DeleteTeamDialog from '@/components/DeleteTeamDialog';
 import TeamManagement from '@/components/TeamManagement';
 import TournamentRegistrations from '@/components/TournamentRegistrations';
 import ModerationPanel from '@/components/ModerationPanel';
+import UserManagementPanel from '@/components/UserManagementPanel';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -258,6 +259,9 @@ const Profile = () => {
                         <div className="flex items-center gap-2">
                           <div className="text-2xl font-black">{user.nickname}</div>
                           {user.is_organizer && <OrganizerBadge size="sm" variant="compact" />}
+                          <Badge className="bg-primary/10 text-primary border-primary/30 text-sm">
+                            {(user as any).user_status || 'Новичок'}
+                          </Badge>
                         </div>
                         <div className="text-sm text-muted-foreground font-normal">{user.email}</div>
                       </div>
@@ -625,6 +629,10 @@ const Profile = () => {
 
               {user?.is_organizer && (
                 <ModerationPanel tournamentName="Winter Championship 2025" />
+              )}
+
+              {(user as any)?.user_status === 'Главный администратор' && (
+                <UserManagementPanel />
               )}
             </div>
           </div>

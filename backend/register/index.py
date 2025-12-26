@@ -117,6 +117,13 @@ def register_team(conn, user_id: str, data: dict) -> dict:
         ''', (user_id, team['id'], tournament_name, 'pending'))
         
         registration = cur.fetchone()
+        
+        cur.execute('''
+            UPDATE users 
+            SET user_status = 'Игрок', updated_at = NOW()
+            WHERE id = %s AND user_status = 'Новичок'
+        ''', (user_id,))
+        
         conn.commit()
         
         result = dict(registration)

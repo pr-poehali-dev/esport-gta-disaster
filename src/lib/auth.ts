@@ -9,6 +9,7 @@ export interface User {
   avatar_url?: string;
   role: string;
   is_organizer?: boolean;
+  user_status?: string;
   created_at: string;
 }
 
