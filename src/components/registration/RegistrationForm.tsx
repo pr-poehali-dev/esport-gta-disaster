@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds';
@@ -14,38 +15,65 @@ interface Team {
   logo_url: string;
   captain_nickname: string;
   roster: any[];
+  member_count: number;
+  is_captain: boolean;
 }
 
 interface RegistrationFormProps {
-  team: Team | null;
   user: any;
   onSubmitSuccess: () => void;
 }
 
-const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps) => {
+const RegistrationForm = ({ user, onSubmitSuccess }: RegistrationFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
   
   const [formData, setFormData] = useState({
+    team_id: '',
     tournament_name: 'Winter Championship 2025',
     discord_contact: '',
     comment: ''
   });
 
+  useEffect(() => {
+    loadTeams();
+  }, []);
+
+  const loadTeams = async () => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53?action=teams', {
+        headers: { 'X-User-Id': user.id?.toString() || '' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTeams(data);
+      }
+    } catch (error) {
+      console.error('Failed to load teams:', error);
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
+
+  const selectedTeam = teams.find(t => t.id === parseInt(formData.team_id));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!team) {
+    if (!formData.team_id) {
       toast({
         title: 'Ошибка',
-        description: 'Сначала создайте команду в профиле',
+        description: 'Выберите команду',
         variant: 'destructive'
       });
       return;
     }
 
-    if (team.roster?.length < 5) {
+    if (selectedTeam && selectedTeam.member_count < 5) {
       toast({
         title: 'Ошибка',
         description: 'В команде должно быть минимум 5 игроков',
@@ -64,12 +92,18 @@ const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps
           'Content-Type': 'application/json',
           'X-User-Id': user.id?.toString() || ''
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          team_id: parseInt(formData.team_id),
+          tournament_name: formData.tournament_name,
+          discord_contact: formData.discord_contact,
+          comment: formData.comment
+        })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
+        throw new Error(data.error || 'Ошибка при подаче заявки');
       }
 
       playSuccessSound();
@@ -80,6 +114,7 @@ const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps
       });
 
       setFormData({
+        team_id: '',
         tournament_name: 'Winter Championship 2025',
         discord_contact: '',
         comment: ''
@@ -97,6 +132,16 @@ const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps
     }
   };
 
+  if (loadingTeams) {
+    return (
+      <Card className="border-primary/30 bg-card/80 backdrop-blur">
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">Загрузка команд...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-primary/30 bg-card/80 backdrop-blur">
       <CardHeader>
@@ -106,25 +151,52 @@ const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {team ? (
+        {teams.length > 0 ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
-              <div className="flex items-center gap-3">
-                <div className="text-4xl">{team.logo_url}</div>
-                <div>
-                  <div className="text-xl font-black">{team.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Капитан: {team.captain_nickname}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Игроков: {team.roster?.length || 0}/7
+            <div>
+              <label className="text-sm font-bold mb-2 block">Выберите команду *</label>
+              <Select value={formData.team_id} onValueChange={(value) => setFormData({...formData, team_id: value})}>
+                <SelectTrigger className="bg-background/50 border-primary/30">
+                  <SelectValue placeholder="Выберите команду..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map(team => (
+                    <SelectItem key={team.id} value={team.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{team.logo_url}</span>
+                        <span>{team.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({team.member_count} игроков)
+                        </span>
+                        {team.is_captain && (
+                          <span className="text-xs text-yellow-500">👑 Капитан</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedTeam && (
+              <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className="text-4xl">{selectedTeam.logo_url}</div>
+                  <div>
+                    <div className="text-xl font-black">{selectedTeam.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Капитан: {selectedTeam.captain_nickname}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Игроков: {selectedTeam.member_count}/7
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div>
-              <label className="text-sm font-bold mb-2 block">Турнир</label>
+              <label className="text-sm font-bold mb-2 block">Турнир *</label>
               <Input
                 value={formData.tournament_name}
                 onChange={(e) => setFormData({...formData, tournament_name: e.target.value})}
@@ -134,7 +206,7 @@ const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps
             </div>
 
             <div>
-              <label className="text-sm font-bold mb-2 block">Discord для связи</label>
+              <label className="text-sm font-bold mb-2 block">Discord для связи *</label>
               <Input
                 value={formData.discord_contact}
                 onChange={(e) => setFormData({...formData, discord_contact: e.target.value})}
@@ -156,7 +228,7 @@ const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps
 
             <Button
               type="submit"
-              disabled={submitting || !team || (team.roster?.length || 0) < 5}
+              disabled={submitting || !formData.team_id || (selectedTeam && selectedTeam.member_count < 5)}
               onMouseEnter={playHoverSound}
               className="w-full bg-gradient-to-r from-primary to-secondary"
             >
@@ -164,7 +236,7 @@ const RegistrationForm = ({ team, user, onSubmitSuccess }: RegistrationFormProps
               {submitting ? 'Отправка...' : 'Подать заявку'}
             </Button>
 
-            {team && (team.roster?.length || 0) < 5 && (
+            {selectedTeam && selectedTeam.member_count < 5 && (
               <div className="text-sm text-yellow-500 text-center">
                 ⚠️ Для регистрации необходимо минимум 5 игроков в составе
               </div>

@@ -10,7 +10,7 @@
       }
     },
     {
-      "name": "Register team without team created",
+      "name": "Register team without team_id",
       "method": "POST",
       "path": "/",
       "headers": {
@@ -21,7 +21,7 @@
       },
       "expectedStatus": 400,
       "expectedBody": {
-        "error": "You must create a team first"
+        "error": "Team is required"
       }
     }
   ]

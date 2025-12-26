@@ -11,13 +11,14 @@ interface Registration {
   id: number;
   team_id: number;
   team_name: string;
+  logo_url: string;
   tournament_name: string;
   captain_nickname: string;
   discord_contact: string;
   comment: string;
   moderation_status: 'pending' | 'approved' | 'rejected';
   moderation_comment?: string;
-  created_at: string;
+  registered_at: string;
 }
 
 interface ModerationPanelProps {
@@ -104,32 +105,37 @@ const ModerationCard = ({ registration, onUpdateStatus }: ModerationCardProps) =
     <div className="p-4 rounded-lg border border-primary/20 bg-background/50">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="font-bold text-lg">{registration.team_name}</div>
-            <Badge className={
-              registration.moderation_status === 'pending' 
-                ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' 
-                : registration.moderation_status === 'approved'
-                ? 'bg-green-500/20 text-green-500 border-green-500/30'
-                : 'bg-red-500/20 text-red-500 border-red-500/30'
-            }>
-              {registration.moderation_status === 'pending' && '⏳ На рассмотрении'}
-              {registration.moderation_status === 'approved' && '✅ Одобрено'}
-              {registration.moderation_status === 'rejected' && '❌ Отклонено'}
-            </Badge>
-          </div>
-          <div className="text-sm text-muted-foreground space-y-1">
-            <div>Турнир: {registration.tournament_name}</div>
-            <div>Капитан: {registration.captain_nickname}</div>
-            <div>Discord: {registration.discord_contact}</div>
-            <div className="text-xs">
-              Подана: {new Date(registration.created_at).toLocaleDateString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="text-3xl">{registration.logo_url}</div>
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="font-bold text-lg">{registration.team_name}</div>
+                <Badge className={
+                  registration.moderation_status === 'pending' 
+                    ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' 
+                    : registration.moderation_status === 'approved'
+                    ? 'bg-green-500/20 text-green-500 border-green-500/30'
+                    : 'bg-red-500/20 text-red-500 border-red-500/30'
+                }>
+                  {registration.moderation_status === 'pending' && '⏳ На рассмотрении'}
+                  {registration.moderation_status === 'approved' && '✅ Одобрено'}
+                  {registration.moderation_status === 'rejected' && '❌ Отклонено'}
+                </Badge>
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1 mt-1">
+                <div>Турнир: {registration.tournament_name}</div>
+                <div>Капитан: {registration.captain_nickname}</div>
+                <div>Discord: {registration.discord_contact}</div>
+                <div className="text-xs">
+                  Подана: {new Date(registration.registered_at).toLocaleDateString('ru-RU', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>

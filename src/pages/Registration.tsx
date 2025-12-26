@@ -8,32 +8,24 @@ import RegistrationForm from '@/components/registration/RegistrationForm';
 import UserRegistrationsList from '@/components/registration/UserRegistrationsList';
 import ModerationPanel from '@/components/registration/ModerationPanel';
 
-interface Team {
-  id: number;
-  name: string;
-  logo_url: string;
-  captain_nickname: string;
-  roster: any[];
-}
-
 interface Registration {
   id: number;
   team_id: number;
   team_name: string;
+  logo_url: string;
   tournament_name: string;
   captain_nickname: string;
   discord_contact: string;
   comment: string;
   moderation_status: 'pending' | 'approved' | 'rejected';
   moderation_comment?: string;
-  created_at: string;
+  registered_at: string;
 }
 
 const Registration = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
-  const [team, setTeam] = useState<Team | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [allRegistrations, setAllRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,15 +51,6 @@ const Registration = () => {
 
       setUser(userData);
 
-      const teamResponse = await fetch('https://functions.poehali.dev/c8cfc7ef-3e1a-4fa4-ad8e-70777d50b4f0', {
-        headers: { 'X-User-Id': userData.id?.toString() || '' }
-      });
-      
-      if (teamResponse.ok) {
-        const teamData = await teamResponse.json();
-        setTeam(teamData);
-      }
-
       const regResponse = await fetch('https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53', {
         headers: { 'X-User-Id': userData.id?.toString() || '' }
       });
@@ -77,7 +60,7 @@ const Registration = () => {
         setRegistrations(regData);
       }
 
-      if (userData.is_organizer || userData.user_status === 'Главный администратор' || userData.user_status === 'Администратор') {
+      if (userData.is_organizer || userData.user_status === 'Главный администратор' || userData.user_status === 'Администратор' || userData.user_status === 'Модератор') {
         const allRegResponse = await fetch('https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53?action=all', {
           headers: { 'X-User-Id': userData.id?.toString() || '' }
         });
@@ -129,7 +112,7 @@ const Registration = () => {
     }
   };
 
-  const isAdmin = user?.is_organizer || user?.user_status === 'Главный администратор' || user?.user_status === 'Администратор';
+  const isAdmin = user?.is_organizer || user?.user_status === 'Главный администратор' || user?.user_status === 'Администратор' || user?.user_status === 'Модератор';
 
   if (loading) {
     return (
@@ -185,7 +168,6 @@ const Registration = () => {
               {!isAdmin && (
                 <>
                   <RegistrationForm 
-                    team={team}
                     user={user}
                     onSubmitSuccess={loadData}
                   />
