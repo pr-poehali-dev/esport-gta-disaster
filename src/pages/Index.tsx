@@ -195,10 +195,8 @@ const Index = () => {
                     type="submit"
                     onMouseEnter={playHoverSound}
                     className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold py-6 clip-corner"
-                  >
-                    <Icon name="Check" className="mr-2" size={20} />
-                    Подтвердить участие
-                  </Button>
+                  >3599+ участников
+</Button>
                 </form>
               </CardContent>
             </Card>
