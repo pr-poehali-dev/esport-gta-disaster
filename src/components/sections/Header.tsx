@@ -26,6 +26,7 @@ const Header = () => {
           </div>
           <nav className="hidden md:flex gap-6 items-center">
             <a href="#tournaments" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Турниры</a>
+            <a href="#streams" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Стримы</a>
             <a href="#register" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Регистрация</a>
             <a href="#ratings" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Рейтинг</a>
             <a href="#rules" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Правила</a>
@@ -64,6 +65,7 @@ const Header = () => {
             <SheetContent side="right" className="bg-card border-primary/30">
               <nav className="flex flex-col gap-6 mt-8">
                 <a href="#tournaments" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Турниры</a>
+                <a href="#streams" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Стримы</a>
                 <a href="#register" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Регистрация</a>
                 <a href="#ratings" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Рейтинг</a>
                 <a href="#rules" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Правила</a>

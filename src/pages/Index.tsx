@@ -14,6 +14,7 @@ import RatingsSection from '@/components/sections/RatingsSection';
 import RulesSection from '@/components/sections/RulesSection';
 import TournamentGallery from '@/components/sections/TournamentGallery';
 import LiveCounter from '@/components/LiveCounter';
+import StreamSection from '@/components/sections/StreamSection';
 
 interface Player {
   id: number;
@@ -136,6 +137,8 @@ const Index = () => {
 
       <TournamentGallery />
 
+      <StreamSection />
+
       <section id="register" className="relative z-10 py-20 bg-gradient-to-b from-transparent via-primary/5 to-transparent">
         <div className="container mx-auto px-4">
           <div ref={registerAnimation.ref} className={`max-w-2xl mx-auto transition-all duration-700 ${registerAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
@@ -232,6 +235,7 @@ const Index = () => {
               <h4 className="font-bold text-lg mb-4 text-white">Быстрые ссылки</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="#tournaments" className="hover:text-primary transition-colors">Турниры</a></li>
+                <li><a href="#streams" className="hover:text-primary transition-colors">Стримы</a></li>
                 <li><a href="#register" className="hover:text-primary transition-colors">Регистрация</a></li>
                 <li><a href="#ratings" className="hover:text-primary transition-colors">Рейтинг</a></li>
                 <li><a href="#rules" className="hover:text-primary transition-colors">Правила</a></li>
