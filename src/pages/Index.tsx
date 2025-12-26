@@ -12,6 +12,8 @@ import Header from '@/components/sections/Header';
 import TournamentSection from '@/components/sections/TournamentSection';
 import RatingsSection from '@/components/sections/RatingsSection';
 import RulesSection from '@/components/sections/RulesSection';
+import TournamentGallery from '@/components/sections/TournamentGallery';
+import LiveCounter from '@/components/LiveCounter';
 
 interface Player {
   id: number;
@@ -121,6 +123,18 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      <section className="relative z-10 py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <LiveCounter targetCount={128} label="Участников" icon="Users" color="primary" />
+            <LiveCounter targetCount={90} label="Тысяч призовых" icon="Trophy" color="secondary" />
+            <LiveCounter targetCount={12} label="Проведено турниров" icon="Calendar" color="accent" />
+          </div>
+        </div>
+      </section>
+
+      <TournamentGallery />
 
       <section id="register" className="relative z-10 py-20 bg-gradient-to-b from-transparent via-primary/5 to-transparent">
         <div className="container mx-auto px-4">
