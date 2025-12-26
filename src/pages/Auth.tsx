@@ -17,9 +17,9 @@ const Auth = () => {
     email: '',
     password: '',
     nickname: '',
-    discord: '',
-    team: ''
+    discord: ''
   });
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -63,22 +63,31 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      await authService.register(
-        registerData.email,
-        registerData.password,
-        registerData.nickname,
-        registerData.discord,
-        registerData.team
-      );
+      const response = await fetch('https://functions.poehali.dev/5cead9f1-4ea0-437f-836e-c5e9e9781cd6?action=register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: registerData.email,
+          password: registerData.password,
+          nickname: registerData.nickname,
+          discord: registerData.discord
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка регистрации');
+      }
+
       playSuccessSound();
+      setShowVerificationMessage(true);
       
       toast({
-        title: "✅ Регистрация успешна!",
-        description: `Добро пожаловать, ${registerData.nickname}!`,
+        title: "📧 Проверьте почту!",
+        description: `На ${registerData.email} отправлено письмо для подтверждения`,
         className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
       });
-      
-      navigate('/profile');
     } catch (error) {
       toast({
         title: "Ошибка регистрации",
@@ -215,15 +224,19 @@ const Auth = () => {
                           className="bg-background/50 border-primary/30 focus:border-primary"
                         />
                       </div>
-                      <div>
-                        <label className="text-sm font-bold mb-2 block">Команда</label>
-                        <Input
-                          placeholder="Team Disaster"
-                          value={registerData.team}
-                          onChange={(e) => setRegisterData({...registerData, team: e.target.value})}
-                          className="bg-background/50 border-primary/30 focus:border-primary"
-                        />
-                      </div>
+                      {showVerificationMessage && (
+                        <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
+                          <div className="flex items-start gap-3">
+                            <Icon name="Mail" className="text-primary mt-0.5" size={20} />
+                            <div className="text-sm">
+                              <p className="font-bold mb-1">📧 Письмо отправлено!</p>
+                              <p className="text-muted-foreground">
+                                Проверьте вашу почту {registerData.email} и перейдите по ссылке для подтверждения регистрации.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <Button 
                         type="submit"
                         disabled={loading}

@@ -6,6 +6,7 @@ import secrets
 from datetime import datetime, timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from utils import send_verification_email
 
 def get_db_connection():
     return psycopg2.connect(os.environ['DATABASE_URL'])
@@ -48,6 +49,10 @@ def handler(event: dict, context) -> dict:
     try:
         if method == 'POST' and path == 'register':
             return register_user(event)
+        elif method == 'GET' and path == 'verify-email':
+            return verify_email(event)
+        elif method == 'POST' and path == 'resend-verification':
+            return resend_verification(event)
         elif method == 'POST' and path == 'login':
             return login_user(event)
         elif method == 'POST' and path == 'logout':
@@ -81,7 +86,6 @@ def register_user(event: dict) -> dict:
     password = data.get('password', '')
     nickname = data.get('nickname', '').strip()
     discord = data.get('discord', '').strip()
-    team = data.get('team', '').strip()
     
     if not email or not password or not nickname:
         return {
@@ -104,10 +108,15 @@ def register_user(event: dict) -> dict:
                 }
             
             password_hash = hash_password(password)
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = datetime.now() + timedelta(hours=24)
+            
             cur.execute(
-                """INSERT INTO users (email, password_hash, nickname, discord, team, user_status, achievement_points) 
-                   VALUES (%s, %s, %s, %s, %s, 'Новичок', 0) RETURNING id, email, nickname, discord, team, role, is_organizer, user_status, achievement_points, created_at""",
-                (email, password_hash, nickname, discord, team)
+                """INSERT INTO users (email, password_hash, nickname, discord, user_status, achievement_points, 
+                   email_verified, verification_token, verification_expires_at) 
+                   VALUES (%s, %s, %s, %s, 'Новичок', 10, FALSE, %s, %s) 
+                   RETURNING id, email, nickname, discord, role, is_organizer, user_status, achievement_points, created_at, email_verified""",
+                (email, password_hash, nickname, discord, verification_token, verification_expires)
             )
             user = cur.fetchone()
             user_id = user['id']
@@ -120,21 +129,146 @@ def register_user(event: dict) -> dict:
             
             conn.commit()
             
-            session_token = generate_session_token()
-            expires_at = datetime.now() + timedelta(days=30)
-            cur.execute(
-                "INSERT INTO user_sessions (user_id, session_token, expires_at) VALUES (%s, %s, %s)",
-                (user_id, session_token, expires_at)
-            )
-            conn.commit()
+            send_verification_email(email, verification_token, nickname)
             
             return {
                 'statusCode': 201,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps({
-                    'user': dict_with_serialized_dates(dict(user)),
+                    'message': 'Registration successful. Please check your email to verify your account.',
+                    'email': email,
+                    'email_verified': False
+                }),
+                'isBase64Encoded': False
+            }
+    finally:
+        conn.close()
+
+
+def verify_email(event: dict) -> dict:
+    query_params = event.get('queryStringParameters') or {}
+    token = query_params.get('token', '')
+    
+    if not token:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Verification token is required'}),
+            'isBase64Encoded': False
+        }
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """SELECT id, email, nickname FROM users 
+                   WHERE verification_token = %s 
+                   AND verification_expires_at > NOW() 
+                   AND email_verified = FALSE""",
+                (token,)
+            )
+            user = cur.fetchone()
+            
+            if not user:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Invalid or expired verification token'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute(
+                """UPDATE users 
+                   SET email_verified = TRUE, 
+                       verification_token = NULL, 
+                       verification_expires_at = NULL 
+                   WHERE id = %s""",
+                (user['id'],)
+            )
+            
+            session_token = generate_session_token()
+            expires_at = datetime.now() + timedelta(days=30)
+            cur.execute(
+                "INSERT INTO user_sessions (user_id, session_token, expires_at) VALUES (%s, %s, %s)",
+                (user['id'], session_token, expires_at)
+            )
+            
+            conn.commit()
+            
+            cur.execute(
+                "SELECT id, email, nickname, discord, role, is_organizer, user_status, achievement_points, created_at, email_verified FROM users WHERE id = %s",
+                (user['id'],)
+            )
+            verified_user = cur.fetchone()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({
+                    'message': 'Email verified successfully',
+                    'user': dict_with_serialized_dates(dict(verified_user)),
                     'session_token': session_token
                 }),
+                'isBase64Encoded': False
+            }
+    finally:
+        conn.close()
+
+
+def resend_verification(event: dict) -> dict:
+    data = json.loads(event.get('body', '{}'))
+    email = data.get('email', '').strip().lower()
+    
+    if not email:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Email is required'}),
+            'isBase64Encoded': False
+        }
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, nickname, email_verified FROM users WHERE email = %s",
+                (email,)
+            )
+            user = cur.fetchone()
+            
+            if not user:
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'User not found'}),
+                    'isBase64Encoded': False
+                }
+            
+            if user['email_verified']:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Email already verified'}),
+                    'isBase64Encoded': False
+                }
+            
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = datetime.now() + timedelta(hours=24)
+            
+            cur.execute(
+                """UPDATE users 
+                   SET verification_token = %s, verification_expires_at = %s 
+                   WHERE id = %s""",
+                (verification_token, verification_expires, user['id'])
+            )
+            conn.commit()
+            
+            send_verification_email(email, verification_token, user['nickname'])
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'message': 'Verification email sent'}),
                 'isBase64Encoded': False
             }
     finally:
@@ -158,7 +292,7 @@ def login_user(event: dict) -> dict:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             password_hash = hash_password(password)
             cur.execute(
-                "SELECT id, email, nickname, discord, team, role, is_organizer, user_status, achievement_points, created_at FROM users WHERE email = %s AND password_hash = %s",
+                "SELECT id, email, nickname, discord, role, is_organizer, user_status, achievement_points, created_at, email_verified FROM users WHERE email = %s AND password_hash = %s",
                 (email, password_hash)
             )
             user = cur.fetchone()
@@ -168,6 +302,14 @@ def login_user(event: dict) -> dict:
                     'statusCode': 401,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                     'body': json.dumps({'error': 'Invalid credentials'}),
+                    'isBase64Encoded': False
+                }
+            
+            if not user.get('email_verified', False):
+                return {
+                    'statusCode': 403,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Email not verified. Please check your email.', 'email': email}),
                     'isBase64Encoded': False
                 }
             

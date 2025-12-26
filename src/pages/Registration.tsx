@@ -253,8 +253,12 @@ const Registration = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <h1 className="text-5xl font-black mb-4 text-white">Регистрация на турниры</h1>
-              <p className="text-muted-foreground">Подайте заявку от своей команды</p>
+              <h1 className="text-5xl font-black mb-4">
+                <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                  РЕГИСТРАЦИЯ НА ТУРНИР
+                </span>
+              </h1>
+              <p className="text-muted-foreground text-lg">Подайте заявку от своей команды на участие</p>
             </div>
 
             <div className="grid gap-6">
