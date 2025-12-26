@@ -11,6 +11,7 @@ import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds
 import AchievementBadge from '@/components/AchievementBadge';
 import OrganizerBadge from '@/components/OrganizerBadge';
 import CreateTeamDialog from '@/components/CreateTeamDialog';
+import EditTeamDialog from '@/components/EditTeamDialog';
 import TeamManagement from '@/components/TeamManagement';
 import TournamentRegistrations from '@/components/TournamentRegistrations';
 import ModerationPanel from '@/components/ModerationPanel';
@@ -29,6 +30,7 @@ const Profile = () => {
   const [team, setTeam] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [showEditTeam, setShowEditTeam] = useState(false);
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [showTeamManagement, setShowTeamManagement] = useState(false);
 
@@ -459,18 +461,32 @@ const Profile = () => {
                             Игроков в составе: {team.roster?.length || 0}/7
                           </div>
                         </div>
-                        <Button
-                          onClick={() => {
-                            playClickSound();
-                            setShowTeamManagement(!showTeamManagement);
-                          }}
-                          onMouseEnter={playHoverSound}
-                          variant="outline"
-                          className="border-primary/30"
-                        >
-                          <Icon name="Settings" size={18} className="mr-2" />
-                          {showTeamManagement ? 'Скрыть' : 'Управление'}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              playClickSound();
+                              setShowEditTeam(true);
+                            }}
+                            onMouseEnter={playHoverSound}
+                            variant="outline"
+                            className="border-primary/30"
+                          >
+                            <Icon name="Edit" size={18} className="mr-2" />
+                            Редактировать
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              playClickSound();
+                              setShowTeamManagement(!showTeamManagement);
+                            }}
+                            onMouseEnter={playHoverSound}
+                            variant="outline"
+                            className="border-primary/30"
+                          >
+                            <Icon name="Users" size={18} className="mr-2" />
+                            {showTeamManagement ? 'Скрыть состав' : 'Состав'}
+                          </Button>
+                        </div>
                       </div>
                       
                       {showTeamManagement && (
@@ -580,6 +596,22 @@ const Profile = () => {
           });
         }}
       />
+
+      {team && (
+        <EditTeamDialog 
+          open={showEditTeam} 
+          onOpenChange={setShowEditTeam}
+          team={team}
+          onSuccess={() => {
+            loadTeam();
+            toast({
+              title: "✅ Команда обновлена!",
+              description: "Изменения успешно сохранены",
+              className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
