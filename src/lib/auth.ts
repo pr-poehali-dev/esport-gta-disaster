@@ -8,6 +8,7 @@ export interface User {
   team?: string;
   avatar_url?: string;
   role: string;
+  is_organizer?: boolean;
   created_at: string;
 }
 

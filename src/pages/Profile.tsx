@@ -9,6 +9,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds';
 import AchievementBadge from '@/components/AchievementBadge';
+import OrganizerBadge from '@/components/OrganizerBadge';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -132,11 +133,14 @@ const Profile = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-full clip-corner flex items-center justify-center text-2xl">
-                        {user.nickname[0].toUpperCase()}
+                      <div className={`w-12 h-12 ${user.is_organizer ? 'bg-gradient-to-br from-yellow-500 to-orange-500' : 'bg-gradient-to-br from-primary to-secondary'} rounded-full clip-corner flex items-center justify-center text-2xl`}>
+                        {user.is_organizer ? '👑' : user.nickname[0].toUpperCase()}
                       </div>
                       <div>
-                        <div className="text-2xl font-black">{user.nickname}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-2xl font-black">{user.nickname}</div>
+                          {user.is_organizer && <OrganizerBadge size="sm" variant="compact" />}
+                        </div>
                         <div className="text-sm text-muted-foreground font-normal">{user.email}</div>
                       </div>
                     </div>
