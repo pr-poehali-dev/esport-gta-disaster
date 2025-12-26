@@ -43,7 +43,7 @@ const LiveCounter = ({ targetCount, label, icon, color = 'primary' }: LiveCounte
 
   return (
     <Card className={`border-${color}/30 bg-card/80 backdrop-blur hover:scale-105 transition-all duration-300 ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-      <CardContent className="p-6">
+      <CardContent className="p-6 bg-slate-800">
         <div className="flex items-center gap-4">
           <div className={`w-16 h-16 bg-gradient-to-br ${colorClasses[color]} rounded-full clip-corner flex items-center justify-center`}>
             <Icon name={icon} className="text-white" size={32} />
