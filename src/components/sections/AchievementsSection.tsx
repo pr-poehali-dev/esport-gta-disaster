@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import AchievementBadge from '@/components/AchievementBadge';
+import AchievementUnlockModal from '@/components/AchievementUnlockModal';
+import { playHoverSound } from '@/utils/sounds';
 
 interface Achievement {
   id: number;
@@ -22,6 +25,13 @@ interface Achievement {
 
 const AchievementsSection = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [unlockedAchievement, setUnlockedAchievement] = useState<{
+    icon: string;
+    name: string;
+    description: string;
+    rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    points: number;
+  } | null>(null);
 
   const mockAchievements: Achievement[] = [
     {
@@ -278,7 +288,7 @@ const AchievementsSection = () => {
             </Tabs>
 
             <div className="mt-8 pt-6 border-t border-primary/20">
-              <div className="flex flex-wrap gap-3 items-center justify-center">
+              <div className="flex flex-wrap gap-3 items-center justify-center mb-4">
                 <Badge className="bg-gray-500/10 text-gray-400 border-gray-500/50">
                   <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
                   Обычное
@@ -296,10 +306,90 @@ const AchievementsSection = () => {
                   Легендарное
                 </Badge>
               </div>
+              
+              <div className="text-center mt-6">
+                <p className="text-sm text-muted-foreground mb-3">Тест анимации разблокировки:</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setUnlockedAchievement({
+                        icon: '⚔️',
+                        name: 'Первая кровь',
+                        description: 'Одержи свою первую победу в турнире',
+                        rarity: 'common',
+                        points: 10
+                      });
+                    }}
+                    onMouseEnter={playHoverSound}
+                    className="border-gray-500/50 text-gray-400"
+                  >
+                    Обычное
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setUnlockedAchievement({
+                        icon: '🔥',
+                        name: 'Неудержимый',
+                        description: 'Одержи 5 побед подряд',
+                        rarity: 'rare',
+                        points: 50
+                      });
+                    }}
+                    onMouseEnter={playHoverSound}
+                    className="border-blue-500/50 text-blue-400"
+                  >
+                    Редкое
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setUnlockedAchievement({
+                        icon: '⚡',
+                        name: 'Легенда',
+                        description: 'Одержи 10 побед подряд',
+                        rarity: 'epic',
+                        points: 100
+                      });
+                    }}
+                    onMouseEnter={playHoverSound}
+                    className="border-purple-500/50 text-purple-400"
+                  >
+                    Эпическое
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setUnlockedAchievement({
+                        icon: '🏆',
+                        name: 'Чемпион сезона',
+                        description: 'Стань победителем турнира сезона',
+                        rarity: 'legendary',
+                        points: 500
+                      });
+                    }}
+                    onMouseEnter={playHoverSound}
+                    className="border-yellow-500/50 text-yellow-400"
+                  >
+                    Легендарное
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <AchievementUnlockModal
+        isOpen={!!unlockedAchievement}
+        onClose={() => setUnlockedAchievement(null)}
+        achievement={unlockedAchievement}
+      />
     </section>
   );
 };
