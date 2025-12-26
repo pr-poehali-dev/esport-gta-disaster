@@ -362,7 +362,7 @@ def get_all_users(event: dict) -> dict:
                 }
             
             cur.execute(
-                """SELECT id, email, nickname, user_status, role, is_organizer, created_at 
+                """SELECT id, email, nickname, discord, team, user_status, role, is_organizer, achievement_points, created_at 
                    FROM users 
                    ORDER BY created_at DESC"""
             )

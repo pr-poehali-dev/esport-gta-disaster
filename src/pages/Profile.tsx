@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds';
 import AchievementBadge from '@/components/AchievementBadge';
 import OrganizerBadge from '@/components/OrganizerBadge';
+import UserStatusBadge from '@/components/UserStatusBadge';
 import CreateTeamDialog from '@/components/CreateTeamDialog';
 import EditTeamDialog from '@/components/EditTeamDialog';
 import DeleteTeamDialog from '@/components/DeleteTeamDialog';
@@ -259,9 +260,7 @@ const Profile = () => {
                         <div className="flex items-center gap-2">
                           <div className="text-2xl font-black">{user.nickname}</div>
                           {user.is_organizer && <OrganizerBadge size="sm" variant="compact" />}
-                          <Badge className="bg-primary/10 text-primary border-primary/30 text-sm">
-                            {(user as any).user_status || 'Новичок'}
-                          </Badge>
+                          <UserStatusBadge status={(user as any).user_status || 'Новичок'} />
                         </div>
                         <div className="text-sm text-muted-foreground font-normal">{user.email}</div>
                       </div>
