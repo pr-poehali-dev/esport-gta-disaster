@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +34,12 @@ const Index = () => {
     discord: '',
     team: ''
   });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const heroAnimation = useScrollAnimation();
+  const registerAnimation = useScrollAnimation();
+  const tournamentAnimation = useScrollAnimation();
+  const ratingsAnimation = useScrollAnimation();
 
   const mockPlayers: Player[] = [
     { id: 1, name: 'RAZOR_PRO', rank: 1, wins: 24, losses: 3, winRate: 88.9, avatar: '🏆' },
@@ -74,13 +82,27 @@ const Index = () => {
               <a href="#register" className="text-sm font-medium hover:text-primary transition-colors">Регистрация</a>
               <a href="#ratings" className="text-sm font-medium hover:text-primary transition-colors">Рейтинг</a>
             </nav>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon" className="text-primary">
+                  <Icon name="Menu" size={24} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-card border-primary/30">
+                <nav className="flex flex-col gap-6 mt-8">
+                  <a href="#tournaments" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Турниры</a>
+                  <a href="#register" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Регистрация</a>
+                  <a href="#ratings" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Рейтинг</a>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>
 
       <section className="relative z-10 py-24 overflow-hidden">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
+          <div ref={heroAnimation.ref} className={`max-w-4xl mx-auto text-center transition-all duration-700 ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
             <Badge className="mb-6 bg-gradient-to-r from-primary to-secondary text-white border-0 px-6 py-2 text-sm font-bold">
               СЕЗОН 2025
             </Badge>
@@ -113,7 +135,7 @@ const Index = () => {
 
       <section id="register" className="relative z-10 py-20 bg-card/30 backdrop-blur-sm">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto">
+          <div ref={registerAnimation.ref} className={`max-w-2xl mx-auto transition-all duration-700 ${registerAnimation.isVisible ? 'animate-scale-in' : 'opacity-0'}`}>
             <div className="text-center mb-12">
               <h3 className="text-4xl font-black mb-4 text-white">Регистрация на турнир</h3>
               <p className="text-muted-foreground">Заполни форму и стань частью легенды</p>
@@ -171,7 +193,7 @@ const Index = () => {
       </section>
 
       <section id="tournaments" className="relative z-10 py-20">
-        <div className="container mx-auto px-4">
+        <div ref={tournamentAnimation.ref} className={`container mx-auto px-4 transition-all duration-700 ${tournamentAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="text-center mb-12">
             <h3 className="text-4xl font-black mb-4 text-white">Турнирная сетка</h3>
             <p className="text-muted-foreground">Следи за ходом соревнований в реальном времени</p>
@@ -264,7 +286,7 @@ const Index = () => {
       </section>
 
       <section id="ratings" className="relative z-10 py-20 bg-card/30 backdrop-blur-sm">
-        <div className="container mx-auto px-4">
+        <div ref={ratingsAnimation.ref} className={`container mx-auto px-4 transition-all duration-700 ${ratingsAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="text-center mb-12">
             <h3 className="text-4xl font-black mb-4 text-white">Таблица рейтингов</h3>
             <p className="text-muted-foreground">Лучшие игроки текущего сезона</p>
