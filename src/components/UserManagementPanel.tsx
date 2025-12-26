@@ -29,6 +29,8 @@ export default function UserManagementPanel() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'points' | 'nickname'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     loadUsers();
@@ -70,16 +72,34 @@ export default function UserManagementPanel() {
     setShowDetailsDialog(false);
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.nickname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || user.user_status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredUsers = users
+    .filter(user => {
+      const matchesSearch = user.nickname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           user.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || user.user_status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === 'date') {
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      } else if (sortBy === 'points') {
+        comparison = (a.achievement_points || 0) - (b.achievement_points || 0);
+      } else if (sortBy === 'nickname') {
+        comparison = a.nickname.localeCompare(b.nickname);
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
   const handleClearFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
   const statusOptions = [
@@ -111,7 +131,8 @@ export default function UserManagementPanel() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
                 <div className="relative">
                   <Icon name="Search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -145,6 +166,48 @@ export default function UserManagementPanel() {
                     <Icon name="X" size={18} />
                   </Button>
                 )}
+              </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Сортировка:</span>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setSortBy('date')}
+                    variant={sortBy === 'date' ? 'default' : 'outline'}
+                    size="sm"
+                    className={sortBy === 'date' ? 'bg-primary/20 border-primary/40' : 'border-primary/30'}
+                  >
+                    <Icon name="Calendar" size={14} className="mr-1" />
+                    Дата
+                  </Button>
+                  <Button
+                    onClick={() => setSortBy('points')}
+                    variant={sortBy === 'points' ? 'default' : 'outline'}
+                    size="sm"
+                    className={sortBy === 'points' ? 'bg-primary/20 border-primary/40' : 'border-primary/30'}
+                  >
+                    <Icon name="Star" size={14} className="mr-1" />
+                    Очки
+                  </Button>
+                  <Button
+                    onClick={() => setSortBy('nickname')}
+                    variant={sortBy === 'nickname' ? 'default' : 'outline'}
+                    size="sm"
+                    className={sortBy === 'nickname' ? 'bg-primary/20 border-primary/40' : 'border-primary/30'}
+                  >
+                    <Icon name="User" size={14} className="mr-1" />
+                    Никнейм
+                  </Button>
+                  <Button
+                    onClick={toggleSortOrder}
+                    variant="outline"
+                    size="icon"
+                    className="border-primary/30 h-8 w-8"
+                  >
+                    <Icon name={sortOrder === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={14} />
+                  </Button>
+                </div>
               </div>
             </div>
 
