@@ -29,6 +29,18 @@ const Header = () => {
             <a href="#streams" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Стримы</a>
             <a href="#achievements" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Достижения</a>
             <a href="#ratings" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Рейтинг</a>
+            <Button 
+              onClick={() => {
+                playClickSound();
+                navigate('/registration');
+              }}
+              onMouseEnter={playHoverSound}
+              variant="outline"
+              className="border-primary/30 hover:bg-primary/10 font-bold"
+            >
+              <Icon name="FileText" className="mr-2" size={18} />
+              Регистрация
+            </Button>
             {isAuthenticated ? (
               <Button 
                 onClick={() => {
@@ -67,6 +79,43 @@ const Header = () => {
                 <a href="#streams" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Стримы</a>
                 <a href="#achievements" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Достижения</a>
                 <a href="#ratings" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Рейтинг</a>
+                <Button 
+                  onClick={() => {
+                    playClickSound();
+                    navigate('/registration');
+                    setMobileMenuOpen(false);
+                  }}
+                  variant="outline"
+                  className="border-primary/30 hover:bg-primary/10 font-bold w-full justify-start"
+                >
+                  <Icon name="FileText" className="mr-2" size={18} />
+                  Регистрация
+                </Button>
+                {isAuthenticated ? (
+                  <Button 
+                    onClick={() => {
+                      playClickSound();
+                      navigate('/profile');
+                      setMobileMenuOpen(false);
+                    }}
+                    className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold w-full justify-start"
+                  >
+                    <Icon name="User" className="mr-2" size={18} />
+                    Профиль
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => {
+                      playClickSound();
+                      navigate('/auth');
+                      setMobileMenuOpen(false);
+                    }}
+                    className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold w-full justify-start"
+                  >
+                    <Icon name="LogIn" className="mr-2" size={18} />
+                    Войти
+                  </Button>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
