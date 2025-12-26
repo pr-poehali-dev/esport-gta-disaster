@@ -15,6 +15,7 @@ import RulesSection from '@/components/sections/RulesSection';
 import TournamentGallery from '@/components/sections/TournamentGallery';
 import LiveCounter from '@/components/LiveCounter';
 import StreamSection from '@/components/sections/StreamSection';
+import AchievementsSection from '@/components/sections/AchievementsSection';
 
 interface Player {
   id: number;
@@ -219,6 +220,8 @@ const Index = () => {
         isVisible={ratingsAnimation.isVisible}
         mockPlayers={mockPlayers}
       />
+
+      <AchievementsSection />
 
       <RulesSection />
 

@@ -4,9 +4,11 @@ import { authService, User } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds';
+import AchievementBadge from '@/components/AchievementBadge';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -232,6 +234,106 @@ const Profile = () => {
                       </div>
                     </form>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/30 bg-card/80 backdrop-blur">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Award" className="text-primary" size={24} />
+                      Мои достижения
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge className="bg-primary/10 text-primary border-primary/30">
+                        <Icon name="Star" size={14} className="mr-1" />
+                        245 очков
+                      </Badge>
+                      <Badge className="bg-secondary/10 text-secondary border-secondary/30">
+                        4/10 получено
+                      </Badge>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <AchievementBadge
+                      icon="⚔️"
+                      name="Первая кровь"
+                      description="Одержи свою первую победу в турнире"
+                      rarity="common"
+                      unlocked={true}
+                      points={10}
+                      unlockedAt="2025-01-15T10:30:00Z"
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="🔥"
+                      name="Неудержимый"
+                      description="Одержи 5 побед подряд"
+                      rarity="rare"
+                      unlocked={true}
+                      points={50}
+                      unlockedAt="2025-01-18T14:20:00Z"
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="💎"
+                      name="Безупречная игра"
+                      description="Выиграй матч со счетом 3:0"
+                      rarity="rare"
+                      unlocked={true}
+                      points={30}
+                      unlockedAt="2025-01-16T16:45:00Z"
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="🎮"
+                      name="Первый турнир"
+                      description="Зарегистрируйся на свой первый турнир"
+                      rarity="common"
+                      unlocked={true}
+                      points={5}
+                      unlockedAt="2025-01-10T09:00:00Z"
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="⚡"
+                      name="Легенда"
+                      description="Одержи 10 побед подряд"
+                      rarity="epic"
+                      unlocked={false}
+                      progress={7}
+                      maxProgress={10}
+                      points={100}
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="👑"
+                      name="Король камбэков"
+                      description="Выиграй матч, проигрывая 0:2"
+                      rarity="epic"
+                      unlocked={false}
+                      progress={0}
+                      maxProgress={1}
+                      points={75}
+                      size="sm"
+                    />
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-primary/20 text-center">
+                    <Button 
+                      onClick={() => {
+                        playClickSound();
+                        navigate('/#achievements');
+                      }}
+                      onMouseEnter={playHoverSound}
+                      variant="outline"
+                      className="border-primary/30 hover:bg-primary/10"
+                    >
+                      <Icon name="Grid" size={18} className="mr-2" />
+                      Смотреть все достижения
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
