@@ -12,6 +12,7 @@ import AchievementBadge from '@/components/AchievementBadge';
 import OrganizerBadge from '@/components/OrganizerBadge';
 import CreateTeamDialog from '@/components/CreateTeamDialog';
 import EditTeamDialog from '@/components/EditTeamDialog';
+import DeleteTeamDialog from '@/components/DeleteTeamDialog';
 import TeamManagement from '@/components/TeamManagement';
 import TournamentRegistrations from '@/components/TournamentRegistrations';
 import ModerationPanel from '@/components/ModerationPanel';
@@ -31,6 +32,7 @@ const Profile = () => {
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showEditTeam, setShowEditTeam] = useState(false);
+  const [showDeleteTeam, setShowDeleteTeam] = useState(false);
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [showTeamManagement, setShowTeamManagement] = useState(false);
 
@@ -133,6 +135,40 @@ const Profile = () => {
       toast({
         title: "Ошибка",
         description: error instanceof Error ? error.message : 'Не удалось зарегистрироваться',
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    playClickSound();
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch('https://functions.poehali.dev/c8cfc7ef-3e1a-4fa4-ad8e-70777d50b4f0', {
+        method: 'DELETE',
+        headers: {
+          'X-User-Id': user.id?.toString() || ''
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+
+      playSuccessSound();
+      toast({
+        title: "✅ Команда удалена",
+        description: "Все данные команды успешно удалены",
+        className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
+      });
+      
+      setTeam(null);
+      loadRegistrations();
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: error instanceof Error ? error.message : 'Не удалось удалить команду',
         variant: "destructive"
       });
     }
@@ -486,6 +522,17 @@ const Profile = () => {
                             <Icon name="Users" size={18} className="mr-2" />
                             {showTeamManagement ? 'Скрыть состав' : 'Состав'}
                           </Button>
+                          <Button
+                            onClick={() => {
+                              playClickSound();
+                              setShowDeleteTeam(true);
+                            }}
+                            onMouseEnter={playHoverSound}
+                            variant="destructive"
+                          >
+                            <Icon name="Trash2" size={18} className="mr-2" />
+                            Удалить
+                          </Button>
                         </div>
                       </div>
                       
@@ -610,6 +657,15 @@ const Profile = () => {
               className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
             });
           }}
+        />
+      )}
+
+      {team && (
+        <DeleteTeamDialog
+          open={showDeleteTeam}
+          onOpenChange={setShowDeleteTeam}
+          teamName={team.name}
+          onDelete={handleDeleteTeam}
         />
       )}
     </div>
