@@ -1,4 +1,6 @@
 {
+  "teams": "https://functions.poehali.dev/c8cfc7ef-3e1a-4fa4-ad8e-70777d50b4f0",
+  "register": "https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53",
   "achievements": "https://functions.poehali.dev/df857b2d-d645-49d0-8575-b3a414066a50",
   "auth": "https://functions.poehali.dev/5cead9f1-4ea0-437f-836e-c5e9e9781cd6"
 }

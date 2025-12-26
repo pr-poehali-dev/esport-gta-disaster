@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Get team without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "User ID required"
+      }
+    },
+    {
+      "name": "Create team error - already exists",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "name": "Test Team",
+        "logo_url": "https://example.com/logo.png"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "You already have a team"
+      }
+    }
+  ]
+}

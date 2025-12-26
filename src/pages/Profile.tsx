@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds';
 import AchievementBadge from '@/components/AchievementBadge';
 import OrganizerBadge from '@/components/OrganizerBadge';
+import CreateTeamDialog from '@/components/CreateTeamDialog';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -22,9 +23,15 @@ const Profile = () => {
     team: ''
   });
   const [loading, setLoading] = useState(false);
+  const [team, setTeam] = useState<any>(null);
+  const [loadingTeam, setLoadingTeam] = useState(true);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [registrations, setRegistrations] = useState<any[]>([]);
 
   useEffect(() => {
     loadProfile();
+    loadTeam();
+    loadRegistrations();
   }, []);
 
   const loadProfile = async () => {
@@ -54,6 +61,75 @@ const Profile = () => {
       description: "До встречи на арене!",
     });
     navigate('/');
+  };
+
+  const loadTeam = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch('https://functions.poehali.dev/c8cfc7ef-3e1a-4fa4-ad8e-70777d50b4f0', {
+        headers: { 'X-User-Id': user.id?.toString() || '' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTeam(data);
+      }
+    } catch (error) {
+      console.log('No team found');
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
+
+  const loadRegistrations = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch('https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53', {
+        headers: { 'X-User-Id': user.id?.toString() || '' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRegistrations(data);
+      }
+    } catch (error) {
+      console.log('Failed to load registrations');
+    }
+  };
+
+  const handleRegisterTournament = async (tournamentName: string) => {
+    playClickSound();
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch('https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id?.toString() || ''
+        },
+        body: JSON.stringify({ tournament_name: tournamentName })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+
+      playSuccessSound();
+      toast({
+        title: "✅ Регистрация завершена!",
+        description: `Команда ${team?.name} зарегистрирована на турнир`,
+        className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
+      });
+      
+      loadRegistrations();
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: error instanceof Error ? error.message : 'Не удалось зарегистрироваться',
+        variant: "destructive"
+      });
+    }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -343,32 +419,122 @@ const Profile = () => {
 
               <Card className="border-primary/30 bg-card/80 backdrop-blur">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Icon name="Trophy" className="text-secondary" size={24} />
-                    Мои турниры
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Users" className="text-primary" size={24} />
+                      Моя команда
+                    </div>
+                    {!team && !loadingTeam && (
+                      <Button 
+                        onClick={() => {
+                          playClickSound();
+                          setShowCreateTeam(true);
+                        }}
+                        onMouseEnter={playHoverSound}
+                        className="bg-gradient-to-r from-primary to-secondary"
+                      >
+                        <Icon name="Plus" size={18} className="mr-2" />
+                        Создать команду
+                      </Button>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Icon name="Trophy" size={48} className="mx-auto mb-4 opacity-30" />
-                    <p>Вы еще не зарегистрированы на турниры</p>
-                    <Button 
-                      onClick={() => {
-                        playClickSound();
-                        navigate('/#register');
-                      }}
-                      onMouseEnter={playHoverSound}
-                      className="mt-4 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-                    >
-                      Зарегистрироваться
-                    </Button>
-                  </div>
+                  {loadingTeam ? (
+                    <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
+                  ) : team ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
+                        <div className="text-5xl">{team.logo_url}</div>
+                        <div className="flex-1">
+                          <div className="text-2xl font-black">{team.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Капитан: {team.captain_nickname}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Участников: {team.members_count || 1}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Icon name="Users" size={48} className="mx-auto mb-4 opacity-30" />
+                      <p className="mb-4">У вас еще нет команды</p>
+                      <p className="text-sm">Создайте команду, чтобы участвовать в турнирах</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/30 bg-card/80 backdrop-blur">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Trophy" className="text-secondary" size={24} />
+                      Мои турниры
+                    </div>
+                    {team && (
+                      <Button 
+                        onClick={() => handleRegisterTournament('Winter Championship 2025')}
+                        onMouseEnter={playHoverSound}
+                        className="bg-gradient-to-r from-primary to-secondary"
+                      >
+                        <Icon name="Plus" size={18} className="mr-2" />
+                        Зарегистрироваться
+                      </Button>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!team ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Icon name="Trophy" size={48} className="mx-auto mb-4 opacity-30" />
+                      <p>Создайте команду, чтобы участвовать в турнирах</p>
+                    </div>
+                  ) : registrations.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Icon name="Trophy" size={48} className="mx-auto mb-4 opacity-30" />
+                      <p>Вы еще не зарегистрированы на турниры</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {registrations.map((reg) => (
+                        <div key={reg.id} className="p-4 rounded-lg border border-primary/20 bg-card/50">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-bold">{reg.tournament_name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                Команда: {reg.team_name}
+                              </div>
+                            </div>
+                            <Badge className={reg.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}>
+                              {reg.status === 'pending' ? 'На рассмотрении' : 'Подтверждено'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
         </div>
       </section>
+
+      <CreateTeamDialog 
+        open={showCreateTeam} 
+        onOpenChange={setShowCreateTeam}
+        onSuccess={() => {
+          loadTeam();
+          toast({
+            title: "✅ Команда создана!",
+            description: "Теперь вы можете регистрироваться на турниры",
+            className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
+          });
+        }}
+      />
     </div>
   );
 };

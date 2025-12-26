@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Get registrations without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "User ID required"
+      }
+    },
+    {
+      "name": "Register team without team created",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "999"
+      },
+      "body": {
+        "tournament_name": "Test Tournament"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "You must create a team first"
+      }
+    }
+  ]
+}
