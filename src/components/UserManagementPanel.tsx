@@ -102,6 +102,46 @@ export default function UserManagementPanel() {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Никнейм', 'Email', 'Discord', 'Команда', 'Статус', 'Роль', 'Организатор', 'Очки', 'Дата регистрации'];
+    
+    const rows = filteredUsers.map(user => [
+      user.id,
+      user.nickname,
+      user.email,
+      user.discord || '-',
+      user.team || '-',
+      user.user_status,
+      user.role,
+      user.is_organizer ? 'Да' : 'Нет',
+      user.achievement_points || 0,
+      new Date(user.created_at).toLocaleDateString('ru-RU')
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `users_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: '✅ Экспорт завершен!',
+      description: `Экспортировано ${filteredUsers.length} пользователей`,
+      className: 'bg-gradient-to-r from-primary to-secondary text-white border-0',
+    });
+  };
+
   const statusOptions = [
     'Новичок',
     'Игрок',
@@ -124,9 +164,21 @@ export default function UserManagementPanel() {
     <>
       <Card className="border-primary/30 bg-card/80 backdrop-blur">
         <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <Icon name="Users" className="text-primary" size={24} />
-            Управление пользователями
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Icon name="Users" className="text-primary" size={24} />
+              Управление пользователями
+            </div>
+            <Button
+              onClick={handleExportCSV}
+              variant="outline"
+              size="sm"
+              className="border-primary/30 hover:bg-primary/10"
+              disabled={filteredUsers.length === 0}
+            >
+              <Icon name="Download" size={16} className="mr-2" />
+              Экспорт CSV
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
