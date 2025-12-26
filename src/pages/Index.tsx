@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds';
-import { authService } from '@/lib/auth';
+import { playHoverSound, playSuccessSound } from '@/utils/sounds';
+import Header from '@/components/sections/Header';
+import TournamentSection from '@/components/sections/TournamentSection';
+import RatingsSection from '@/components/sections/RatingsSection';
+import RulesSection from '@/components/sections/RulesSection';
 
 interface Player {
   id: number;
@@ -34,15 +34,12 @@ interface Match {
 }
 
 const Index = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nickname: '',
     discord: '',
     team: ''
   });
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
-  const isAuthenticated = authService.isAuthenticated();
 
   const heroAnimation = useScrollAnimation();
   const registerAnimation = useScrollAnimation();
@@ -93,67 +90,7 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-[#1a1a2e]">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSJyZ2JhKDEzLDE0OCwyMzEsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-30"></div>
 
-      <header className="relative z-10 border-b border-primary/20 bg-background/50 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 bg-gradient-to-br from-primary via-secondary to-accent rounded clip-corner flex items-center justify-center logo-pulse">
-                <Icon name="Zap" className="text-white" size={28} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black tracking-tight text-shine">DISASTER ESPORTS</h1>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest">ГТА Криминальная Россия</p>
-              </div>
-            </div>
-            <nav className="hidden md:flex gap-6 items-center">
-              <a href="#tournaments" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Турниры</a>
-              <a href="#register" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Регистрация</a>
-              <a href="#ratings" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Рейтинг</a>
-              <a href="#rules" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Правила</a>
-              {isAuthenticated ? (
-                <Button 
-                  onClick={() => {
-                    playClickSound();
-                    navigate('/profile');
-                  }}
-                  onMouseEnter={playHoverSound}
-                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold"
-                >
-                  <Icon name="User" className="mr-2" size={18} />
-                  Профиль
-                </Button>
-              ) : (
-                <Button 
-                  onClick={() => {
-                    playClickSound();
-                    navigate('/auth');
-                  }}
-                  onMouseEnter={playHoverSound}
-                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold"
-                >
-                  <Icon name="LogIn" className="mr-2" size={18} />
-                  Войти
-                </Button>
-              )}
-            </nav>
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon" className="text-primary">
-                  <Icon name="Menu" size={24} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="bg-card border-primary/30">
-                <nav className="flex flex-col gap-6 mt-8">
-                  <a href="#tournaments" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Турниры</a>
-                  <a href="#register" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Регистрация</a>
-                  <a href="#ratings" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Рейтинг</a>
-                  <a href="#rules" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold hover:text-primary transition-colors">Правила</a>
-                </nav>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <section className="relative z-10 py-24 overflow-hidden">
         <div className="container mx-auto px-4">
@@ -172,26 +109,23 @@ const Index = () => {
               Присоединяйся к крупнейшему турниру по ГТА Криминальная Россия. Докажи, что ты лучший на улицах виртуального мира.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold px-8 py-6 text-lg clip-corner">
+              <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold clip-corner px-8">
                 <Icon name="Trophy" className="mr-2" size={20} />
-                Зарегистрироваться
+                Призовой фонд: 90 000₽
               </Button>
-              <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10 font-bold px-8 py-6 text-lg clip-corner">
-                <Icon name="Play" className="mr-2" size={20} />
-                Смотреть стрим
+              <Button size="lg" variant="outline" className="border-primary/30 hover:bg-primary/10 font-bold">
+                <Icon name="Users" className="mr-2" size={20} />
+                128+ участников
               </Button>
             </div>
           </div>
         </div>
-        
-        <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] -z-10"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-[120px] -z-10"></div>
       </section>
 
-      <section id="register" className="relative z-10 py-20 bg-card/30 backdrop-blur-sm">
+      <section id="register" className="relative z-10 py-20 bg-gradient-to-b from-transparent via-primary/5 to-transparent">
         <div className="container mx-auto px-4">
-          <div ref={registerAnimation.ref} className={`max-w-2xl mx-auto transition-all duration-700 ${registerAnimation.isVisible ? 'animate-scale-in' : 'opacity-0'}`}>
-            <div className="text-center mb-12">
+          <div ref={registerAnimation.ref} className={`max-w-2xl mx-auto transition-all duration-700 ${registerAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <div className="text-center mb-8">
               <h3 className="text-4xl font-black mb-4 text-white">Регистрация на турнир</h3>
               <p className="text-muted-foreground">Заполни форму и стань частью легенды</p>
             </div>
@@ -199,12 +133,15 @@ const Index = () => {
             <Card className="border-primary/30 bg-card/80 backdrop-blur neon-border">
               <CardHeader>
                 <CardTitle className="text-2xl">Форма участника</CardTitle>
-                <CardDescription>Убедись, что данные указаны корректно</CardDescription>
+                <CardDescription>Все поля обязательны для заполнения</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Игровой никнейм</label>
+                  <div>
+                    <label className="text-sm font-bold mb-2 block flex items-center gap-2">
+                      <Icon name="User" size={16} />
+                      Игровой никнейм *
+                    </label>
                     <Input 
                       placeholder="RAZOR_PRO"
                       value={formData.nickname}
@@ -213,8 +150,11 @@ const Index = () => {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Discord</label>
+                  <div>
+                    <label className="text-sm font-bold mb-2 block flex items-center gap-2">
+                      <Icon name="MessageSquare" size={16} />
+                      Discord *
+                    </label>
                     <Input 
                       placeholder="username#1234"
                       value={formData.discord}
@@ -223,8 +163,11 @@ const Index = () => {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Команда (опционально)</label>
+                  <div>
+                    <label className="text-sm font-bold mb-2 block flex items-center gap-2">
+                      <Icon name="Users" size={16} />
+                      Команда (опционально)
+                    </label>
                     <Input 
                       placeholder="Team Disaster"
                       value={formData.team}
@@ -248,256 +191,19 @@ const Index = () => {
         </div>
       </section>
 
-      <section id="tournaments" className="relative z-10 py-20">
-        <div ref={tournamentAnimation.ref} className={`container mx-auto px-4 transition-all duration-700 ${tournamentAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-          <div className="text-center mb-12">
-            <h3 className="text-4xl font-black mb-4 text-white">Турнирная сетка</h3>
-            <p className="text-muted-foreground">Следи за ходом соревнований в реальном времени</p>
-          </div>
+      <TournamentSection 
+        animationRef={tournamentAnimation.ref}
+        isVisible={tournamentAnimation.isVisible}
+        mockMatches={mockMatches}
+      />
 
-          <Tabs defaultValue="bracket" className="max-w-6xl mx-auto">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="bracket" className="font-bold">
-                <Icon name="GitBranch" className="mr-2" size={18} />
-                Сетка
-              </TabsTrigger>
-              <TabsTrigger value="matches" className="font-bold">
-                <Icon name="Swords" className="mr-2" size={18} />
-                Матчи
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="bracket" className="space-y-6">
-              <div className="grid gap-4">
-                {mockMatches.map((match) => (
-                  <Card key={match.id} className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] transition-all duration-300 group">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <Badge className="mb-2 bg-secondary/20 text-secondary border-secondary/50">
-                            {match.round}
-                          </Badge>
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded clip-corner flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
-                                {match.player1[0]}
-                              </div>
-                              <span className="font-bold text-lg group-hover:text-primary transition-colors">{match.player1}</span>
-                            </div>
-                            {match.score1 !== undefined && (
-                              <span className="text-2xl font-black text-primary">{match.score1}</span>
-                            )}
-                          </div>
-                          <div className="my-3 flex items-center gap-2">
-                            <div className="flex-1 h-px bg-border"></div>
-                            <span className="text-xs text-muted-foreground uppercase px-2">VS</span>
-                            <div className="flex-1 h-px bg-border"></div>
-                          </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded clip-corner flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
-                                {match.player2[0]}
-                              </div>
-                              <span className="font-bold text-lg group-hover:text-accent transition-colors">{match.player2}</span>
-                            </div>
-                            {match.score2 !== undefined && (
-                              <span className="text-2xl font-black text-accent">{match.score2}</span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="ml-6">
-                          {match.status === 'live' && (
-                            <Badge className="bg-red-500 text-white border-0 animate-pulse">
-                              <Icon name="Radio" className="mr-1" size={14} />
-                              LIVE
-                            </Badge>
-                          )}
-                          {match.status === 'upcoming' && (
-                            <Badge variant="outline" className="border-muted-foreground/50">
-                              <Icon name="Clock" className="mr-1" size={14} />
-                              Скоро
-                            </Badge>
-                          )}
-                          {match.status === 'completed' && (
-                            <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
-                              <Icon name="CheckCircle" className="mr-1" size={14} />
-                              Завершен
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="matches" className="text-center text-muted-foreground py-12">
-              <Icon name="Calendar" className="mx-auto mb-4 text-primary" size={48} />
-              <p className="text-lg">Расписание матчей появится после завершения регистрации</p>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </section>
+      <RatingsSection 
+        animationRef={ratingsAnimation.ref}
+        isVisible={ratingsAnimation.isVisible}
+        mockPlayers={mockPlayers}
+      />
 
-      <section id="ratings" className="relative z-10 py-20 bg-card/30 backdrop-blur-sm">
-        <div ref={ratingsAnimation.ref} className={`container mx-auto px-4 transition-all duration-700 ${ratingsAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-          <div className="text-center mb-12">
-            <h3 className="text-4xl font-black mb-4 text-white">Таблица рейтингов</h3>
-            <p className="text-muted-foreground">Лучшие игроки текущего сезона</p>
-          </div>
-
-          <Card className="max-w-6xl mx-auto border-primary/30 bg-card/80 backdrop-blur neon-border">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-primary/30 bg-primary/5">
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Место</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">Игрок</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Побед</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Поражений</th>
-                      <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Винрейт</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockPlayers.map((player, index) => (
-                      <tr 
-                        key={player.id} 
-                        className="border-b border-border/50 hover:bg-primary/10 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            {index < 3 ? (
-                              <div className={`w-8 h-8 rounded clip-corner flex items-center justify-center font-black ${
-                                index === 0 ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' :
-                                index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400' :
-                                'bg-gradient-to-br from-orange-600 to-orange-700'
-                              }`}>
-                                {player.rank}
-                              </div>
-                            ) : (
-                              <span className="w-8 text-center font-bold text-muted-foreground">{player.rank}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl group-hover:scale-110 transition-transform">{player.avatar}</span>
-                            <span className="font-bold text-lg group-hover:text-primary transition-colors">{player.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="font-bold text-green-400">{player.wins}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="font-bold text-red-400">{player.losses}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Badge className={`font-bold ${
-                            player.winRate >= 80 ? 'bg-green-500/20 text-green-400 border-green-500/50' :
-                            player.winRate >= 70 ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' :
-                            'bg-gray-500/20 text-gray-400 border-gray-500/50'
-                          }`}>
-                            {player.winRate}%
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <section id="rules" className="relative z-10 py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h3 className="text-4xl font-black mb-4 text-white">Правила турнира</h3>
-            <p className="text-muted-foreground">Ознакомьтесь с регламентом перед участием</p>
-          </div>
-
-          <div className="max-w-4xl mx-auto grid gap-6">
-            <Card className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary/60 transition-all">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Icon name="Users" className="text-primary" size={24} />
-                  Участие
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-muted-foreground">
-                <p>• Регистрация обязательна через форму на сайте</p>
-                <p>• Возраст участников: от 16 лет</p>
-                <p>• Обязательное наличие Discord для связи</p>
-                <p>• Один игрок = одна заявка</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary/60 transition-all">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Icon name="Trophy" className="text-secondary" size={24} />
-                  Формат турнира
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-muted-foreground">
-                <p>• Система: одиночная сетка с выбыванием</p>
-                <p>• Режим игры: 1v1 дуэль</p>
-                <p>• Карта: Криминальная Россия (стандартная)</p>
-                <p>• Время матча: до 3 побед (Best of 5)</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary/60 transition-all">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Icon name="Ban" className="text-destructive" size={24} />
-                  Запреты и ограничения
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-muted-foreground">
-                <p>• Читы и модификации: строгий запрет (дисквалификация)</p>
-                <p>• Токсичное поведение: предупреждение/бан</p>
-                <p>• Запрещенное оружие: RPG, минигун</p>
-                <p>• Сговор и подставы: дисквалификация обоих участников</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary/60 transition-all">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Icon name="Award" className="text-accent" size={24} />
-                  Призовой фонд
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-muted-foreground">
-                <p>🥇 1 место: 50 000₽ + звание чемпиона</p>
-                <p>🥈 2 место: 25 000₽</p>
-                <p>🥉 3 место: 15 000₽</p>
-                <p>• Выплаты в течение 7 дней после финала</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary/60 transition-all">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Icon name="Clock" className="text-primary" size={24} />
-                  Расписание
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-muted-foreground">
-                <p>• Регистрация: до 31 декабря 2024</p>
-                <p>• Отборочные: 5-10 января 2025</p>
-                <p>• Плей-офф: 15-20 января 2025</p>
-                <p>• Финал: 25 января 2025 (прямой эфир)</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
+      <RulesSection />
 
       <footer className="relative z-10 border-t border-primary/20 bg-background/50 backdrop-blur-xl py-12">
         <div className="container mx-auto px-4">
@@ -509,33 +215,34 @@ const Index = () => {
               </p>
             </div>
             <div>
-              <h4 className="font-bold text-lg mb-4 text-white">Ссылки</h4>
+              <h4 className="font-bold text-lg mb-4 text-white">Быстрые ссылки</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">Правила турниров</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">FAQ</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Контакты</a></li>
+                <li><a href="#tournaments" className="hover:text-primary transition-colors">Турниры</a></li>
+                <li><a href="#register" className="hover:text-primary transition-colors">Регистрация</a></li>
+                <li><a href="#ratings" className="hover:text-primary transition-colors">Рейтинг</a></li>
+                <li><a href="#rules" className="hover:text-primary transition-colors">Правила</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-lg mb-4 text-white">Социальные сети</h4>
-              <div className="flex gap-3">
-                <Button size="icon" variant="outline" className="border-primary/30 hover:bg-primary/10">
-                  <Icon name="MessageCircle" size={20} />
-                </Button>
-                <Button size="icon" variant="outline" className="border-primary/30 hover:bg-primary/10">
-                  <Icon name="Youtube" size={20} />
-                </Button>
-                <Button size="icon" variant="outline" className="border-primary/30 hover:bg-primary/10">
-                  <Icon name="Twitch" size={20} />
-                </Button>
-              </div>
+              <h4 className="font-bold text-lg mb-4 text-white">Связь</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Icon name="MessageSquare" size={16} />
+                  Discord: disaster#1234
+                </li>
+                <li className="flex items-center gap-2">
+                  <Icon name="Mail" size={16} />
+                  info@disaster.gg
+                </li>
+              </ul>
             </div>
           </div>
-          <div className="text-center text-sm text-muted-foreground pt-8 border-t border-border/50">
-            © 2025 DISASTER E2SPORT. Все права защищены.
+          <div className="border-t border-primary/20 pt-8 text-center text-sm text-muted-foreground">
+            <p>© 2025 DISASTER ESPORTS. Все права защищены.</p>
           </div>
         </div>
       </footer>
+
       <Toaster />
     </div>
   );
