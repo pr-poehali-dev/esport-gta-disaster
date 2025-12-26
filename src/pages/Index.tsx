@@ -219,7 +219,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
-              <h4 className="font-bold text-lg mb-4 text-white">DISASTER E2SPORT</h4>
+              <h4 className="font-bold text-lg mb-4 text-white">DISASTER ESPORT</h4>
               <p className="text-sm text-muted-foreground">
                 Киберспортивная организация, проводящая профессиональные турниры по ГТА Криминальная Россия.
               </p>
