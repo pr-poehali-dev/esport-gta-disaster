@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
-import confetti from 'canvas-confetti';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { playAchievementSound } from '@/utils/sounds';
+
+const loadConfetti = async () => {
+  const module = await import('canvas-confetti');
+  return module.default;
+};
 
 interface AchievementUnlockModalProps {
   isOpen: boolean;
@@ -52,7 +56,9 @@ const rarityLabels = {
   legendary: 'Легендарное'
 };
 
-const triggerConfetti = (rarity: 'common' | 'rare' | 'epic' | 'legendary') => {
+const triggerConfetti = async (rarity: 'common' | 'rare' | 'epic' | 'legendary') => {
+  const confetti = await loadConfetti();
+  
   const colors = {
     common: ['#9CA3AF', '#6B7280'],
     rare: ['#3B82F6', '#2563EB', '#60A5FA'],
