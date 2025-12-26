@@ -175,7 +175,7 @@ const StreamSection = () => {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-sm">RAZOR_PRO</span>
+                          <span className="font-bold text-sm">DIEGO PRO</span>
                           <span className="text-xs text-muted-foreground">2 мин назад</span>
                         </div>
                         <p className="text-sm text-muted-foreground">Этот матч был невероятным! 🔥</p>
