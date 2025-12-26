@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds';
+import { authService } from '@/lib/auth';
 
 interface Player {
   id: number;
@@ -32,6 +34,7 @@ interface Match {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nickname: '',
     discord: '',
@@ -39,6 +42,7 @@ const Index = () => {
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
+  const isAuthenticated = authService.isAuthenticated();
 
   const heroAnimation = useScrollAnimation();
   const registerAnimation = useScrollAnimation();
@@ -101,11 +105,36 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground uppercase tracking-widest">ГТА Криминальная Россия</p>
               </div>
             </div>
-            <nav className="hidden md:flex gap-6">
+            <nav className="hidden md:flex gap-6 items-center">
               <a href="#tournaments" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Турниры</a>
               <a href="#register" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Регистрация</a>
               <a href="#ratings" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Рейтинг</a>
               <a href="#rules" onMouseEnter={playHoverSound} onClick={playClickSound} className="text-sm font-medium hover:text-primary transition-colors">Правила</a>
+              {isAuthenticated ? (
+                <Button 
+                  onClick={() => {
+                    playClickSound();
+                    navigate('/profile');
+                  }}
+                  onMouseEnter={playHoverSound}
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold"
+                >
+                  <Icon name="User" className="mr-2" size={18} />
+                  Профиль
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => {
+                    playClickSound();
+                    navigate('/auth');
+                  }}
+                  onMouseEnter={playHoverSound}
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold"
+                >
+                  <Icon name="LogIn" className="mr-2" size={18} />
+                  Войти
+                </Button>
+              )}
             </nav>
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
