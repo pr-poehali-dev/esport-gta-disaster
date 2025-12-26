@@ -49,7 +49,7 @@ const LiveCounter = ({ targetCount, label, icon, color = 'primary' }: LiveCounte
             <Icon name={icon} className="text-white" size={32} />
           </div>
           <div className="flex-1">
-            <div className={`text-4xl font-black bg-gradient-to-r ${colorClasses[color]} bg-clip-text text-transparent`}>+100</div>
+            <div className={`text-4xl font-black bg-gradient-to-r ${colorClasses[color]} bg-clip-text text-transparent`}>+3000</div>
             <div className="text-sm text-muted-foreground font-bold uppercase tracking-wider">
               {label}
             </div>
