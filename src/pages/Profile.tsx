@@ -11,6 +11,9 @@ import { playClickSound, playHoverSound, playSuccessSound } from '@/utils/sounds
 import AchievementBadge from '@/components/AchievementBadge';
 import OrganizerBadge from '@/components/OrganizerBadge';
 import CreateTeamDialog from '@/components/CreateTeamDialog';
+import TeamManagement from '@/components/TeamManagement';
+import TournamentRegistrations from '@/components/TournamentRegistrations';
+import ModerationPanel from '@/components/ModerationPanel';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -27,6 +30,7 @@ const Profile = () => {
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [registrations, setRegistrations] = useState<any[]>([]);
+  const [showTeamManagement, setShowTeamManagement] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -452,10 +456,38 @@ const Profile = () => {
                             Капитан: {team.captain_nickname}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Участников: {team.members_count || 1}
+                            Игроков в составе: {team.roster?.length || 0}/7
                           </div>
                         </div>
+                        <Button
+                          onClick={() => {
+                            playClickSound();
+                            setShowTeamManagement(!showTeamManagement);
+                          }}
+                          onMouseEnter={playHoverSound}
+                          variant="outline"
+                          className="border-primary/30"
+                        >
+                          <Icon name="Settings" size={18} className="mr-2" />
+                          {showTeamManagement ? 'Скрыть' : 'Управление'}
+                        </Button>
                       </div>
+                      
+                      {showTeamManagement && (
+                        <div className="mt-4">
+                          <TeamManagement 
+                            teamId={team.id} 
+                            onUpdate={() => {
+                              loadTeam();
+                              toast({
+                                title: "✅ Состав обновлен!",
+                                description: "Изменения успешно сохранены",
+                                className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
+                              });
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-12 text-muted-foreground">
@@ -467,14 +499,14 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border-primary/30 bg-card/80 backdrop-blur">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Icon name="Trophy" className="text-secondary" size={24} />
-                      Мои турниры
-                    </div>
-                    {team && (
+              {team && (
+                <Card className="border-primary/30 bg-card/80 backdrop-blur">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Icon name="Trophy" className="text-secondary" size={24} />
+                        Регистрация на турнир
+                      </div>
                       <Button 
                         onClick={() => handleRegisterTournament('Winter Championship 2025')}
                         onMouseEnter={playHoverSound}
@@ -483,41 +515,54 @@ const Profile = () => {
                         <Icon name="Plus" size={18} className="mr-2" />
                         Зарегистрироваться
                       </Button>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!team ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Icon name="Trophy" size={48} className="mx-auto mb-4 opacity-30" />
-                      <p>Создайте команду, чтобы участвовать в турнирах</p>
-                    </div>
-                  ) : registrations.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Icon name="Trophy" size={48} className="mx-auto mb-4 opacity-30" />
-                      <p>Вы еще не зарегистрированы на турниры</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {registrations.map((reg) => (
-                        <div key={reg.id} className="p-4 rounded-lg border border-primary/20 bg-card/50">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-bold">{reg.tournament_name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Команда: {reg.team_name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {registrations.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p className="text-sm">Зарегистрируйте команду на турнир, чтобы участвовать</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {registrations.map((reg) => (
+                          <div key={reg.id} className="p-4 rounded-lg border border-primary/20 bg-card/50">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-bold">{reg.tournament_name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Команда: {reg.team_name}
+                                </div>
                               </div>
+                              <Badge className={
+                                reg.moderation_status === 'pending' 
+                                  ? 'bg-yellow-500/20 text-yellow-500' 
+                                  : reg.moderation_status === 'approved'
+                                  ? 'bg-green-500/20 text-green-500'
+                                  : 'bg-red-500/20 text-red-500'
+                              }>
+                                {reg.moderation_status === 'pending' && '⏳ На рассмотрении'}
+                                {reg.moderation_status === 'approved' && '✅ Одобрено'}
+                                {reg.moderation_status === 'rejected' && '❌ Отклонено'}
+                              </Badge>
                             </div>
-                            <Badge className={reg.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}>
-                              {reg.status === 'pending' ? 'На рассмотрении' : 'Подтверждено'}
-                            </Badge>
+                            {reg.moderation_comment && (
+                              <div className="mt-2 p-2 rounded bg-muted/50 text-xs text-muted-foreground">
+                                {reg.moderation_comment}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              <TournamentRegistrations tournamentName="Winter Championship 2025" />
+
+              {user?.is_organizer && (
+                <ModerationPanel tournamentName="Winter Championship 2025" />
+              )}
             </div>
           </div>
         </div>

@@ -4,8 +4,10 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 def handler(event: dict, context) -> dict:
-    '''API для управления командами: создание, получение, обновление и удаление команд'''
+    '''API для управления командами: создание, редактирование, управление составом (5 основных + 2 запасных игрока)'''
     method = event.get('httpMethod', 'GET')
+    query_params = event.get('queryStringParameters', {}) or {}
+    action = query_params.get('action', '')
     
     if method == 'OPTIONS':
         return {
@@ -30,7 +32,13 @@ def handler(event: dict, context) -> dict:
     conn = psycopg2.connect(dsn)
     
     try:
-        if method == 'GET':
+        if action == 'roster':
+            if method == 'PUT':
+                body = json.loads(event.get('body', '{}'))
+                return update_roster(conn, user_id, body)
+            elif method == 'GET':
+                return get_roster(conn, user_id)
+        elif method == 'GET':
             return get_user_team(conn, user_id)
         elif method == 'POST':
             body = json.loads(event.get('body', '{}'))
@@ -54,8 +62,7 @@ def get_user_team(conn, user_id: str) -> dict:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute('''
             SELECT t.id, t.name, t.logo_url, t.captain_id, t.created_at,
-                   u.nickname as captain_nickname,
-                   (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) as members_count
+                   u.nickname as captain_nickname
             FROM teams t
             JOIN users u ON t.captain_id = u.id
             LEFT JOIN team_members tm ON t.id = tm.team_id
@@ -73,27 +80,143 @@ def get_user_team(conn, user_id: str) -> dict:
             }
         
         cur.execute('''
-            SELECT u.id, u.nickname, u.avatar_url, tm.joined_at
-            FROM team_members tm
-            JOIN users u ON tm.user_id = u.id
-            WHERE tm.team_id = %s
-            ORDER BY tm.joined_at
+            SELECT id, player_nickname, player_role, joined_at
+            FROM team_members
+            WHERE team_id = %s
+            ORDER BY 
+                CASE player_role WHEN 'main' THEN 1 WHEN 'reserve' THEN 2 END,
+                joined_at
         ''', (team['id'],))
         
-        members = cur.fetchall()
+        roster = cur.fetchall()
         
         result = dict(team)
-        result['members'] = [dict(m) for m in members]
+        result['roster'] = [dict(r) for r in roster]
         result['created_at'] = result['created_at'].isoformat() if result['created_at'] else None
         
-        for member in result['members']:
-            if member['joined_at']:
-                member['joined_at'] = member['joined_at'].isoformat()
+        for player in result['roster']:
+            if player['joined_at']:
+                player['joined_at'] = player['joined_at'].isoformat()
         
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps(result)
+        }
+
+
+def get_roster(conn, user_id: str) -> dict:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT id FROM teams WHERE captain_id = %s', (user_id,))
+        team = cur.fetchone()
+        
+        if not team:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Team not found'})
+            }
+        
+        cur.execute('''
+            SELECT id, player_nickname, player_role, joined_at
+            FROM team_members
+            WHERE team_id = %s
+            ORDER BY 
+                CASE player_role WHEN 'main' THEN 1 WHEN 'reserve' THEN 2 END,
+                joined_at
+        ''', (team['id'],))
+        
+        roster = cur.fetchall()
+        result = [dict(r) for r in roster]
+        
+        for player in result:
+            if player['joined_at']:
+                player['joined_at'] = player['joined_at'].isoformat()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps(result)
+        }
+
+
+def update_roster(conn, user_id: str, data: dict) -> dict:
+    main_players = data.get('main_players', [])
+    reserve_players = data.get('reserve_players', [])
+    
+    if len(main_players) > 5:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Maximum 5 main players allowed'})
+        }
+    
+    if len(reserve_players) > 2:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Maximum 2 reserve players allowed'})
+        }
+    
+    all_nicknames = [p.strip().lower() for p in main_players + reserve_players if p and p.strip()]
+    if len(all_nicknames) != len(set(all_nicknames)):
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Duplicate nicknames in roster'})
+        }
+    
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT id FROM teams WHERE captain_id = %s', (user_id,))
+        team = cur.fetchone()
+        
+        if not team:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Team not found or you are not the captain'})
+            }
+        
+        for nickname in all_nicknames:
+            if nickname:
+                cur.execute('''
+                    SELECT u.id, u.nickname 
+                    FROM users u
+                    WHERE LOWER(u.nickname) = %s
+                ''', (nickname,))
+                existing_user = cur.fetchone()
+                
+                if existing_user:
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({
+                            'error': f'Nickname "{existing_user["nickname"]}" is already registered by another user'
+                        })
+                    }
+        
+        cur.execute('DELETE FROM team_members WHERE team_id = %s', (team['id'],))
+        
+        for nickname in main_players:
+            if nickname and nickname.strip():
+                cur.execute('''
+                    INSERT INTO team_members (team_id, player_nickname, player_role)
+                    VALUES (%s, %s, %s)
+                ''', (team['id'], nickname.strip(), 'main'))
+        
+        for nickname in reserve_players:
+            if nickname and nickname.strip():
+                cur.execute('''
+                    INSERT INTO team_members (team_id, player_nickname, player_role)
+                    VALUES (%s, %s, %s)
+                ''', (team['id'], nickname.strip(), 'reserve'))
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'message': 'Roster updated successfully'})
         }
 
 

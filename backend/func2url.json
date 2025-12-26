@@ -1,4 +1,5 @@
 {
+  "moderation": "https://functions.poehali.dev/5b647bf2-2cba-46c5-8fb5-57bd855a039d",
   "teams": "https://functions.poehali.dev/c8cfc7ef-3e1a-4fa4-ad8e-70777d50b4f0",
   "register": "https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53",
   "achievements": "https://functions.poehali.dev/df857b2d-d645-49d0-8575-b3a414066a50",

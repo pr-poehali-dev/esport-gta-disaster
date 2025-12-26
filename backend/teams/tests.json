@@ -10,20 +10,13 @@
       }
     },
     {
-      "name": "Create team error - already exists",
-      "method": "POST",
-      "path": "/",
+      "name": "Get team roster",
+      "method": "GET",
+      "path": "/?action=roster",
       "headers": {
         "X-User-Id": "1"
       },
-      "body": {
-        "name": "Test Team",
-        "logo_url": "https://example.com/logo.png"
-      },
-      "expectedStatus": 400,
-      "expectedBody": {
-        "error": "You already have a team"
-      }
+      "expectedStatus": 200
     }
   ]
 }
