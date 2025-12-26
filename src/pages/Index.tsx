@@ -113,10 +113,7 @@ const Index = () => {
               Присоединяйся к крупнейшему турниру по ГТА Криминальная Россия. Докажи, что ты лучший на улицах виртуального мира.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold clip-corner px-8">
-                <Icon name="Trophy" className="mr-2" size={20} />
-                Призовой фонд: 90 000₽
-              </Button>
+              <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold clip-corner px-8">ЧЕСТНЫЕ ТУРНИРЫ</Button>
               <Button size="lg" variant="outline" className="border-primary/30 hover:bg-primary/10 font-bold">
                 <Icon name="Users" className="mr-2" size={20} />
                 128+ участников
