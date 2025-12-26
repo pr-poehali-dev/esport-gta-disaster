@@ -107,7 +107,7 @@ const TournamentGallery = () => {
           <div className="inline-flex items-center gap-3 bg-card/50 backdrop-blur border border-primary/30 rounded-full px-6 py-3">
             <Icon name="Star" className="text-primary" size={20} />
             <span className="text-sm font-bold">
-              За всё время проведено <span className="text-primary">12+ турниров</span> с общим призовым фондом <span className="text-secondary">500 000₽+</span>
+              За всё время проведено <span className="text-primary">30+ турниров</span> с общим призовым фондом <span className="text-secondary">500 000₽+</span>
             </span>
           </div>
         </div>
