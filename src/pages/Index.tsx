@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 interface Player {
   id: number;
@@ -35,6 +37,7 @@ const Index = () => {
     team: ''
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
 
   const heroAnimation = useScrollAnimation();
   const registerAnimation = useScrollAnimation();
@@ -58,7 +61,25 @@ const Index = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.nickname || !formData.discord) {
+      toast({
+        title: "Ошибка регистрации",
+        description: "Заполните обязательные поля: никнейм и Discord",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     console.log('Registration:', formData);
+    
+    toast({
+      title: "✅ Регистрация успешна!",
+      description: `Добро пожаловать в турнир, ${formData.nickname}! Проверьте Discord для подтверждения.`,
+      className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
+    });
+    
+    setFormData({ nickname: '', discord: '', team: '' });
   };
 
   return (
@@ -214,7 +235,7 @@ const Index = () => {
             <TabsContent value="bracket" className="space-y-6">
               <div className="grid gap-4">
                 {mockMatches.map((match) => (
-                  <Card key={match.id} className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary/60 transition-all">
+                  <Card key={match.id} className="border-primary/30 bg-card/80 backdrop-blur hover:border-primary hover:shadow-lg hover:shadow-primary/20 hover:scale-[1.02] transition-all duration-300 group">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -223,10 +244,10 @@ const Index = () => {
                           </Badge>
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3 flex-1">
-                              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded clip-corner flex items-center justify-center font-bold">
+                              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded clip-corner flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                                 {match.player1[0]}
                               </div>
-                              <span className="font-bold text-lg">{match.player1}</span>
+                              <span className="font-bold text-lg group-hover:text-primary transition-colors">{match.player1}</span>
                             </div>
                             {match.score1 !== undefined && (
                               <span className="text-2xl font-black text-primary">{match.score1}</span>
@@ -239,10 +260,10 @@ const Index = () => {
                           </div>
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3 flex-1">
-                              <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded clip-corner flex items-center justify-center font-bold">
+                              <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded clip-corner flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                                 {match.player2[0]}
                               </div>
-                              <span className="font-bold text-lg">{match.player2}</span>
+                              <span className="font-bold text-lg group-hover:text-accent transition-colors">{match.player2}</span>
                             </div>
                             {match.score2 !== undefined && (
                               <span className="text-2xl font-black text-accent">{match.score2}</span>
@@ -309,7 +330,7 @@ const Index = () => {
                     {mockPlayers.map((player, index) => (
                       <tr 
                         key={player.id} 
-                        className="border-b border-border/50 hover:bg-primary/5 transition-colors"
+                        className="border-b border-border/50 hover:bg-primary/10 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -328,8 +349,8 @@ const Index = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">{player.avatar}</span>
-                            <span className="font-bold text-lg">{player.name}</span>
+                            <span className="text-2xl group-hover:scale-110 transition-transform">{player.avatar}</span>
+                            <span className="font-bold text-lg group-hover:text-primary transition-colors">{player.name}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
@@ -394,6 +415,7 @@ const Index = () => {
           </div>
         </div>
       </footer>
+      <Toaster />
     </div>
   );
 };
