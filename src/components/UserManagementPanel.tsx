@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -150,6 +150,30 @@ export default function UserManagementPanel() {
     'Главный администратор'
   ];
 
+  const statistics = useMemo(() => {
+    const totalUsers = users.length;
+    const organizers = users.filter(u => u.is_organizer).length;
+    const totalPoints = users.reduce((sum, u) => sum + (u.achievement_points || 0), 0);
+    const avgPoints = totalUsers > 0 ? Math.round(totalPoints / totalUsers) : 0;
+    
+    const statusCounts = statusOptions.reduce((acc, status) => {
+      acc[status] = users.filter(u => u.user_status === status).length;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
+    const newUsers = users.filter(u => new Date(u.created_at) >= last7Days).length;
+
+    return {
+      totalUsers,
+      organizers,
+      avgPoints,
+      statusCounts,
+      newUsers
+    };
+  }, [users]);
+
   if (loading) {
     return (
       <Card className="border-primary/30 bg-card/80 backdrop-blur">
@@ -162,6 +186,76 @@ export default function UserManagementPanel() {
 
   return (
     <>
+      <Card className="border-primary/30 bg-card/80 backdrop-blur mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <Icon name="BarChart" className="text-primary" size={24} />
+            Статистика платформы
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="Users" className="text-primary" size={20} />
+                <div className="text-sm text-muted-foreground">Всего пользователей</div>
+              </div>
+              <div className="text-3xl font-black text-white">{statistics.totalUsers}</div>
+              {statistics.newUsers > 0 && (
+                <div className="text-xs text-green-400 mt-1">
+                  +{statistics.newUsers} за 7 дней
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 rounded-lg bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border border-yellow-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="Crown" className="text-yellow-500" size={20} />
+                <div className="text-sm text-muted-foreground">Организаторов</div>
+              </div>
+              <div className="text-3xl font-black text-white">{statistics.organizers}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {statistics.totalUsers > 0 ? Math.round((statistics.organizers / statistics.totalUsers) * 100) : 0}% от всех
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-gradient-to-br from-secondary/20 to-secondary/5 border border-secondary/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="Star" className="text-secondary" size={20} />
+                <div className="text-sm text-muted-foreground">Средние очки</div>
+              </div>
+              <div className="text-3xl font-black text-white">{statistics.avgPoints}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                на игрока
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="Trophy" className="text-accent" size={20} />
+                <div className="text-sm text-muted-foreground">Игроков</div>
+              </div>
+              <div className="text-3xl font-black text-white">{statistics.statusCounts['Игрок'] || 0}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                активных участников
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 rounded-lg bg-background/50 border border-primary/20">
+            <div className="text-sm font-bold mb-3">Распределение по статусам:</div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {statusOptions.map(status => (
+                <div key={status} className="text-center">
+                  <div className="text-2xl font-black text-primary">{statistics.statusCounts[status] || 0}</div>
+                  <div className="text-xs text-muted-foreground">{status}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-primary/30 bg-card/80 backdrop-blur">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
