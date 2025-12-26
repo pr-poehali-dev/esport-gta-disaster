@@ -249,6 +249,23 @@ def create_team(conn, user_id: str, data: dict) -> dict:
         ''', (name, logo_url, user_id))
         
         team = cur.fetchone()
+        
+        cur.execute('''
+            INSERT INTO user_achievements (user_id, achievement_code) 
+            VALUES (%s, 'team_captain')
+            ON CONFLICT (user_id, achievement_code) DO NOTHING
+        ''', (user_id,))
+        
+        cur.execute('''
+            UPDATE users 
+            SET achievement_points = achievement_points + 30
+            WHERE id = %s 
+            AND NOT EXISTS (
+                SELECT 1 FROM user_achievements 
+                WHERE user_id = %s AND achievement_code = 'team_captain'
+            )
+        ''', (user_id, user_id))
+        
         conn.commit()
         
         result = dict(team)

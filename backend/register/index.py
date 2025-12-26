@@ -119,10 +119,23 @@ def register_team(conn, user_id: str, data: dict) -> dict:
         registration = cur.fetchone()
         
         cur.execute('''
-            UPDATE users 
-            SET user_status = 'Игрок', updated_at = NOW()
-            WHERE id = %s AND user_status = 'Новичок'
+            INSERT INTO user_achievements (user_id, achievement_code) 
+            VALUES (%s, 'first_tournament')
+            ON CONFLICT (user_id, achievement_code) DO NOTHING
         ''', (user_id,))
+        
+        cur.execute('''
+            UPDATE users 
+            SET user_status = 'Игрок', 
+                achievement_points = achievement_points + 20,
+                updated_at = NOW()
+            WHERE id = %s 
+            AND user_status = 'Новичок'
+            AND NOT EXISTS (
+                SELECT 1 FROM user_achievements 
+                WHERE user_id = %s AND achievement_code = 'first_tournament'
+            )
+        ''', (user_id, user_id))
         
         conn.commit()
         

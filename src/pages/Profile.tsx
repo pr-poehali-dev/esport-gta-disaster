@@ -373,10 +373,7 @@ const Profile = () => {
                     <div className="flex items-center gap-4">
                       <Badge className="bg-primary/10 text-primary border-primary/30">
                         <Icon name="Star" size={14} className="mr-1" />
-                        245 очков
-                      </Badge>
-                      <Badge className="bg-secondary/10 text-secondary border-secondary/30">
-                        4/10 получено
+                        {(user as any).achievement_points || 0} очков
                       </Badge>
                     </div>
                   </CardTitle>
@@ -384,43 +381,49 @@ const Profile = () => {
                 <CardContent>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <AchievementBadge
-                      icon="⚔️"
-                      name="Первая кровь"
-                      description="Одержи свою первую победу в турнире"
+                      icon="👋"
+                      name="Добро пожаловать!"
+                      description="Зарегистрировался на платформе"
                       rarity="common"
-                      unlocked={true}
+                      unlocked={user.user_status !== undefined}
                       points={10}
-                      unlockedAt="2025-01-15T10:30:00Z"
-                      size="sm"
-                    />
-                    <AchievementBadge
-                      icon="🔥"
-                      name="Неудержимый"
-                      description="Одержи 5 побед подряд"
-                      rarity="rare"
-                      unlocked={true}
-                      points={50}
-                      unlockedAt="2025-01-18T14:20:00Z"
-                      size="sm"
-                    />
-                    <AchievementBadge
-                      icon="💎"
-                      name="Безупречная игра"
-                      description="Выиграй матч со счетом 3:0"
-                      rarity="rare"
-                      unlocked={true}
-                      points={30}
-                      unlockedAt="2025-01-16T16:45:00Z"
+                      unlockedAt={user.created_at}
                       size="sm"
                     />
                     <AchievementBadge
                       icon="🎮"
                       name="Первый турнир"
-                      description="Зарегистрируйся на свой первый турнир"
+                      description="Зарегистрировался на первый турнир"
                       rarity="common"
-                      unlocked={true}
-                      points={5}
-                      unlockedAt="2025-01-10T09:00:00Z"
+                      unlocked={user.user_status === 'Игрок' || registrations.length > 0}
+                      points={20}
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="⚔️"
+                      name="Капитан команды"
+                      description="Создал свою команду"
+                      rarity="rare"
+                      unlocked={!!team}
+                      points={30}
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="🔥"
+                      name="Первая кровь"
+                      description="Одержи свою первую победу в турнире"
+                      rarity="rare"
+                      unlocked={false}
+                      points={50}
+                      size="sm"
+                    />
+                    <AchievementBadge
+                      icon="💪"
+                      name="Неудержимый"
+                      description="Одержи 5 побед подряд"
+                      rarity="epic"
+                      unlocked={false}
+                      points={100}
                       size="sm"
                     />
                     <AchievementBadge
@@ -429,20 +432,7 @@ const Profile = () => {
                       description="Одержи 10 побед подряд"
                       rarity="epic"
                       unlocked={false}
-                      progress={7}
-                      maxProgress={10}
-                      points={100}
-                      size="sm"
-                    />
-                    <AchievementBadge
-                      icon="👑"
-                      name="Король камбэков"
-                      description="Выиграй матч, проигрывая 0:2"
-                      rarity="epic"
-                      unlocked={false}
-                      progress={0}
-                      maxProgress={1}
-                      points={75}
+                      points={150}
                       size="sm"
                     />
                   </div>

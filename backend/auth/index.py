@@ -105,18 +105,26 @@ def register_user(event: dict) -> dict:
             
             password_hash = hash_password(password)
             cur.execute(
-                """INSERT INTO users (email, password_hash, nickname, discord, team, user_status) 
-                   VALUES (%s, %s, %s, %s, %s, 'Новичок') RETURNING id, email, nickname, discord, team, role, is_organizer, user_status, created_at""",
+                """INSERT INTO users (email, password_hash, nickname, discord, team, user_status, achievement_points) 
+                   VALUES (%s, %s, %s, %s, %s, 'Новичок', 0) RETURNING id, email, nickname, discord, team, role, is_organizer, user_status, achievement_points, created_at""",
                 (email, password_hash, nickname, discord, team)
             )
             user = cur.fetchone()
+            user_id = user['id']
+            
+            cur.execute(
+                """INSERT INTO user_achievements (user_id, achievement_code) 
+                   VALUES (%s, 'first_registration')""",
+                (user_id,)
+            )
+            
             conn.commit()
             
             session_token = generate_session_token()
             expires_at = datetime.now() + timedelta(days=30)
             cur.execute(
                 "INSERT INTO user_sessions (user_id, session_token, expires_at) VALUES (%s, %s, %s)",
-                (user['id'], session_token, expires_at)
+                (user_id, session_token, expires_at)
             )
             conn.commit()
             
@@ -150,7 +158,7 @@ def login_user(event: dict) -> dict:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             password_hash = hash_password(password)
             cur.execute(
-                "SELECT id, email, nickname, discord, team, role, is_organizer, user_status, created_at FROM users WHERE email = %s AND password_hash = %s",
+                "SELECT id, email, nickname, discord, team, role, is_organizer, user_status, achievement_points, created_at FROM users WHERE email = %s AND password_hash = %s",
                 (email, password_hash)
             )
             user = cur.fetchone()
@@ -224,7 +232,7 @@ def get_profile(event: dict) -> dict:
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """SELECT u.id, u.email, u.nickname, u.discord, u.team, u.avatar_url, u.role, u.is_organizer, u.user_status, u.created_at
+                """SELECT u.id, u.email, u.nickname, u.discord, u.team, u.avatar_url, u.role, u.is_organizer, u.user_status, u.achievement_points, u.created_at
                    FROM users u
                    JOIN user_sessions s ON u.id = s.user_id
                    WHERE s.session_token = %s AND s.expires_at > NOW()""",
@@ -309,7 +317,7 @@ def update_profile(event: dict) -> dict:
             updates.append("updated_at = NOW()")
             params.append(user_id)
             
-            query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s RETURNING id, email, nickname, discord, team, avatar_url, role, is_organizer, user_status, created_at"
+            query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s RETURNING id, email, nickname, discord, team, avatar_url, role, is_organizer, user_status, achievement_points, created_at"
             cur.execute(query, params)
             user = cur.fetchone()
             conn.commit()

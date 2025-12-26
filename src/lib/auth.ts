@@ -10,6 +10,7 @@ export interface User {
   role: string;
   is_organizer?: boolean;
   user_status?: string;
+  achievement_points?: number;
   created_at: string;
 }
 
