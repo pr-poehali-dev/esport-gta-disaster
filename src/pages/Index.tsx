@@ -94,7 +94,7 @@ const Index = () => {
                 <Icon name="Zap" className="text-white" size={28} />
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight neon-glow">DISASTER E2SPORT</h1>
+                <h1 className="text-2xl font-black tracking-tight neon-glow">DISASTER ESPORTS</h1>
                 <p className="text-xs text-muted-foreground uppercase tracking-widest">ГТА Криминальная Россия</p>
               </div>
             </div>
