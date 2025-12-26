@@ -2,6 +2,8 @@ import json
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import urllib.request
+import urllib.error
 
 def handler(event: dict, context) -> dict:
     '''API для модерации заявок на турниры: просмотр, одобрение и отклонение заявок команд'''
@@ -155,6 +157,26 @@ def moderate_registration(conn, moderator_id: str, data: dict) -> dict:
     
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute('''
+            SELECT tr.id, tr.tournament_name, tr.team_id,
+                   t.name as team_name, 
+                   u.nickname as captain_nickname,
+                   u.discord as captain_discord
+            FROM tournament_registrations tr
+            JOIN teams t ON tr.team_id = t.id
+            JOIN users u ON t.captain_id = u.id
+            WHERE tr.id = %s
+        ''', (registration_id,))
+        
+        reg_info = cur.fetchone()
+        
+        if not reg_info:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Registration not found'})
+            }
+        
+        cur.execute('''
             UPDATE tournament_registrations
             SET moderation_status = %s,
                 moderation_comment = %s,
@@ -165,18 +187,61 @@ def moderate_registration(conn, moderator_id: str, data: dict) -> dict:
         ''', (status, comment, moderator_id, registration_id))
         
         updated = cur.fetchone()
-        
-        if not updated:
-            return {
-                'statusCode': 404,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'error': 'Registration not found'})
-            }
-        
         conn.commit()
+        
+        send_discord_notification(
+            team_name=reg_info['team_name'],
+            captain_nickname=reg_info['captain_nickname'],
+            captain_discord=reg_info.get('captain_discord', ''),
+            tournament_name=reg_info['tournament_name'],
+            status=status,
+            comment=comment
+        )
         
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps(dict(updated))
         }
+
+
+def send_discord_notification(team_name: str, captain_nickname: str, captain_discord: str, 
+                             tournament_name: str, status: str, comment: str = ''):
+    webhook_url = os.environ.get('DISCORD_WEBHOOK_URL')
+    if not webhook_url:
+        return
+    
+    status_emoji = '✅' if status == 'approved' else '❌'
+    status_text = 'ОДОБРЕНА' if status == 'approved' else 'ОТКЛОНЕНА'
+    color = 3066993 if status == 'approved' else 15158332
+    
+    embed = {
+        'title': f'{status_emoji} Заявка {status_text}',
+        'description': f'Команда **{team_name}** на турнир **{tournament_name}**',
+        'color': color,
+        'fields': [
+            {'name': '👑 Капитан', 'value': captain_nickname, 'inline': True},
+        ],
+        'footer': {'text': 'DISASTER ESPORTS'},
+        'timestamp': None
+    }
+    
+    if captain_discord:
+        embed['fields'].append({'name': '💬 Discord', 'value': captain_discord, 'inline': True})
+    
+    if comment:
+        embed['fields'].append({'name': '📝 Комментарий', 'value': comment, 'inline': False})
+    
+    payload = {
+        'embeds': [embed]
+    }
+    
+    try:
+        req = urllib.request.Request(
+            webhook_url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except (urllib.error.URLError, Exception):
+        pass
