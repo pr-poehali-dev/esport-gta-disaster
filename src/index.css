@@ -122,4 +122,41 @@
       transform: translate(2px, 2px);
     }
   }
+
+  .logo-pulse {
+    animation: logo-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes logo-pulse {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(0 0 10px hsl(var(--neon-cyan)));
+    }
+    50% {
+      transform: scale(1.05) rotate(2deg);
+      filter: drop-shadow(0 0 20px hsl(var(--neon-cyan)))
+        drop-shadow(0 0 30px hsl(var(--neon-purple)));
+    }
+  }
+
+  .text-shine {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--neon-cyan)) 0%,
+      hsl(var(--neon-purple)) 50%,
+      hsl(var(--neon-cyan)) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: text-shine 3s linear infinite;
+  }
+
+  @keyframes text-shine {
+    to {
+      background-position: 200% center;
+    }
+  }
 }

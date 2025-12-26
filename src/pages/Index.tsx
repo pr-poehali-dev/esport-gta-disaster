@@ -90,11 +90,11 @@ const Index = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 bg-gradient-to-br from-primary via-secondary to-accent rounded clip-corner flex items-center justify-center">
+              <div className="h-12 w-12 bg-gradient-to-br from-primary via-secondary to-accent rounded clip-corner flex items-center justify-center logo-pulse">
                 <Icon name="Zap" className="text-white" size={28} />
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight neon-glow">DISASTER ESPORTS</h1>
+                <h1 className="text-2xl font-black tracking-tight text-shine">DISASTER ESPORTS</h1>
                 <p className="text-xs text-muted-foreground uppercase tracking-widest">ГТА Криминальная Россия</p>
               </div>
             </div>
