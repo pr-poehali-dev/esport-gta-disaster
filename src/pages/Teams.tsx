@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -9,99 +9,50 @@ interface Team {
   id: string;
   name: string;
   tag: string;
-  logo: string;
-  members: number;
+  logo_url: string | null;
+  member_count: number;
   wins: number;
   losses: number;
-  winRate: number;
+  win_rate: number;
   verified: boolean;
-  createdAt: string;
+  created_at: string;
+  description?: string;
 }
 
 export default function Teams() {
   const headerAnimation = useScrollAnimation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockTeams: Team[] = [
-    {
-      id: '1',
-      name: 'PHANTOM SQUAD',
-      tag: 'PHNTM',
-      logo: '🏆',
-      members: 5,
-      wins: 48,
-      losses: 12,
-      winRate: 80,
-      verified: true,
-      createdAt: '15 ноября 2024',
-    },
-    {
-      id: '2',
-      name: 'VORTEX GAMING',
-      tag: 'VRTX',
-      logo: '⚡',
-      members: 5,
-      wins: 42,
-      losses: 18,
-      winRate: 70,
-      verified: true,
-      createdAt: '20 ноября 2024',
-    },
-    {
-      id: '3',
-      name: 'ECLIPSE ESPORTS',
-      tag: 'ECLPS',
-      logo: '🌙',
-      members: 5,
-      wins: 38,
-      losses: 22,
-      winRate: 63,
-      verified: true,
-      createdAt: '25 ноября 2024',
-    },
-    {
-      id: '4',
-      name: 'NEXUS PRO',
-      tag: 'NXS',
-      logo: '💎',
-      members: 5,
-      wins: 35,
-      losses: 25,
-      winRate: 58,
-      verified: true,
-      createdAt: '01 декабря 2024',
-    },
-    {
-      id: '5',
-      name: 'CYBER KNIGHTS',
-      tag: 'CYKN',
-      logo: '⚔️',
-      members: 5,
-      wins: 32,
-      losses: 28,
-      winRate: 53,
-      verified: true,
-      createdAt: '05 декабря 2024',
-    },
-    {
-      id: '6',
-      name: 'STORM RAIDERS',
-      tag: 'STRM',
-      logo: '🌩️',
-      members: 5,
-      wins: 28,
-      losses: 32,
-      winRate: 47,
-      verified: true,
-      createdAt: '10 декабря 2024',
-    },
-  ];
+  useEffect(() => {
+    fetchTeams();
+  }, []);
 
-  const filteredTeams = mockTeams.filter(
-    (team) =>
-      team.verified &&
-      (team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        team.tag.toLowerCase().includes(searchQuery.toLowerCase()))
+  const fetchTeams = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515');
+      
+      if (!response.ok) {
+        throw new Error('Не удалось загрузить команды');
+      }
+
+      const data = await response.json();
+      setTeams(data.teams || []);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Произошла ошибка');
+      console.error('Error fetching teams:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredTeams = teams.filter((team) =>
+    team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    team.tag?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -138,18 +89,34 @@ export default function Teams() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTeams.map((team, index) => (
-              <TeamCard key={team.id} team={team} index={index} />
-            ))}
-          </div>
-
-          {filteredTeams.length === 0 && (
+          {loading ? (
+            <div className="text-center py-16">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+              <p className="text-lg text-muted-foreground">Загрузка команд...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <Icon name="AlertCircle" className="h-16 w-16 text-destructive mx-auto mb-4" />
+              <p className="text-lg text-muted-foreground mb-4">{error}</p>
+              <button
+                onClick={fetchTeams}
+                className="px-6 py-2 bg-primary text-background font-bold font-mono hover:bg-primary/90 transition-colors"
+              >
+                Попробовать снова
+              </button>
+            </div>
+          ) : filteredTeams.length === 0 ? (
             <div className="text-center py-16">
               <Icon name="Users" className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <p className="text-lg text-muted-foreground">
-                Команды не найдены
+                {searchQuery ? 'Команды не найдены' : 'Пока нет зарегистрированных команд'}
               </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTeams.map((team, index) => (
+                <TeamCard key={team.id} team={team} index={index} />
+              ))}
             </div>
           )}
         </div>
@@ -162,6 +129,23 @@ export default function Teams() {
 
 function TeamCard({ team, index }: { team: Team; index: number }) {
   const cardAnimation = useScrollAnimation({ threshold: 0.2 });
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
+  const getTeamLogo = () => {
+    if (team.logo_url) {
+      return <img src={team.logo_url} alt={team.name} className="w-full h-full object-cover rounded-full" />;
+    }
+    const firstLetter = team.name.charAt(0).toUpperCase();
+    return <span className="text-3xl font-black text-gradient">{firstLetter}</span>;
+  };
 
   return (
     <div
@@ -176,8 +160,8 @@ function TeamCard({ team, index }: { team: Team; index: number }) {
       <div className="relative space-y-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl digital-glow">
-              {team.logo}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center digital-glow overflow-hidden">
+              {getTeamLogo()}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -189,11 +173,17 @@ function TeamCard({ team, index }: { team: Team; index: number }) {
                 )}
               </div>
               <p className="text-sm text-muted-foreground font-mono">
-                [{team.tag}]
+                [{team.tag || 'NO TAG'}]
               </p>
             </div>
           </div>
         </div>
+
+        {team.description && (
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {team.description}
+          </p>
+        )}
 
         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
           <div className="text-center">
@@ -214,7 +204,7 @@ function TeamCard({ team, index }: { team: Team; index: number }) {
           </div>
           <div className="text-center">
             <div className="text-2xl font-black text-primary font-mono">
-              {team.winRate}%
+              {team.win_rate}%
             </div>
             <div className="text-xs text-muted-foreground uppercase tracking-wider">
               Винрейт
@@ -225,10 +215,10 @@ function TeamCard({ team, index }: { team: Team; index: number }) {
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Icon name="Users" className="h-4 w-4" />
-            <span className="font-mono">{team.members} игроков</span>
+            <span className="font-mono">{team.member_count} игроков</span>
           </div>
           <div className="text-xs text-muted-foreground font-mono">
-            {team.createdAt}
+            {formatDate(team.created_at)}
           </div>
         </div>
       </div>

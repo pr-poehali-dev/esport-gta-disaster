@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "Register team without auth",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "name": "Test Team",
+        "tag": "TEST"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
