@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 
 interface Tournament {
@@ -45,6 +47,8 @@ const mockTournaments: Tournament[] = [
 ];
 
 export default function Tournaments() {
+  const navigate = useNavigate();
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
       upcoming: { variant: 'secondary', label: 'Скоро' },
@@ -91,6 +95,24 @@ export default function Tournaments() {
                 <div className="flex items-center text-sm font-semibold text-primary">
                   <Icon name="Trophy" className="h-4 w-4 mr-2" />
                   <span>{tournament.prize}</span>
+                </div>
+                
+                <div className="pt-3 flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => navigate(`/tournaments/${tournament.id}/bracket`)}
+                  >
+                    <Icon name="GitBranch" className="h-4 w-4 mr-2" />
+                    Сетка
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={() => navigate(`/tournaments/${tournament.id}/teams/create`)}
+                  >
+                    <Icon name="Plus" className="h-4 w-4 mr-2" />
+                    Команда
+                  </Button>
                 </div>
               </CardContent>
             </Card>

@@ -27,6 +27,8 @@ import PaymentHistory from "./pages/PaymentHistory";
 import CMS from "./pages/CMS";
 import PageEditor from "./pages/PageEditor";
 import Achievements from "./pages/Achievements";
+import TournamentBracket from "./pages/TournamentBracket";
+import CreateTeam from "./pages/CreateTeam";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +62,8 @@ const App = () => (
           <Route path="/forum/:slug" element={<ForumTopic />} />
           <Route path="/cms" element={<ProtectedRoute requireAdmin><CMS /></ProtectedRoute>} />
           <Route path="/cms/page-editor" element={<ProtectedRoute requireAdmin><PageEditor /></ProtectedRoute>} />
+          <Route path="/tournaments/:id/bracket" element={<TournamentBracket />} />
+          <Route path="/tournaments/:id/teams/create" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
