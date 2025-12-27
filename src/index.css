@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Roboto:wght@300;400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Montserrat:wght@900&family=Rajdhani:wght@700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,48 +6,44 @@
 
 @layer base {
   :root {
-    --background: 218 25% 10%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
 
-    --card: 220 22% 14%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 220 22% 14%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 195 100% 50%;
+    --primary-foreground: 0 0% 10%;
 
-    --secondary: 271 91% 65%;
+    --secondary: 271 76% 53%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 15% 25%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 328 86% 70%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 195 100% 50%;
+    --accent-foreground: 0 0% 10%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 25%;
-    --input: 220 15% 20%;
-    --ring: 199 89% 48%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 195 100% 50%;
 
-    --radius: 0.25rem;
+    --radius: 0rem;
 
-    --neon-cyan: 199 89% 48%;
-    --neon-purple: 271 91% 65%;
-    --neon-pink: 328 86% 70%;
-
-    --sidebar-background: 220 22% 14%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 25%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 220 15% 25%;
-    --sidebar-ring: 199 89% 48%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 195 100% 50%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 195 100% 50%;
   }
 }
 
@@ -58,7 +54,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: "Roboto", sans-serif;
+    font-family: "Inter", sans-serif;
   }
 
   h1,
@@ -68,177 +64,130 @@
   h5,
   h6 {
     font-family: "Montserrat", sans-serif;
-    font-weight: 700;
+    font-weight: 900;
   }
 }
 
 @layer utilities {
-  .neon-glow {
-    text-shadow:
-      0 0 10px hsl(var(--neon-cyan)),
-      0 0 20px hsl(var(--neon-cyan)),
-      0 0 30px hsl(var(--neon-cyan));
-  }
-
-  .neon-border {
-    box-shadow:
-      0 0 10px hsl(var(--neon-cyan)),
-      0 0 20px hsl(var(--neon-cyan)),
-      inset 0 0 10px hsl(var(--neon-cyan));
-  }
-
-  .clip-corner {
-    clip-path: polygon(
-      0 0,
-      calc(100% - 20px) 0,
-      100% 20px,
-      100% 100%,
-      20px 100%,
-      0 calc(100% - 20px)
-    );
-  }
-
-  @keyframes gradient-shift {
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-
-  .animate-gradient {
-    animation: gradient-shift 3s ease infinite;
-  }
-
-  .glitch {
+  .glitch-text {
     position: relative;
-    animation: glitch 3s infinite;
+    animation: glitch 5s infinite;
   }
 
   @keyframes glitch {
     0%,
-    90%,
+    96%,
     100% {
       transform: translate(0);
+      opacity: 1;
     }
-    92% {
+    97% {
       transform: translate(-2px, 2px);
-    }
-    94% {
-      transform: translate(2px, -2px);
-    }
-    96% {
-      transform: translate(-2px, -2px);
+      opacity: 0.8;
     }
     98% {
-      transform: translate(2px, 2px);
+      transform: translate(2px, -2px);
+      opacity: 0.8;
+    }
+    99% {
+      transform: translate(-1px, 1px);
+      opacity: 0.9;
     }
   }
 
-  .logo-pulse {
-    animation: logo-pulse 2s ease-in-out infinite;
+  .digital-glow {
+    filter: drop-shadow(0 0 8px hsl(var(--primary)))
+      drop-shadow(0 0 16px hsl(var(--primary)));
   }
 
-  @keyframes logo-pulse {
+  .energy-pulse {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
     0%,
     100% {
-      transform: scale(1) rotate(0deg);
-      filter: drop-shadow(0 0 10px hsl(var(--neon-cyan)));
+      filter: drop-shadow(0 0 4px hsl(var(--primary)));
     }
     50% {
-      transform: scale(1.05) rotate(2deg);
-      filter: drop-shadow(0 0 20px hsl(var(--neon-cyan)))
-        drop-shadow(0 0 30px hsl(var(--neon-purple)));
+      filter: drop-shadow(0 0 12px hsl(var(--primary)))
+        drop-shadow(0 0 20px hsl(var(--secondary)));
     }
   }
 
-  .text-shine {
+  .scanline {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scanline::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
     background: linear-gradient(
       90deg,
-      hsl(var(--neon-cyan)) 0%,
-      hsl(var(--neon-purple)) 50%,
-      hsl(var(--neon-cyan)) 100%
+      transparent,
+      hsl(var(--primary)),
+      transparent
     );
-    background-size: 200% auto;
+    animation: scan 3s linear infinite;
+  }
+
+  @keyframes scan {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(2000%);
+    }
+  }
+
+  .gradient-border {
+    position: relative;
+    background: hsl(var(--card));
+    border: 1px solid transparent;
+  }
+
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(var(--secondary))
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .text-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(var(--secondary))
+    );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: text-shine 3s linear infinite;
   }
 
-  @keyframes text-shine {
-    to {
-      background-position: 200% center;
-    }
+  .hover-lift {
+    transition:
+      transform 0.3s ease,
+      filter 0.3s ease;
   }
 
-  .animate-bounce-in {
-    animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  }
-
-  @keyframes bounce-in {
-    0% {
-      transform: scale(0) rotate(-180deg);
-      opacity: 0;
-    }
-    50% {
-      transform: scale(1.2) rotate(90deg);
-    }
-    100% {
-      transform: scale(1) rotate(0deg);
-      opacity: 1;
-    }
-  }
-
-  .animate-fade-in-up {
-    animation: fade-in-up 0.6s ease-out;
-  }
-
-  @keyframes fade-in-up {
-    0% {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-    100% {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  .animation-delay-100 {
-    animation-delay: 100ms;
-  }
-
-  .animation-delay-200 {
-    animation-delay: 200ms;
-  }
-
-  .animate-progress-bar {
-    animation: progress-bar 1s ease-out forwards;
-  }
-
-  @keyframes progress-bar {
-    0% {
-      width: 0%;
-    }
-    100% {
-      width: 100%;
-    }
-  }
-
-  .animate-bounce-subtle {
-    animation: bounce-subtle 2s ease-in-out infinite;
-  }
-
-  @keyframes bounce-subtle {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    filter: drop-shadow(0 8px 16px rgba(0, 191, 255, 0.3));
   }
 }
