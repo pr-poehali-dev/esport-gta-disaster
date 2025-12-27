@@ -9,7 +9,7 @@ export default function Footer() {
           <div className="flex items-center gap-6">
             <Logo showText={true} animated={false} />
             <p className="text-sm text-muted-foreground font-mono">
-              © 2024 DISASTER ESPORTS
+              © 2025 Disaster Esports
             </p>
           </div>
           <div className="flex items-center gap-6">

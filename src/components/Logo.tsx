@@ -36,24 +36,34 @@ export default function Logo({ className = "", showText = true, animated = true 
       onMouseLeave={() => animated && setGlitchActive(false)}
     >
       <div 
-        className={`relative ${animated ? 'energy-pulse' : ''} ${glitchActive ? 'logo-glitch' : ''} ${shatterActive ? 'logo-shatter' : ''}`}
+        className={`relative ${glitchActive ? 'logo-glitch' : ''} ${shatterActive ? 'logo-shatter' : ''}`}
       >
         <svg
-          width="56"
-          height="56"
-          viewBox="0 0 56 56"
+          width="64"
+          height="64"
+          viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="transition-transform duration-300 group-hover:scale-110"
         >
           <defs>
-            <linearGradient id="logo-gradient" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+            <linearGradient id="logo-gradient-d" x1="0" y1="0" x2="30" y2="50" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="hsl(195 100% 50%)" />
-              <stop offset="50%" stopColor="hsl(271 76% 53%)" />
-              <stop offset="100%" stopColor="hsl(195 100% 50%)" />
+              <stop offset="100%" stopColor="hsl(195 100% 60%)" />
             </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+            <linearGradient id="logo-gradient-e" x1="30" y1="0" x2="60" y2="50" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="hsl(271 76% 53%)" />
+              <stop offset="100%" stopColor="hsl(271 76% 63%)" />
+            </linearGradient>
+            <filter id="glow-d">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <filter id="glow-e">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
               <feMerge>
                 <feMergeNode in="coloredBlur"/>
                 <feMergeNode in="SourceGraphic"/>
@@ -61,36 +71,53 @@ export default function Logo({ className = "", showText = true, animated = true 
             </filter>
           </defs>
           
-          <g filter="url(#glow)">
+          <g filter="url(#glow-d)" className={animated ? 'logo-letter-d' : ''}>
             <text
-              x="28"
-              y="38"
-              fontSize="32"
+              x="18"
+              y="42"
+              fontSize="36"
               fontWeight="900"
               fontFamily="Montserrat, sans-serif"
               textAnchor="middle"
-              fill="url(#logo-gradient)"
+              fill="url(#logo-gradient-d)"
               stroke="hsl(195 100% 50%)"
-              strokeWidth="1"
-              letterSpacing="-2"
-              className={glitchActive ? 'animate-pulse' : ''}
+              strokeWidth="1.5"
             >
-              DE
+              D
+            </text>
+          </g>
+          
+          <g filter="url(#glow-e)" className={animated ? 'logo-letter-e' : ''}>
+            <text
+              x="46"
+              y="42"
+              fontSize="36"
+              fontWeight="900"
+              fontFamily="Montserrat, sans-serif"
+              textAnchor="middle"
+              fill="url(#logo-gradient-e)"
+              stroke="hsl(271 76% 53%)"
+              strokeWidth="1.5"
+            >
+              E
             </text>
           </g>
           
           {glitchActive && (
             <>
-              <rect x="8" y="10" width="3" height="6" fill="hsl(195 100% 50%)" opacity="0.6" />
-              <rect x="45" y="40" width="3" height="6" fill="hsl(271 76% 53%)" opacity="0.6" />
-              <line x1="12" y1="28" x2="20" y2="28" stroke="hsl(195 100% 50%)" strokeWidth="2" opacity="0.5" />
-              <line x1="36" y1="28" x2="44" y2="28" stroke="hsl(271 76% 53%)" strokeWidth="2" opacity="0.5" />
+              <rect x="10" y="12" width="3" height="6" fill="hsl(195 100% 50%)" opacity="0.6" />
+              <rect x="51" y="46" width="3" height="6" fill="hsl(271 76% 53%)" opacity="0.6" />
+              <line x1="14" y1="32" x2="22" y2="32" stroke="hsl(195 100% 50%)" strokeWidth="2" opacity="0.5" />
+              <line x1="42" y1="32" x2="50" y2="32" stroke="hsl(271 76% 53%)" strokeWidth="2" opacity="0.5" />
             </>
           )}
         </svg>
 
         {animated && (
-          <div className="absolute inset-0 scanline opacity-30 pointer-events-none" />
+          <>
+            <div className="absolute inset-0 scanline opacity-20 pointer-events-none" />
+            <div className="logo-particles" />
+          </>
         )}
       </div>
       
@@ -98,9 +125,9 @@ export default function Logo({ className = "", showText = true, animated = true 
         <div className="flex flex-col leading-none">
           <span 
             className={`text-2xl font-black tracking-tight text-gradient relative ${glitchActive ? 'text-glitch' : ''}`}
-            data-text="D ESPORTS"
+            data-text="DISASTER ESPORTS"
           >
-            D ESPORTS
+            DISASTER ESPORTS
           </span>
         </div>
       )}
