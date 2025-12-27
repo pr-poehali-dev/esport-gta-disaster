@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { playSuccessSound } from '@/utils/sounds';
+import { showNotification } from '@/components/NotificationSystem';
+import { unlockAchievement } from '@/components/AchievementSystem';
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -50,6 +52,8 @@ const VerifyEmail = () => {
           description: 'Добро пожаловать на платформу!',
           className: 'bg-gradient-to-r from-primary to-secondary text-white border-0',
         });
+        showNotification('success', 'Email подтвержден!', 'Добро пожаловать на DISASTER ESPORTS');
+        unlockAchievement('email_verified');
 
         setTimeout(() => {
           navigate('/');

@@ -416,6 +416,14 @@ export default function Profile() {
                       <span className="font-bold">{new Date(profile.created_at).toLocaleDateString('ru-RU')}</span>
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={() => navigate('/achievements')}
+                  >
+                    <Icon name="Trophy" className="mr-2 h-4 w-4" />
+                    Мои достижения
+                  </Button>
                 </Card>
 
                 <Card className="p-6 bg-card/50">

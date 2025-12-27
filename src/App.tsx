@@ -26,6 +26,7 @@ import Payment from "./pages/Payment";
 import PaymentHistory from "./pages/PaymentHistory";
 import CMS from "./pages/CMS";
 import PageEditor from "./pages/PageEditor";
+import Achievements from "./pages/Achievements";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/verify" element={<VerifyEmail />} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
           <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
           <Route path="/payment-history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
