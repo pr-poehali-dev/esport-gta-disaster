@@ -31,6 +31,7 @@ import TournamentBracket from "./pages/TournamentBracket";
 import CreateTeam from "./pages/CreateTeam";
 import TeamProfile from "./pages/TeamProfile";
 import UserProfile from "./pages/UserProfile";
+import MatchDetails from "./pages/MatchDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
           <Route path="/teams/create" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
           <Route path="/teams/:id" element={<TeamProfile />} />
           <Route path="/user/:id" element={<UserProfile />} />
+          <Route path="/matches/:matchId" element={<MatchDetails />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

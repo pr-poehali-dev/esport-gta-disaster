@@ -418,23 +418,7 @@ def send_verification_email(to_email: str, nickname: str, token: str):
     server.send_message(msg)
     server.quit()
 
-def format_user(user_data) -> dict:
-    """Форматирование данных пользователя"""
-    return {
-        'id': user_data[0],
-        'nickname': user_data[1],
-        'email': user_data[2],
-        'discord': user_data[4],
-        'team': user_data[5],
-        'avatar_url': user_data[6],
-        'role': user_data[7],
-        'is_organizer': user_data[8],
-        'user_status': user_data[9],
-        'achievement_points': user_data[10],
-        'created_at': user_data[11].isoformat() if user_data[11] else None,
-        'is_banned': user_data[14] if len(user_data) > 14 else False,
-        'is_muted': user_data[15] if len(user_data) > 15 else False
-    }
+
 
 def reset_password_request(cur, conn, body: dict) -> dict:
     '''Запрос на восстановление пароля - отправка кода на email'''

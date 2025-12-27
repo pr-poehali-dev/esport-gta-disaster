@@ -81,13 +81,17 @@ export default function TournamentBracket() {
   };
 
   const renderMatch = (match: Match) => (
-    <Card key={match.id} className="p-4 bg-card/50 relative group">
+    <Card key={match.id} className="p-4 bg-card/50 relative group cursor-pointer hover:border-primary transition-colors"
+      onClick={() => navigate(`/matches/${match.id}`)}>
       {canEdit && (
         <Button
           size="sm"
           variant="ghost"
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => setEditMatch(match)}
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditMatch(match);
+          }}
         >
           <Icon name="Edit" className="h-4 w-4" />
         </Button>
@@ -95,11 +99,7 @@ export default function TournamentBracket() {
 
       <div className="space-y-2">
         <div 
-          className="flex items-center justify-between p-3 bg-background/50 rounded hover:bg-background/70 transition-colors cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (match.team1) navigate(`/teams/${match.team1.id}`);
-          }}
+          className="flex items-center justify-between p-3 bg-background/50 rounded"
         >
           <div className="flex items-center gap-3">
             {match.team1?.logo_url && (
@@ -113,11 +113,7 @@ export default function TournamentBracket() {
         </div>
 
         <div 
-          className="flex items-center justify-between p-3 bg-background/50 rounded hover:bg-background/70 transition-colors cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (match.team2) navigate(`/teams/${match.team2.id}`);
-          }}
+          className="flex items-center justify-between p-3 bg-background/50 rounded"
         >
           <div className="flex items-center gap-3">
             {match.team2?.logo_url && (
@@ -144,6 +140,10 @@ export default function TournamentBracket() {
           <span>{new Date(match.scheduled_at).toLocaleString('ru-RU')}</span>
         </div>
       )}
+      
+      <div className="text-center pt-3 mt-3 border-t border-border">
+        <span className="text-xs text-primary font-medium">Нажмите для подробностей →</span>
+      </div>
     </Card>
   );
 
