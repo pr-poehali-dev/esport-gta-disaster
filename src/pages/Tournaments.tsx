@@ -97,21 +97,14 @@ export default function Tournaments() {
                   <span>{tournament.prize}</span>
                 </div>
                 
-                <div className="pt-3 flex gap-2">
+                <div className="pt-3">
                   <Button 
                     variant="outline" 
-                    className="flex-1"
+                    className="w-full"
                     onClick={() => navigate(`/tournaments/${tournament.id}/bracket`)}
                   >
                     <Icon name="GitBranch" className="h-4 w-4 mr-2" />
-                    Сетка
-                  </Button>
-                  <Button 
-                    className="flex-1"
-                    onClick={() => navigate(`/tournaments/${tournament.id}/teams/create`)}
-                  >
-                    <Icon name="Plus" className="h-4 w-4 mr-2" />
-                    Команда
+                    Турнирная сетка
                   </Button>
                 </div>
               </CardContent>

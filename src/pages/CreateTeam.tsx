@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,6 @@ interface TeamMember {
 }
 
 export default function CreateTeam() {
-  const { id: tournamentId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -82,7 +81,6 @@ export default function CreateTeam() {
       
       const teamData: any = {
         action: 'create_team',
-        tournament_id: tournamentId,
         name: teamName,
         website: website || null,
         members: members.filter(m => m.email.trim()).map(m => ({
@@ -128,7 +126,7 @@ export default function CreateTeam() {
         title: 'Команда создана!',
         description: 'Приглашения отправлены участникам'
       });
-      navigate(`/tournaments/${tournamentId}/bracket`);
+      navigate('/teams');
     } else {
       toast({
         title: 'Ошибка',

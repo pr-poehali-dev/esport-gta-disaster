@@ -63,7 +63,7 @@ const App = () => (
           <Route path="/cms" element={<ProtectedRoute requireAdmin><CMS /></ProtectedRoute>} />
           <Route path="/cms/page-editor" element={<ProtectedRoute requireAdmin><PageEditor /></ProtectedRoute>} />
           <Route path="/tournaments/:id/bracket" element={<TournamentBracket />} />
-          <Route path="/tournaments/:id/teams/create" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
+          <Route path="/teams/create" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

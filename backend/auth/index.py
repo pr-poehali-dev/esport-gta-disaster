@@ -8,6 +8,21 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 
+def format_user(user_data):
+    """Форматирование данных пользователя для JSON ответа"""
+    if not user_data:
+        return None
+    
+    return {
+        'id': user_data[0],
+        'nickname': user_data[1],
+        'email': user_data[2],
+        'role': user_data[4] if len(user_data) > 4 else 'user',
+        'avatar_url': user_data[5] if len(user_data) > 5 else None,
+        'email_verified': user_data[6] if len(user_data) > 6 else False,
+        'created_at': user_data[7].isoformat() if len(user_data) > 7 and user_data[7] and hasattr(user_data[7], 'isoformat') else str(user_data[7]) if len(user_data) > 7 else None
+    }
+
 def handler(event: dict, context) -> dict:
     """API для регистрации и авторизации пользователей с подтверждением email"""
     
