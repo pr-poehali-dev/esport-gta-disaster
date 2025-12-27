@@ -132,31 +132,76 @@ export default function Header() {
       </div>
 
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-border bg-card">
+        <div className="lg:hidden border-t border-border bg-card/95 backdrop-blur-xl">
           <div className="px-4 py-6 space-y-4">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target={link.external ? '_blank' : undefined}
-                rel={link.external ? 'noopener noreferrer' : undefined}
-                className="block text-sm font-medium text-muted-foreground hover:text-primary transition-colors uppercase tracking-wide"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
-            {isAdmin && (
-              <a
-                href="/admin"
-                className="block px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 transition-all duration-300 font-semibold text-sm uppercase tracking-wide text-center"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Icon name="Shield" className="h-4 w-4 inline mr-2" />
-                Админ-Панель
-              </a>
+            {!isAuthenticated ? (
+              <div className="space-y-3 mb-6">
+                <Button
+                  onClick={() => {
+                    navigate('/login');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  variant="outline"
+                  className="w-full justify-center font-semibold"
+                >
+                  <Icon name="LogIn" className="h-4 w-4 mr-2" />
+                  ВХОД
+                </Button>
+                <Button
+                  onClick={() => {
+                    navigate('/register');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full justify-center bg-gradient-to-r from-primary to-secondary font-semibold"
+                >
+                  <Icon name="UserPlus" className="h-4 w-4 mr-2" />
+                  РЕГИСТРАЦИЯ
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3 mb-6">
+                <Button
+                  onClick={() => {
+                    navigate('/profile');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  variant="outline"
+                  className="w-full justify-center font-semibold"
+                >
+                  <Icon name="User" className="h-4 w-4 mr-2" />
+                  ПРОФИЛЬ
+                </Button>
+                {isAdmin && (
+                  <Button
+                    onClick={() => {
+                      navigate('/admin');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-center bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 font-semibold"
+                  >
+                    <Icon name="Shield" className="h-4 w-4 mr-2" />
+                    АДМИН-ПАНЕЛЬ
+                  </Button>
+                )}
+              </div>
             )}
-            <div className="pt-4 flex items-center gap-3">
+
+            <div className="border-t border-border pt-4 space-y-2">
+              {navLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target={link.external ? '_blank' : undefined}
+                  rel={link.external ? 'noopener noreferrer' : undefined}
+                  className="block py-2 px-4 text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 rounded transition-colors uppercase tracking-wide"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+
+            <div className="pt-4 border-t border-border flex justify-center gap-3">
               {socialLinks.map((social) => (
                 <a
                   key={social.label}
@@ -164,7 +209,7 @@ export default function Header() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={social.label}
-                  className="w-10 h-10 flex items-center justify-center border border-border hover:border-primary bg-background hover:bg-primary/10 transition-all duration-300"
+                  className="w-12 h-12 flex items-center justify-center border border-border hover:border-primary bg-background hover:bg-primary/10 rounded-lg transition-all duration-300"
                 >
                   <Icon name={social.icon as any} className="h-5 w-5 text-muted-foreground hover:text-primary" />
                 </a>

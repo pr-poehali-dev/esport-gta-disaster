@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,41 @@ export default function PageEditor() {
   const [pageSlug, setPageSlug] = useState('new-page');
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isDraft, setIsDraft] = useState(true);
+
+  useEffect(() => {
+    const savedDraft = localStorage.getItem('page-draft');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setPageTitle(draft.pageTitle);
+        setPageSlug(draft.pageSlug);
+        setBlocks(draft.blocks);
+        setLastSaved(new Date(draft.timestamp));
+        toast({ title: 'Черновик восстановлен', description: 'Продолжите редактирование' });
+      } catch (e) {
+        console.error('Failed to restore draft');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      if (blocks.length > 0) {
+        const draft = {
+          pageTitle,
+          pageSlug,
+          blocks,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('page-draft', JSON.stringify(draft));
+        setLastSaved(new Date());
+      }
+    }, 30000);
+
+    return () => clearInterval(autoSaveInterval);
+  }, [pageTitle, pageSlug, blocks]);
 
   const blockTypes = [
     { type: 'heading', icon: 'Heading', label: 'Заголовок' },
@@ -104,6 +139,19 @@ export default function PageEditor() {
   };
 
   const savePage = () => {
+    localStorage.removeItem('page-draft');
+    setIsDraft(false);
+    const version = {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      pageTitle,
+      pageSlug,
+      blocks: [...blocks]
+    };
+    const savedVersions = JSON.parse(localStorage.getItem('page-versions') || '[]');
+    savedVersions.push(version);
+    localStorage.setItem('page-versions', JSON.stringify(savedVersions.slice(-10)));
+    
     toast({
       title: 'Страница сохранена',
       description: `Страница "${pageTitle}" успешно сохранена`
@@ -120,8 +168,22 @@ export default function PageEditor() {
               <Icon name="ArrowLeft" className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">{pageTitle}</h1>
-              <p className="text-sm text-muted-foreground">/{pageSlug}</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold">{pageTitle}</h1>
+                {isDraft && <span className="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded">Черновик</span>}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>/{pageSlug}</span>
+                {lastSaved && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <Icon name="Clock" className="h-3 w-3" />
+                      Сохранено {lastSaved.toLocaleTimeString('ru-RU')}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
