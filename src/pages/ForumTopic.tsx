@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import UserRoleBadge from '@/components/UserRoleBadge';
 
 interface Post {
   id: number;
@@ -257,13 +258,12 @@ export default function ForumTopic() {
                   )}
                   
                   <div className="text-center">
-                    <div className="font-bold mb-1">{post.author.nickname}</div>
-                    <div className={`text-xs px-2 py-1 rounded font-bold text-white ${getRoleBadgeColor(post.author.role)} mb-1`}>
-                      {post.author.role.toUpperCase()}
-                    </div>
-                    <div className={`text-xs px-2 py-1 rounded font-bold text-white ${getStatusBadgeColor(post.author.auto_status)}`}>
-                      {post.author.auto_status}
-                    </div>
+                    <div className="font-bold mb-2">{post.author.nickname}</div>
+                    <UserRoleBadge 
+                      role={post.author.role} 
+                      autoStatus={post.author.auto_status}
+                      showIcon={false}
+                    />
                   </div>
 
                   {post.author.signature_url && (

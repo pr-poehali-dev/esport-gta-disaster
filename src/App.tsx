@@ -22,6 +22,8 @@ import Forum from "./pages/Forum";
 import ForumTopic from "./pages/ForumTopic";
 import Payment from "./pages/Payment";
 import PaymentHistory from "./pages/PaymentHistory";
+import CMS from "./pages/CMS";
+import PageEditor from "./pages/PageEditor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +52,8 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/forum" element={<Forum />} />
           <Route path="/forum/:slug" element={<ForumTopic />} />
+          <Route path="/cms" element={<ProtectedRoute requireAdmin><CMS /></ProtectedRoute>} />
+          <Route path="/cms/page-editor" element={<ProtectedRoute requireAdmin><PageEditor /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
