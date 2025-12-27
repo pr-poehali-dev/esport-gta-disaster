@@ -1,3 +1,4 @@
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import Icon from '@/components/ui/icon';
 
 interface TeamMember {
@@ -8,6 +9,9 @@ interface TeamMember {
 }
 
 export default function TeamSection() {
+  const headerAnimation = useScrollAnimation();
+  const cardsAnimation = useScrollAnimation({ threshold: 0.2 });
+
   const team: TeamMember[] = [
     {
       nickname: 'PHANTOM',
@@ -56,7 +60,10 @@ export default function TeamSection() {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/5 to-transparent" />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-20">
+        <div 
+          ref={headerAnimation.ref}
+          className={`text-center mb-20 transition-all duration-700 ${headerAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
           <h2 className="text-5xl sm:text-6xl font-black mb-4">
             Наша <span className="text-gradient">Команда</span>
           </h2>
@@ -65,12 +72,15 @@ export default function TeamSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div 
+          ref={cardsAnimation.ref}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
           {team.map((member, index) => (
             <div
               key={member.nickname}
-              className="group gradient-border hover-lift bg-card p-6 relative overflow-hidden"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className={`group gradient-border hover-lift bg-card p-6 relative overflow-hidden transition-all duration-700 ${cardsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+              style={{ transitionDelay: `${index * 100}ms` }}
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/20 to-transparent blur-3xl" />
               

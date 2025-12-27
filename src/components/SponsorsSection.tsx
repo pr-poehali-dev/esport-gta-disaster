@@ -1,4 +1,9 @@
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+
 export default function SponsorsSection() {
+  const headerAnimation = useScrollAnimation();
+  const sponsorsAnimation = useScrollAnimation({ threshold: 0.2 });
+
   const sponsors = [
     { name: 'RAZER', tier: 'Главный спонсор' },
     { name: 'NVIDIA', tier: 'Технологический партнер' },
@@ -11,7 +16,10 @@ export default function SponsorsSection() {
   return (
     <section id="sponsors" className="py-32 bg-card/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
+        <div 
+          ref={headerAnimation.ref}
+          className={`text-center mb-20 transition-all duration-700 ${headerAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
           <h2 className="text-5xl sm:text-6xl font-black mb-4">
             Наши <span className="text-gradient">Партнеры</span>
           </h2>
@@ -20,11 +28,15 @@ export default function SponsorsSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div 
+          ref={sponsorsAnimation.ref}
+          className="grid grid-cols-2 md:grid-cols-3 gap-6"
+        >
           {sponsors.map((sponsor, index) => (
             <div
               key={index}
-              className="gradient-border p-8 hover-lift group relative overflow-hidden bg-card"
+              className={`gradient-border p-8 hover-lift group relative overflow-hidden bg-card transition-all duration-700 ${sponsorsAnimation.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+              style={{ transitionDelay: `${index * 100}ms` }}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               

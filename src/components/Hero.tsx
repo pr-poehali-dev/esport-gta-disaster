@@ -1,35 +1,54 @@
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 
 export default function Hero() {
+  const [textVisible, setTextVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTextVisible(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
       
       <div className="absolute inset-0 scanline opacity-20" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 text-center">
         <div className="space-y-8">
-          <div className="inline-block pixel-corners bg-primary/10 border border-primary/30 px-6 py-2">
+          <div 
+            className={`inline-block pixel-corners bg-primary/10 border border-primary/30 px-6 py-2 transition-all duration-700 ${textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+          >
             <span className="text-sm font-bold tracking-[0.2em] text-primary uppercase font-mono">
               Киберспортивная организация
             </span>
           </div>
 
           <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter">
-            <span className="block neon-text relative" data-text="DISASTER">
+            <span 
+              className={`block neon-text relative transition-all duration-1000 delay-200 ${textVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+              data-text="DISASTER"
+            >
               DISASTER
             </span>
-            <span className="block text-foreground mt-2 font-mono tracking-[0.1em]">
+            <span 
+              className={`block text-foreground mt-2 font-mono tracking-[0.1em] transition-all duration-1000 delay-400 ${textVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}
+            >
               ESPORTS
             </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
+          <p 
+            className={`text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto font-medium transition-all duration-700 delay-600 ${textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+          >
             Мы не просто играем — мы доминируем. Сила, точность и стратегия в каждом матче.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
+          <div 
+            className={`flex flex-col sm:flex-row items-center justify-center gap-4 pt-8 transition-all duration-700 delay-700 ${textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+          >
             <Button
               size="lg"
               className="bg-gradient-to-r from-primary to-secondary text-background font-bold text-lg px-8 hover-lift"

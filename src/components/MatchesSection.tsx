@@ -1,3 +1,4 @@
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 
@@ -12,6 +13,9 @@ interface Match {
 }
 
 export default function MatchesSection() {
+  const headerAnimation = useScrollAnimation();
+  const matchesAnimation = useScrollAnimation({ threshold: 0.2 });
+
   const matches: Match[] = [
     {
       date: '28 ДЕК',
@@ -79,7 +83,10 @@ export default function MatchesSection() {
   return (
     <section id="matches" className="py-32 bg-card/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
+        <div 
+          ref={headerAnimation.ref}
+          className={`text-center mb-20 transition-all duration-700 ${headerAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
           <h2 className="text-5xl sm:text-6xl font-black mb-4">
             Ближайшие <span className="text-gradient">Матчи</span>
           </h2>
@@ -88,13 +95,15 @@ export default function MatchesSection() {
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div 
+          ref={matchesAnimation.ref}
+          className="space-y-4"
+        >
           {matches.map((match, index) => (
             <div
               key={index}
-              className={`gradient-border p-6 hover-lift ${
-                match.status === 'live' ? 'scanline' : ''
-              }`}
+              className={`gradient-border p-6 hover-lift transition-all duration-700 ${match.status === 'live' ? 'scanline' : ''} ${matchesAnimation.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}
+              style={{ transitionDelay: `${index * 150}ms` }}
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">

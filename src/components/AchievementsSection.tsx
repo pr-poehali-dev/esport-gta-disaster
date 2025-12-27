@@ -1,3 +1,4 @@
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import Icon from '@/components/ui/icon';
 
 interface Achievement {
@@ -9,6 +10,10 @@ interface Achievement {
 }
 
 export default function AchievementsSection() {
+  const headerAnimation = useScrollAnimation();
+  const achievementsAnimation = useScrollAnimation({ threshold: 0.2 });
+  const statsAnimation = useScrollAnimation({ threshold: 0.5 });
+
   const achievements: Achievement[] = [
     {
       title: '1 МЕСТО',
@@ -48,7 +53,10 @@ export default function AchievementsSection() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-20">
+        <div 
+          ref={headerAnimation.ref}
+          className={`text-center mb-20 transition-all duration-700 ${headerAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
           <h2 className="text-5xl sm:text-6xl font-black mb-4">
             Наши <span className="text-gradient">Достижения</span>
           </h2>
@@ -57,11 +65,15 @@ export default function AchievementsSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div 
+          ref={achievementsAnimation.ref}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
           {achievements.map((achievement, index) => (
             <div
               key={index}
-              className="group gradient-border p-8 hover-lift relative overflow-hidden"
+              className={`group gradient-border p-8 hover-lift relative overflow-hidden transition-all duration-700 ${achievementsAnimation.isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+              style={{ transitionDelay: `${index * 150}ms` }}
             >
               <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/20 via-secondary/20 to-transparent blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               
@@ -94,26 +106,29 @@ export default function AchievementsSection() {
           ))}
         </div>
 
-        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-          <div className="text-center space-y-2 group">
+        <div 
+          ref={statsAnimation.ref}
+          className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto"
+        >
+          <div className={`text-center space-y-2 group transition-all duration-700 ${statsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '0ms' }}>
             <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">$850K</div>
             <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Общий призовой фонд
             </div>
           </div>
-          <div className="text-center space-y-2 group">
+          <div className={`text-center space-y-2 group transition-all duration-700 ${statsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '150ms' }}>
             <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">12</div>
             <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Турниров выиграно
             </div>
           </div>
-          <div className="text-center space-y-2 group">
+          <div className={`text-center space-y-2 group transition-all duration-700 ${statsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '300ms' }}>
             <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">94%</div>
             <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Процент побед
             </div>
           </div>
-          <div className="text-center space-y-2 group">
+          <div className={`text-center space-y-2 group transition-all duration-700 ${statsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: '450ms' }}>
             <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">3</div>
             <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Года на сцене
