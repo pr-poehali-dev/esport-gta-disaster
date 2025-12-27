@@ -7,7 +7,7 @@ import Icon from '@/components/ui/icon';
 
 const AUTH_API_URL = 'https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4';
 
-const GTA_CHARACTER = 'https://cdn.poehali.dev/projects/659da987-8745-4d52-9d31-3d9043c6e4d5/files/6aed713f-7a7b-46c0-98d2-bd40b4e0dafd.jpg';
+const GTA_CHARACTER = 'https://cdn.poehali.dev/projects/659da987-8745-4d52-9d31-3d9043c6e4d5/files/d68fc26e-3acc-4fae-9163-6a8034e00477.jpg';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -77,6 +77,13 @@ export default function Login() {
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1920')] bg-cover bg-center opacity-10" />
       
       <div className="relative z-10 w-full max-w-4xl flex bg-black/80 backdrop-blur-xl rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl">
+        <button
+          onClick={() => navigate('/')}
+          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+        >
+          <Icon name="X" size={24} className="text-white" />
+        </button>
+        
         <div className="hidden md:flex md:w-1/2 relative">
           <img
             src={GTA_CHARACTER}
