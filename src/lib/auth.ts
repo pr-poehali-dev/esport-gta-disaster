@@ -12,6 +12,8 @@ export interface User {
   user_status?: string;
   achievement_points?: number;
   created_at: string;
+  is_banned?: boolean;
+  is_muted?: boolean;
 }
 
 export interface AuthResponse {
@@ -51,6 +53,11 @@ export const authService = {
     }
     
     const data = await response.json();
+    
+    if (data.user && data.user.is_banned) {
+      throw new Error('Ваш аккаунт заблокирован. Обратитесь к администрации.');
+    }
+    
     localStorage.setItem('session_token', data.session_token);
     localStorage.setItem('user', JSON.stringify(data.user));
     return data;

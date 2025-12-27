@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200,
+      "headers": {
+        "Access-Control-Allow-Origin": "*"
+      }
+    },
+    {
+      "name": "Get bans without auth",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "get_bans"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

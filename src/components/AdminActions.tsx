@@ -27,11 +27,13 @@ interface AdminActionsProps {
   userId: string;
 }
 
+const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+
 export default function AdminActions({ username, userId }: AdminActionsProps) {
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [muteDialogOpen, setMuteDialogOpen] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [emailVerificationOpen, setEmailVerificationOpen] = useState(false);
   
   const [banDays, setBanDays] = useState('7');
   const [banReason, setBanReason] = useState('');
@@ -40,53 +42,210 @@ export default function AdminActions({ username, userId }: AdminActionsProps) {
   const [suspendReason, setSuspendReason] = useState('');
   const [selectedTournament, setSelectedTournament] = useState('');
   
+  const [verificationCode, setVerificationCode] = useState('');
   const [pendingAction, setPendingAction] = useState<'ban' | 'mute' | 'suspend' | null>(null);
+  const [pendingActionData, setPendingActionData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   
   const { toast } = useToast();
 
+  const getAdminId = () => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        return userData.id;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const sendVerificationCode = async (actionType: string, actionData: any) => {
+    setLoading(true);
+    const adminId = getAdminId();
+    
+    if (!adminId) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось определить ID администратора',
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': adminId,
+        },
+        body: JSON.stringify({
+          action: 'send_verification_code',
+          action_type: actionType,
+          action_data: actionData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Код отправлен',
+          description: data.message,
+        });
+        setPendingAction(actionType as any);
+        setPendingActionData(actionData);
+        setEmailVerificationOpen(true);
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось отправить код',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Ошибка отправки кода',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyAndExecute = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast({
+        title: 'Ошибка',
+        description: 'Введите 6-значный код',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    const adminId = getAdminId();
+
+    try {
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': adminId,
+        },
+        body: JSON.stringify({
+          action: 'verify_and_execute',
+          code: verificationCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно',
+          description: data.message,
+        });
+        
+        setEmailVerificationOpen(false);
+        setVerificationCode('');
+        
+        if (pendingAction === 'ban') {
+          setBanDialogOpen(false);
+          setBanDays('7');
+          setBanReason('');
+        } else if (pendingAction === 'mute') {
+          setMuteDialogOpen(false);
+          setMuteDays('3');
+          setMuteReason('');
+        } else if (pendingAction === 'suspend') {
+          setSuspendDialogOpen(false);
+          setSuspendReason('');
+          setSelectedTournament('');
+        }
+        
+        setPendingAction(null);
+        setPendingActionData(null);
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось выполнить действие',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Ошибка выполнения действия',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleBanClick = () => {
-    setPendingAction('ban');
-    setConfirmDialogOpen(true);
+    if (!banReason.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Укажите причину бана',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const actionData = {
+      user_id: userId,
+      reason: banReason,
+      duration_days: banDays === 'forever' ? null : banDays,
+      is_permanent: banDays === 'forever',
+    };
+
+    sendVerificationCode('ban', actionData);
   };
 
   const handleMuteClick = () => {
-    setPendingAction('mute');
-    setConfirmDialogOpen(true);
+    if (!muteReason.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Укажите причину мута',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const actionData = {
+      user_id: userId,
+      reason: muteReason,
+      duration_days: muteDays,
+      is_permanent: false,
+    };
+
+    sendVerificationCode('mute', actionData);
   };
 
   const handleSuspendClick = () => {
-    setPendingAction('suspend');
-    setConfirmDialogOpen(true);
-  };
-
-  const executeAction = () => {
-    if (pendingAction === 'ban') {
+    if (!suspendReason.trim() || !selectedTournament) {
       toast({
-        title: 'Бан выдан',
-        description: `${username} забанен на ${banDays === 'forever' ? 'навсегда' : `${banDays} дней`}`,
+        title: 'Ошибка',
+        description: 'Заполните все поля',
+        variant: 'destructive',
       });
-      setBanDialogOpen(false);
-      setBanDays('7');
-      setBanReason('');
-    } else if (pendingAction === 'mute') {
-      toast({
-        title: 'Мут выдан',
-        description: `${username} замучен на ${muteDays} дней`,
-      });
-      setMuteDialogOpen(false);
-      setMuteDays('3');
-      setMuteReason('');
-    } else if (pendingAction === 'suspend') {
-      toast({
-        title: 'Отстранение выполнено',
-        description: `${username} отстранен от турнира`,
-      });
-      setSuspendDialogOpen(false);
-      setSuspendReason('');
-      setSelectedTournament('');
+      return;
     }
-    setConfirmDialogOpen(false);
-    setPendingAction(null);
+
+    const actionData = {
+      user_id: userId,
+      tournament_id: selectedTournament,
+      reason: suspendReason,
+    };
+
+    sendVerificationCode('suspend', actionData);
   };
 
   return (
@@ -186,9 +345,9 @@ export default function AdminActions({ username, userId }: AdminActionsProps) {
             <Button
               variant="destructive"
               onClick={handleBanClick}
-              disabled={!banReason.trim()}
+              disabled={!banReason.trim() || loading}
             >
-              Подтвердить Бан
+              {loading ? 'Отправка...' : 'Подтвердить Бан'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -238,9 +397,9 @@ export default function AdminActions({ username, userId }: AdminActionsProps) {
             </Button>
             <Button
               onClick={handleMuteClick}
-              disabled={!muteReason.trim()}
+              disabled={!muteReason.trim() || loading}
             >
-              Подтвердить Мут
+              {loading ? 'Отправка...' : 'Подтвердить Мут'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -263,9 +422,9 @@ export default function AdminActions({ username, userId }: AdminActionsProps) {
                   <SelectValue placeholder="Выберите турнир" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cs2-championship">CS2 Championship 2025</SelectItem>
-                  <SelectItem value="valorant-cup">Valorant Spring Cup</SelectItem>
-                  <SelectItem value="dota2-league">Dota 2 League</SelectItem>
+                  <SelectItem value="1">CS2 Championship 2025</SelectItem>
+                  <SelectItem value="2">Valorant Spring Cup</SelectItem>
+                  <SelectItem value="3">Dota 2 League</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -288,68 +447,58 @@ export default function AdminActions({ username, userId }: AdminActionsProps) {
             </Button>
             <Button
               onClick={handleSuspendClick}
-              disabled={!suspendReason.trim() || !selectedTournament}
+              disabled={!suspendReason.trim() || !selectedTournament || loading}
             >
-              Подтвердить Отстранение
+              {loading ? 'Отправка...' : 'Подтвердить Отстранение'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+      <Dialog open={emailVerificationOpen} onOpenChange={setEmailVerificationOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Icon name="AlertTriangle" size={24} />
-              Подтверждение Действия
+            <DialogTitle className="flex items-center gap-2">
+              <Icon name="Mail" size={24} className="text-primary" />
+              Подтверждение по Email
             </DialogTitle>
             <DialogDescription>
-              Вы уверены, что хотите выполнить это действие?
+              Код подтверждения отправлен на ваш email. Введите его для выполнения действия.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4 space-y-2">
-            <p className="text-sm">
-              <strong>Пользователь:</strong> {username}
-            </p>
-            {pendingAction === 'ban' && (
-              <>
-                <p className="text-sm">
-                  <strong>Действие:</strong> Бан на {banDays === 'forever' ? 'навсегда' : `${banDays} дней`}
-                </p>
-                <p className="text-sm">
-                  <strong>Причина:</strong> {banReason}
-                </p>
-              </>
-            )}
-            {pendingAction === 'mute' && (
-              <>
-                <p className="text-sm">
-                  <strong>Действие:</strong> Мут на {muteDays} дней
-                </p>
-                <p className="text-sm">
-                  <strong>Причина:</strong> {muteReason}
-                </p>
-              </>
-            )}
-            {pendingAction === 'suspend' && (
-              <>
-                <p className="text-sm">
-                  <strong>Действие:</strong> Отстранение от турнира
-                </p>
-                <p className="text-sm">
-                  <strong>Причина:</strong> {suspendReason}
-                </p>
-              </>
-            )}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="verification-code">Код подтверждения</Label>
+              <Input
+                id="verification-code"
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength={6}
+                className="text-center text-2xl tracking-widest"
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                Введите 6-значный код из письма
+              </p>
+            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setEmailVerificationOpen(false);
+                setVerificationCode('');
+              }}
+            >
               Отмена
             </Button>
-            <Button variant="destructive" onClick={executeAction}>
-              Подтвердить
+            <Button
+              onClick={verifyAndExecute}
+              disabled={verificationCode.length !== 6 || loading}
+            >
+              {loading ? 'Проверка...' : 'Подтвердить'}
             </Button>
           </DialogFooter>
         </DialogContent>
