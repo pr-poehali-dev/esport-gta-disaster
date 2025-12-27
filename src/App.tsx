@@ -29,6 +29,8 @@ import PageEditor from "./pages/PageEditor";
 import Achievements from "./pages/Achievements";
 import TournamentBracket from "./pages/TournamentBracket";
 import CreateTeam from "./pages/CreateTeam";
+import TeamProfile from "./pages/TeamProfile";
+import UserProfile from "./pages/UserProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +66,8 @@ const App = () => (
           <Route path="/cms/page-editor" element={<ProtectedRoute requireAdmin><PageEditor /></ProtectedRoute>} />
           <Route path="/tournaments/:id/bracket" element={<TournamentBracket />} />
           <Route path="/teams/create" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
+          <Route path="/teams/:id" element={<TeamProfile />} />
+          <Route path="/user/:id" element={<UserProfile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -94,7 +94,13 @@ export default function TournamentBracket() {
       )}
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between p-3 bg-background/50 rounded">
+        <div 
+          className="flex items-center justify-between p-3 bg-background/50 rounded hover:bg-background/70 transition-colors cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (match.team1) navigate(`/teams/${match.team1.id}`);
+          }}
+        >
           <div className="flex items-center gap-3">
             {match.team1?.logo_url && (
               <img src={match.team1.logo_url} alt="" className="w-8 h-8 rounded" />
@@ -106,7 +112,13 @@ export default function TournamentBracket() {
           <span className="text-2xl font-bold">{match.score_team1}</span>
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-background/50 rounded">
+        <div 
+          className="flex items-center justify-between p-3 bg-background/50 rounded hover:bg-background/70 transition-colors cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (match.team2) navigate(`/teams/${match.team2.id}`);
+          }}
+        >
           <div className="flex items-center gap-3">
             {match.team2?.logo_url && (
               <img src={match.team2.logo_url} alt="" className="w-8 h-8 rounded" />

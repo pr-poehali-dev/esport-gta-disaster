@@ -13,14 +13,21 @@ def format_user(user_data):
     if not user_data:
         return None
     
+    # Порядок полей в БД: id, email, password_hash, nickname, discord, team, avatar_url, role, created_at...
     return {
         'id': user_data[0],
-        'nickname': user_data[1],
-        'email': user_data[2],
-        'role': user_data[4] if len(user_data) > 4 else 'user',
-        'avatar_url': user_data[5] if len(user_data) > 5 else None,
-        'email_verified': user_data[6] if len(user_data) > 6 else False,
-        'created_at': user_data[7].isoformat() if len(user_data) > 7 and user_data[7] and hasattr(user_data[7], 'isoformat') else str(user_data[7]) if len(user_data) > 7 else None
+        'email': user_data[1] if len(user_data) > 1 else None,
+        'nickname': user_data[3] if len(user_data) > 3 else None,
+        'discord': user_data[4] if len(user_data) > 4 else None,
+        'team': user_data[5] if len(user_data) > 5 else None,
+        'avatar_url': user_data[6] if len(user_data) > 6 else None,
+        'role': user_data[7] if len(user_data) > 7 else 'user',
+        'created_at': user_data[8].isoformat() if len(user_data) > 8 and user_data[8] and hasattr(user_data[8], 'isoformat') else str(user_data[8]) if len(user_data) > 8 else None,
+        'email_verified': user_data[13] if len(user_data) > 13 else False,
+        'auto_status': user_data[20] if len(user_data) > 20 else None,
+        'rating': user_data[26] if len(user_data) > 26 else 1000,
+        'wins': user_data[27] if len(user_data) > 27 else 0,
+        'losses': user_data[28] if len(user_data) > 28 else 0
     }
 
 def handler(event: dict, context) -> dict:

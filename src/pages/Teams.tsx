@@ -86,7 +86,7 @@ export default function Teams() {
 
             <TabsContent value="teams" className="space-y-4">
               {teams.map((team, index) => (
-                <Card key={team.id} className="p-6 hover:border-primary transition-colors">
+                <Card key={team.id} className="p-6 hover:border-primary transition-colors cursor-pointer" onClick={() => navigate(`/teams/${team.id}`)}>
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-4 flex-1">
                       <span className="w-12 text-center text-3xl font-black text-muted-foreground">#{index + 1}</span>
@@ -122,7 +122,7 @@ export default function Teams() {
 
             <TabsContent value="players" className="space-y-4">
               {players.map((player, index) => (
-                <Card key={player.id} className="p-6 hover:border-primary transition-colors">
+                <Card key={player.id} className="p-6 hover:border-primary transition-colors cursor-pointer" onClick={() => navigate(`/user/${player.id}`)}>
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-4 flex-1">
                       <span className="w-12 text-center text-3xl font-black text-muted-foreground">#{index + 1}</span>
