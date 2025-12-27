@@ -27,7 +27,7 @@ export default function Header() {
   const isAdmin = userRole === 'admin' || userRole === 'founder' || userRole === 'organizer';
 
   const navLinks = [
-    { label: 'Обсуждения', href: '#', external: true },
+    { label: 'Обсуждения', href: '/forum', external: false },
     { label: 'Команды', href: '/teams', external: false },
     { label: 'Турниры', href: '/tournaments', external: false },
     { label: 'Рейтинг', href: '/rating', external: false },

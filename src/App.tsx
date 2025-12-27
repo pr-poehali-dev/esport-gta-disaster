@@ -11,6 +11,9 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
+import ForgotPassword from "./pages/ForgotPassword";
+import Forum from "./pages/Forum";
+import ForumTopic from "./pages/ForumTopic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +32,9 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/verify" element={<VerifyEmail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/forum" element={<Forum />} />
+          <Route path="/forum/:slug" element={<ForumTopic />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -47,6 +47,12 @@ def handler(event: dict, context) -> dict:
                 return login(cur, conn, body)
             elif action == 'logout':
                 return logout(cur, conn, event)
+            elif action == 'reset_password_request':
+                return reset_password_request(cur, conn, body)
+            elif action == 'reset_password_verify':
+                return reset_password_verify(cur, conn, body)
+            elif action == 'reset_password':
+                return reset_password(cur, conn, body)
             else:
                 return error_response('Неизвестное действие', 400)
         
@@ -403,6 +409,189 @@ def format_user(user_data) -> dict:
         'is_banned': user_data[14] if len(user_data) > 14 else False,
         'is_muted': user_data[15] if len(user_data) > 15 else False
     }
+
+def reset_password_request(cur, conn, body: dict) -> dict:
+    '''Запрос на восстановление пароля - отправка кода на email'''
+    email = body.get('email', '').strip().lower()
+    
+    if not email:
+        return error_response('Email обязателен', 400)
+    
+    cur.execute(
+        "SELECT id, nickname FROM t_p4831367_esport_gta_disaster.users WHERE email = %s",
+        (email,)
+    )
+    user = cur.fetchone()
+    
+    if not user:
+        return error_response('Пользователь с таким email не найден', 404)
+    
+    user_id, nickname = user
+    
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now() + timedelta(hours=1)
+    
+    cur.execute(
+        """INSERT INTO t_p4831367_esport_gta_disaster.password_reset_tokens 
+           (user_id, token, expires_at) VALUES (%s, %s, %s)""",
+        (user_id, token, expires_at)
+    )
+    conn.commit()
+    
+    smtp_email = os.environ.get('SMTP_EMAIL')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    
+    if smtp_email and smtp_password:
+        try:
+            send_reset_email(email, nickname, token, smtp_email, smtp_password)
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'success': True,
+            'message': 'Код восстановления отправлен на ваш email',
+            'token': token
+        }),
+        'isBase64Encoded': False
+    }
+
+
+def reset_password_verify(cur, conn, body: dict) -> dict:
+    '''Проверка токена восстановления'''
+    token = body.get('token', '').strip()
+    
+    if not token:
+        return error_response('Токен обязателен', 400)
+    
+    cur.execute(
+        """SELECT user_id, expires_at, used 
+           FROM t_p4831367_esport_gta_disaster.password_reset_tokens 
+           WHERE token = %s""",
+        (token,)
+    )
+    result = cur.fetchone()
+    
+    if not result:
+        return error_response('Неверный токен', 404)
+    
+    user_id, expires_at, used = result
+    
+    if used:
+        return error_response('Токен уже использован', 400)
+    
+    if datetime.now() > expires_at:
+        return error_response('Токен истек', 400)
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'valid': True, 'user_id': user_id}),
+        'isBase64Encoded': False
+    }
+
+
+def reset_password(cur, conn, body: dict) -> dict:
+    '''Сброс пароля с использованием токена'''
+    token = body.get('token', '').strip()
+    new_password = body.get('new_password', '').strip()
+    
+    if not token or not new_password:
+        return error_response('Токен и новый пароль обязательны', 400)
+    
+    if len(new_password) < 6:
+        return error_response('Пароль должен быть не менее 6 символов', 400)
+    
+    cur.execute(
+        """SELECT user_id, expires_at, used 
+           FROM t_p4831367_esport_gta_disaster.password_reset_tokens 
+           WHERE token = %s""",
+        (token,)
+    )
+    result = cur.fetchone()
+    
+    if not result:
+        return error_response('Неверный токен', 404)
+    
+    user_id, expires_at, used = result
+    
+    if used:
+        return error_response('Токен уже использован', 400)
+    
+    if datetime.now() > expires_at:
+        return error_response('Токен истек', 400)
+    
+    password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+    
+    cur.execute(
+        "UPDATE t_p4831367_esport_gta_disaster.users SET password_hash = %s WHERE id = %s",
+        (password_hash, user_id)
+    )
+    
+    cur.execute(
+        "UPDATE t_p4831367_esport_gta_disaster.password_reset_tokens SET used = TRUE WHERE token = %s",
+        (token,)
+    )
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Пароль успешно изменен'}),
+        'isBase64Encoded': False
+    }
+
+
+def send_reset_email(to_email: str, nickname: str, token: str, smtp_email: str, smtp_password: str):
+    '''Отправка email с кодом восстановления'''
+    subject = "Восстановление пароля DISASTER ESPORTS"
+    
+    html_content = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #1a1a1a; border: 1px solid #333; padding: 30px; border-radius: 10px;">
+                <h1 style="color: #0d94e7; margin-bottom: 20px;">DISASTER ESPORTS</h1>
+                <h2 style="color: #ffffff;">Восстановление пароля</h2>
+                <p>Здравствуйте, {nickname}!</p>
+                <p>Вы запросили восстановление пароля. Ваш код восстановления:</p>
+                <div style="background-color: #0d94e7; color: #ffffff; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; border-radius: 5px; margin: 20px 0;">
+                    {token}
+                </div>
+                <p style="color: #999;">Код действителен в течение 1 часа.</p>
+                <p style="color: #999;">Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.</p>
+                <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
+                <p style="color: #666; font-size: 12px;">DISASTER ESPORTS - Киберспортивная организация</p>
+            </div>
+        </body>
+    </html>
+    """
+    
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = smtp_email
+    msg['To'] = to_email
+    
+    html_part = MIMEText(html_content, 'html')
+    msg.attach(html_part)
+    
+    if 'gmail' in smtp_email:
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+    elif 'yandex' in smtp_email:
+        smtp_server = 'smtp.yandex.ru'
+        smtp_port = 587
+    else:
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+    
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_email, smtp_password)
+        server.send_message(msg)
+
 
 def error_response(message: str, status: int) -> dict:
     """Формирование ответа с ошибкой"""

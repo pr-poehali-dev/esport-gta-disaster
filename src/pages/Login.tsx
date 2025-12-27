@@ -165,7 +165,14 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="text-center">
+            <div className="text-center space-y-3">
+              <button
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-primary hover:text-secondary transition-colors"
+              >
+                Забыли пароль?
+              </button>
+              
               <p className="text-sm text-gray-400 mb-3">Нет учетной записи?</p>
               <Button
                 onClick={() => navigate('/register')}
