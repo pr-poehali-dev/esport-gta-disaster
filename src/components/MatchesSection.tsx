@@ -56,20 +56,20 @@ export default function MatchesSection() {
     switch (status) {
       case 'live':
         return (
-          <span className="px-3 py-1 bg-primary/20 border border-primary text-primary text-xs font-bold flex items-center gap-2">
+          <span className="px-3 py-1 bg-primary/20 border border-primary text-primary text-xs font-bold flex items-center gap-2 pixel-corners font-mono">
             <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
             LIVE
           </span>
         );
       case 'finished':
         return (
-          <span className="px-3 py-1 bg-muted border border-border text-muted-foreground text-xs font-bold">
+          <span className="px-3 py-1 bg-muted border border-border text-muted-foreground text-xs font-bold pixel-corners font-mono">
             ЗАВЕРШЕН
           </span>
         );
       default:
         return (
-          <span className="px-3 py-1 bg-card border border-primary/30 text-primary text-xs font-bold">
+          <span className="px-3 py-1 bg-card border border-primary/30 text-primary text-xs font-bold pixel-corners font-mono">
             СКОРО
           </span>
         );
@@ -99,10 +99,10 @@ export default function MatchesSection() {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">
                   <div className="text-center min-w-[80px]">
-                    <div className={`text-2xl font-black ${getStatusColor(match.status)}`}>
+                    <div className={`text-2xl font-black ${getStatusColor(match.status)} font-mono`}>
                       {match.date}
                     </div>
-                    <div className="text-sm text-muted-foreground font-medium">
+                    <div className="text-sm text-muted-foreground font-medium font-mono">
                       {match.time}
                     </div>
                   </div>
@@ -111,12 +111,12 @@ export default function MatchesSection() {
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs px-2 py-1 bg-secondary/20 border border-secondary/30 text-secondary font-semibold">
+                      <span className="text-xs px-2 py-1 bg-secondary/20 border border-secondary/30 text-secondary font-bold pixel-corners font-mono">
                         {match.game}
                       </span>
                       {getStatusBadge(match.status)}
                     </div>
-                    <div className="text-sm text-muted-foreground font-medium">
+                    <div className="text-sm text-muted-foreground font-medium uppercase tracking-wide">
                       {match.tournament}
                     </div>
                   </div>
@@ -125,20 +125,20 @@ export default function MatchesSection() {
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-4 text-center">
                     <div>
-                      <div className="text-xl font-black text-gradient mb-1">DISASTER</div>
+                      <div className="text-xl font-black text-gradient mb-1 font-mono">DISASTER</div>
                       {match.result && (
-                        <div className="text-sm text-primary font-bold">
+                        <div className="text-sm text-primary font-bold font-mono">
                           {match.result.split(':')[0]}
                         </div>
                       )}
                     </div>
 
-                    <div className="text-2xl font-black text-muted-foreground">VS</div>
+                    <div className="text-2xl font-black text-muted-foreground font-mono">VS</div>
 
                     <div>
-                      <div className="text-xl font-black mb-1">{match.opponent}</div>
+                      <div className="text-xl font-black mb-1 font-mono">{match.opponent}</div>
                       {match.result && (
-                        <div className="text-sm text-muted-foreground font-bold">
+                        <div className="text-sm text-muted-foreground font-bold font-mono">
                           {match.result.split(':')[1]}
                         </div>
                       )}

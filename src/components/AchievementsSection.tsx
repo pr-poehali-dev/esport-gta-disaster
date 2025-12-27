@@ -72,19 +72,19 @@ export default function AchievementsSection() {
 
                 <div className="flex-1 space-y-3">
                   <div className="flex items-start justify-between gap-4">
-                    <h3 className="text-3xl font-black text-gradient">
+                    <h3 className="text-3xl font-black text-gradient font-mono">
                       {achievement.title}
                     </h3>
-                    <span className="text-lg font-bold text-primary whitespace-nowrap">
+                    <span className="text-lg font-bold text-primary whitespace-nowrap font-mono">
                       {achievement.prize}
                     </span>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-lg font-bold text-foreground">
+                    <p className="text-lg font-bold text-foreground uppercase tracking-wide">
                       {achievement.tournament}
                     </p>
-                    <p className="text-sm text-muted-foreground font-medium">
+                    <p className="text-sm text-muted-foreground font-medium font-mono">
                       {achievement.year}
                     </p>
                   </div>
@@ -95,27 +95,27 @@ export default function AchievementsSection() {
         </div>
 
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-          <div className="text-center space-y-2">
-            <div className="text-5xl font-black text-gradient">$850K</div>
-            <div className="text-sm text-muted-foreground font-medium">
+          <div className="text-center space-y-2 group">
+            <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">$850K</div>
+            <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Общий призовой фонд
             </div>
           </div>
-          <div className="text-center space-y-2">
-            <div className="text-5xl font-black text-gradient">12</div>
-            <div className="text-sm text-muted-foreground font-medium">
+          <div className="text-center space-y-2 group">
+            <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">12</div>
+            <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Турниров выиграно
             </div>
           </div>
-          <div className="text-center space-y-2">
-            <div className="text-5xl font-black text-gradient">94%</div>
-            <div className="text-sm text-muted-foreground font-medium">
+          <div className="text-center space-y-2 group">
+            <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">94%</div>
+            <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Процент побед
             </div>
           </div>
-          <div className="text-center space-y-2">
-            <div className="text-5xl font-black text-gradient">3</div>
-            <div className="text-sm text-muted-foreground font-medium">
+          <div className="text-center space-y-2 group">
+            <div className="text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">3</div>
+            <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
               Года на сцене
             </div>
           </div>

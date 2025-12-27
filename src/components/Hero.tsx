@@ -10,17 +10,17 @@ export default function Hero() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 text-center">
         <div className="space-y-8">
-          <div className="inline-block">
-            <span className="text-sm font-bold tracking-widest text-primary uppercase">
+          <div className="inline-block pixel-corners bg-primary/10 border border-primary/30 px-6 py-2">
+            <span className="text-sm font-bold tracking-[0.2em] text-primary uppercase font-mono">
               Киберспортивная организация
             </span>
           </div>
 
           <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter">
-            <span className="block text-gradient glitch-text">
+            <span className="block neon-text relative" data-text="DISASTER">
               DISASTER
             </span>
-            <span className="block text-foreground mt-2">
+            <span className="block text-foreground mt-2 font-mono tracking-[0.1em]">
               ESPORTS
             </span>
           </h1>
@@ -48,27 +48,27 @@ export default function Hero() {
           </div>
 
           <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto pt-16">
-            <div className="space-y-2">
-              <div className="text-4xl sm:text-5xl font-black text-gradient">
+            <div className="space-y-2 group">
+              <div className="text-4xl sm:text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">
                 50+
               </div>
-              <div className="text-sm text-muted-foreground font-medium">
+              <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
                 Побед
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="text-4xl sm:text-5xl font-black text-gradient">
+            <div className="space-y-2 group">
+              <div className="text-4xl sm:text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">
                 12
               </div>
-              <div className="text-sm text-muted-foreground font-medium">
+              <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
                 Турниров
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="text-4xl sm:text-5xl font-black text-gradient">
+            <div className="space-y-2 group">
+              <div className="text-4xl sm:text-5xl font-black text-gradient font-mono group-hover:scale-110 transition-transform">
                 #1
               </div>
-              <div className="text-sm text-muted-foreground font-medium">
+              <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
                 Рейтинг
               </div>
             </div>

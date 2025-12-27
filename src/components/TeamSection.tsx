@@ -77,10 +77,10 @@ export default function TeamSection() {
               <div className="relative space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-2xl font-black text-gradient mb-1">
+                    <h3 className="text-2xl font-black text-gradient mb-1 font-mono">
                       {member.nickname}
                     </h3>
-                    <p className="text-sm text-muted-foreground font-medium">
+                    <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
                       {member.role}
                     </p>
                   </div>
@@ -93,7 +93,7 @@ export default function TeamSection() {
                   {member.games.map((game) => (
                     <span
                       key={game}
-                      className="text-xs px-3 py-1 bg-primary/10 border border-primary/30 text-primary font-semibold"
+                      className="text-xs px-3 py-1 bg-primary/10 border border-primary/30 text-primary font-bold font-mono pixel-corners"
                     >
                       {game}
                     </span>
@@ -103,8 +103,8 @@ export default function TeamSection() {
                 <div className="space-y-3 pt-4 border-t border-border">
                   {member.stats.map((stat) => (
                     <div key={stat.label} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{stat.label}</span>
-                      <span className="text-sm font-bold text-primary">{stat.value}</span>
+                      <span className="text-sm text-muted-foreground uppercase tracking-wide">{stat.label}</span>
+                      <span className="text-sm font-bold text-primary font-mono">{stat.value}</span>
                     </div>
                   ))}
                 </div>
