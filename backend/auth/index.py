@@ -101,7 +101,7 @@ def check_nickname(cur, conn, body: dict) -> dict:
     if not nickname:
         return error_response('Укажите имя пользователя', 400)
     
-    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE nickname = %s", (nickname,))
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE LOWER(nickname) = LOWER(%s)", (nickname,))
     exists = cur.fetchone()
     
     return {
@@ -137,11 +137,11 @@ def register(cur, conn, body: dict) -> dict:
     if not nickname or not email or not password:
         return error_response('Заполните все поля', 400)
     
-    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE nickname = %s", (nickname,))
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE LOWER(nickname) = LOWER(%s)", (nickname,))
     if cur.fetchone():
         return error_response('Данное имя пользователя занято', 400)
     
-    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE email = %s", (email,))
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE LOWER(email) = LOWER(%s)", (email,))
     if cur.fetchone():
         return error_response('Данная почта уже привязана к другому аккаунту', 400)
     
@@ -276,7 +276,7 @@ def login(cur, conn, body: dict) -> dict:
     
     cur.execute("""
         SELECT id, email_verified, is_banned FROM t_p4831367_esport_gta_disaster.users 
-        WHERE email = %s AND password_hash = %s
+        WHERE LOWER(email) = LOWER(%s) AND password_hash = %s
     """, (email, password_hash))
     
     user = cur.fetchone()

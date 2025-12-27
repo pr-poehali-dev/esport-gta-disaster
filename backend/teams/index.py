@@ -3,6 +3,7 @@ import os
 import psycopg2
 import boto3
 import base64
+import random
 from datetime import datetime
 from psycopg2.extras import RealDictCursor
 
@@ -45,6 +46,10 @@ def handler(event: dict, context) -> dict:
                 return update_score(cur, conn, body, event)
             elif action == 'moderate_match':
                 return moderate_match(cur, conn, body, event)
+            elif action == 'assign_referee':
+                return assign_referee(cur, conn, body, event)
+            elif action == 'nullify_match':
+                return nullify_match(cur, conn, body, event)
             else:
                 return error_response('Неизвестное действие', 400)
         
@@ -134,12 +139,14 @@ def get_match_details(cur, conn, event: dict) -> dict:
             bm.id, bm.team1_id, bm.team2_id, bm.round, bm.match_order,
             bm.team1_score, bm.team2_score, bm.status, bm.match_details,
             bm.team1_captain_confirmed, bm.team2_captain_confirmed,
-            bm.moderator_verified, bm.completed_at,
-            t1.name as team1_name, t1.logo_url as team1_logo, t1.captain_id as team1_captain,
-            t2.name as team2_name, t2.logo_url as team2_logo, t2.captain_id as team2_captain
+            bm.moderator_verified, bm.completed_at, bm.referee_id,
+            t1.name as team1_name, t1.logo_url as team1_logo, t1.captain_id as team1_captain, t1.team_color as team1_color,
+            t2.name as team2_name, t2.logo_url as team2_logo, t2.captain_id as team2_captain, t2.team_color as team2_color,
+            u.nickname as referee_name
         FROM t_p4831367_esport_gta_disaster.bracket_matches bm
         LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
         LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON bm.referee_id = u.id
         WHERE bm.id = %s
     """, (match_id,))
     
@@ -162,6 +169,22 @@ def get_match_details(cur, conn, event: dict) -> dict:
     
     screenshots = cur.fetchall()
     
+    cur.execute("""
+        SELECT tm.user_id, u.nickname, u.avatar_url, tm.role
+        FROM t_p4831367_esport_gta_disaster.team_members tm
+        JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
+        WHERE tm.team_id = %s
+    """, (match[1],))
+    team1_members = cur.fetchall()
+    
+    cur.execute("""
+        SELECT tm.user_id, u.nickname, u.avatar_url, tm.role
+        FROM t_p4831367_esport_gta_disaster.team_members tm
+        JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
+        WHERE tm.team_id = %s
+    """, (match[2],))
+    team2_members = cur.fetchall()
+    
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -180,16 +203,35 @@ def get_match_details(cur, conn, event: dict) -> dict:
                 'team2_captain_confirmed': match[10],
                 'moderator_verified': match[11],
                 'completed_at': match[12].isoformat() if match[12] else None,
+                'referee_id': match[13],
                 'team1': {
-                    'name': match[13],
-                    'logo_url': match[14],
-                    'captain_id': match[15]
+                    'name': match[14],
+                    'logo_url': match[15],
+                    'captain_id': match[16],
+                    'color': match[17] or generate_random_color(),
+                    'members': [{
+                        'id': m[0],
+                        'nickname': m[1],
+                        'avatar_url': m[2],
+                        'role': m[3]
+                    } for m in team1_members]
                 },
                 'team2': {
-                    'name': match[16],
-                    'logo_url': match[17],
-                    'captain_id': match[18]
-                }
+                    'name': match[18],
+                    'logo_url': match[19],
+                    'captain_id': match[20],
+                    'color': match[21] or generate_random_color(),
+                    'members': [{
+                        'id': m[0],
+                        'nickname': m[1],
+                        'avatar_url': m[2],
+                        'role': m[3]
+                    } for m in team2_members]
+                },
+                'referee': {
+                    'id': match[13],
+                    'nickname': match[22]
+                } if match[13] else None
             },
             'screenshots': [{
                 'id': s[0],
@@ -513,6 +555,134 @@ def moderate_match(cur, conn, body: dict, event: dict) -> dict:
         'body': json.dumps({'success': True}),
         'isBase64Encoded': False
     }
+
+def assign_referee(cur, conn, body: dict, event: dict) -> dict:
+    '''Назначение судьи на матч (автоматически или вручную)'''
+    session_token = event.get('headers', {}).get('X-Session-Token')
+    
+    if not session_token:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("""
+        SELECT u.role FROM t_p4831367_esport_gta_disaster.users u
+        JOIN t_p4831367_esport_gta_disaster.sessions s ON u.id = s.user_id
+        WHERE s.session_token = %s AND s.expires_at > NOW()
+    """, (session_token,))
+    
+    user = cur.fetchone()
+    
+    if not user:
+        return error_response('Сессия недействительна', 401)
+    
+    user_role = user[0]
+    
+    if user_role not in ['moderator', 'admin', 'founder']:
+        return error_response('Недостаточно прав', 403)
+    
+    match_id = body.get('match_id')
+    referee_id = body.get('referee_id')
+    
+    if not match_id:
+        return error_response('Укажите match_id', 400)
+    
+    if referee_id:
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+            SET referee_id = %s
+            WHERE id = %s
+        """, (referee_id, match_id))
+    else:
+        cur.execute("""
+            SELECT id FROM t_p4831367_esport_gta_disaster.users 
+            WHERE role = 'referee'
+            ORDER BY RANDOM()
+            LIMIT 1
+        """)
+        referee = cur.fetchone()
+        
+        if referee:
+            cur.execute("""
+                UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+                SET referee_id = %s
+                WHERE id = %s
+            """, (referee[0], match_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
+
+def nullify_match(cur, conn, body: dict, event: dict) -> dict:
+    '''Аннулирование результата матча судьей'''
+    session_token = event.get('headers', {}).get('X-Session-Token')
+    
+    if not session_token:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("""
+        SELECT u.id, u.role FROM t_p4831367_esport_gta_disaster.users u
+        JOIN t_p4831367_esport_gta_disaster.sessions s ON u.id = s.user_id
+        WHERE s.session_token = %s AND s.expires_at > NOW()
+    """, (session_token,))
+    
+    user = cur.fetchone()
+    
+    if not user:
+        return error_response('Сессия недействительна', 401)
+    
+    user_id, user_role = user
+    match_id = body.get('match_id')
+    
+    if not match_id:
+        return error_response('Укажите match_id', 400)
+    
+    cur.execute("""
+        SELECT referee_id FROM t_p4831367_esport_gta_disaster.bracket_matches
+        WHERE id = %s
+    """, (match_id,))
+    
+    match = cur.fetchone()
+    
+    if not match:
+        return error_response('Матч не найден', 404)
+    
+    is_referee = match[0] == user_id
+    is_moderator = user_role in ['moderator', 'admin', 'founder']
+    
+    if not is_referee and not is_moderator:
+        return error_response('Только судья матча или модератор может аннулировать результат', 403)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+        SET winner_id = NULL, 
+            status = 'nullified',
+            team1_captain_confirmed = FALSE, 
+            team2_captain_confirmed = FALSE,
+            moderator_verified = FALSE,
+            completed_at = NULL
+        WHERE id = %s
+    """, (match_id,))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Результат матча аннулирован'}),
+        'isBase64Encoded': False
+    }
+
+def generate_random_color() -> str:
+    '''Генерация случайного hex цвета'''
+    colors = [
+        '#0D94E7', '#A855F7', '#10B981', '#F59E0B', '#EF4444',
+        '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#06B6D4'
+    ]
+    return random.choice(colors)
 
 def error_response(message: str, status: int) -> dict:
     '''Формирование ответа с ошибкой'''
