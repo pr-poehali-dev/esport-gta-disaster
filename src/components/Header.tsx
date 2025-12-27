@@ -36,18 +36,20 @@ export default function Header() {
   ];
 
   const socialLinks = [
-    { icon: 'MessageCircle', label: 'ВКонтакте', href: '#' },
-    { icon: 'Send', label: 'Telegram', href: '#' },
+    { icon: 'MessageCircle', label: 'ВКонтакте', href: 'https://vk.com/disaster_esports' },
+    { icon: 'Send', label: 'Telegram', href: 'https://t.me/dizasterri' },
     { icon: 'MessageSquare', label: 'Discord', href: '#' },
   ];
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          <Logo showText={true} animated={true} />
+        <div className="flex items-center justify-between h-20 gap-8">
+          <div className="flex-shrink-0">
+            <Logo showText={true} animated={true} />
+          </div>
 
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-6">
             {navLinks.map((link) => (
               <a
                 key={link.label}
@@ -62,7 +64,7 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-3">
             {!isAuthenticated ? (
               <>
                 <Button

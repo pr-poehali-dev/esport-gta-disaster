@@ -39,22 +39,24 @@ export default function Logo({ className = "", showText = true, animated = true 
       <div 
         className={`relative ${glitchActive ? 'logo-glitch' : ''} ${shatterActive ? 'logo-shatter' : ''}`}
         style={{ 
-          filter: 'drop-shadow(0 0 6px rgba(13, 148, 231, 0.25))',
+          filter: 'drop-shadow(0 0 8px rgba(13, 148, 231, 0.4))',
           WebkitBackfaceVisibility: 'hidden',
-          backfaceVisibility: 'hidden'
+          backfaceVisibility: 'hidden',
+          background: 'transparent'
         }}
       >
         <svg
-          width="56"
-          height="56"
+          width="48"
+          height="48"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="transition-all duration-500 ease-out group-hover:scale-105"
+          className="transition-all duration-700 ease-out group-hover:scale-110 group-hover:rotate-3"
           style={{
             shapeRendering: 'geometricPrecision',
             textRendering: 'geometricPrecision',
             imageRendering: 'crisp-edges',
+            background: 'transparent'
           }}
         >
           <defs>

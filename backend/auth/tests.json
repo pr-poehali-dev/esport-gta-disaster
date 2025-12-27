@@ -19,7 +19,7 @@
       },
       "expectedStatus": 200,
       "expectedBody": {
-        "available": "boolean"
+        "available": true
       },
       "bodyMatcher": "partial"
     }

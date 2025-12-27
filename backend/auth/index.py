@@ -69,7 +69,7 @@ def check_nickname(cur, conn, body: dict) -> dict:
     if not nickname:
         return error_response('Укажите имя пользователя', 400)
     
-    cur.execute("SELECT id FROM users WHERE nickname = %s", (nickname,))
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE nickname = %s", (nickname,))
     exists = cur.fetchone()
     
     return {
@@ -86,7 +86,7 @@ def check_email(cur, conn, body: dict) -> dict:
     if not email:
         return error_response('Укажите email', 400)
     
-    cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE email = %s", (email,))
     exists = cur.fetchone()
     
     return {
@@ -105,11 +105,11 @@ def register(cur, conn, body: dict) -> dict:
     if not nickname or not email or not password:
         return error_response('Заполните все поля', 400)
     
-    cur.execute("SELECT id FROM users WHERE nickname = %s", (nickname,))
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE nickname = %s", (nickname,))
     if cur.fetchone():
         return error_response('Данное имя пользователя занято', 400)
     
-    cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.users WHERE email = %s", (email,))
     if cur.fetchone():
         return error_response('Данная почта уже привязана к другому аккаунту', 400)
     
@@ -117,7 +117,7 @@ def register(cur, conn, body: dict) -> dict:
     verification_token = secrets.token_urlsafe(32)
     
     cur.execute("""
-        INSERT INTO users (nickname, email, password_hash, role, email_verified, email_verification_token, created_at)
+        INSERT INTO t_p4831367_esport_gta_disaster.users (nickname, email, password_hash, role, email_verified, email_verification_token, created_at)
         VALUES (%s, %s, %s, 'user', FALSE, %s, NOW())
         RETURNING id
     """, (nickname, email, password_hash, verification_token))
@@ -160,7 +160,7 @@ def verify_email(cur, conn, body: dict) -> dict:
         return error_response('Токен не указан', 400)
     
     cur.execute("""
-        SELECT id, nickname, email FROM users 
+        SELECT id, nickname, email FROM t_p4831367_esport_gta_disaster.users 
         WHERE email_verification_token = %s AND email_verified = FALSE
     """, (token,))
     
@@ -172,7 +172,7 @@ def verify_email(cur, conn, body: dict) -> dict:
     user_id, nickname, email = user
     
     cur.execute("""
-        UPDATE users 
+        UPDATE t_p4831367_esport_gta_disaster.users 
         SET email_verified = TRUE, email_verification_token = NULL 
         WHERE id = %s
     """, (user_id,))
@@ -181,13 +181,13 @@ def verify_email(cur, conn, body: dict) -> dict:
     expires_at = datetime.now() + timedelta(days=30)
     
     cur.execute("""
-        INSERT INTO sessions (user_id, session_token, expires_at)
+        INSERT INTO t_p4831367_esport_gta_disaster.sessions (user_id, session_token, expires_at)
         VALUES (%s, %s, %s)
     """, (user_id, session_token, expires_at))
     
     conn.commit()
     
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    cur.execute("SELECT * FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
     user_data = cur.fetchone()
     
     return {
@@ -208,7 +208,7 @@ def resend_verification(cur, conn, body: dict) -> dict:
     
     cur.execute("""
         SELECT id, nickname, email_verification_token, email_verified 
-        FROM users WHERE email = %s
+        FROM t_p4831367_esport_gta_disaster.users WHERE email = %s
     """, (email,))
     
     user = cur.fetchone()
@@ -243,7 +243,7 @@ def login(cur, conn, body: dict) -> dict:
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     
     cur.execute("""
-        SELECT id, email_verified, is_banned FROM users 
+        SELECT id, email_verified, is_banned FROM t_p4831367_esport_gta_disaster.users 
         WHERE email = %s AND password_hash = %s
     """, (email, password_hash))
     
@@ -264,13 +264,13 @@ def login(cur, conn, body: dict) -> dict:
     expires_at = datetime.now() + timedelta(days=30)
     
     cur.execute("""
-        INSERT INTO sessions (user_id, session_token, expires_at)
+        INSERT INTO t_p4831367_esport_gta_disaster.sessions (user_id, session_token, expires_at)
         VALUES (%s, %s, %s)
     """, (user_id, session_token, expires_at))
     
     conn.commit()
     
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    cur.execute("SELECT * FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
     user_data = cur.fetchone()
     
     return {
@@ -288,7 +288,7 @@ def logout(cur, conn, event: dict) -> dict:
     session_token = event.get('headers', {}).get('X-Session-Token')
     
     if session_token:
-        cur.execute("DELETE FROM sessions WHERE session_token = %s", (session_token,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.sessions WHERE session_token = %s", (session_token,))
         conn.commit()
     
     return {
@@ -301,8 +301,8 @@ def logout(cur, conn, event: dict) -> dict:
 def get_profile(cur, conn, session_token: str) -> dict:
     """Получение профиля пользователя"""
     cur.execute("""
-        SELECT u.* FROM users u
-        JOIN sessions s ON u.id = s.user_id
+        SELECT u.* FROM t_p4831367_esport_gta_disaster.users u
+        JOIN t_p4831367_esport_gta_disaster.sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
     

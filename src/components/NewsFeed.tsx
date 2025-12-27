@@ -87,13 +87,18 @@ export default function NewsFeed() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
           ref={headerAnimation.ref}
-          className={`text-center mb-12 transition-all duration-700 ${
+          className={`text-center mb-16 transition-all duration-700 ${
             headerAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <h1 className="text-5xl sm:text-6xl font-black mb-4">
+          <div className="mb-8">
+            <h1 className="text-2xl font-light tracking-[0.3em] text-muted-foreground/60 mb-2">
+              DISASTER ESPORTS
+            </h1>
+          </div>
+          <h2 className="text-5xl sm:text-6xl font-black mb-4">
             Последние <span className="text-gradient">Новости</span>
-          </h1>
+          </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Анонсы турниров, результаты матчей и новости команд
           </p>
