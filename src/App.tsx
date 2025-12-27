@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SnowEffect from "./components/SnowEffect";
+import NotificationSystem from "./components/NotificationSystem";
+import AchievementSystem from "./components/AchievementSystem";
 import Index from "./pages/Index";
 import Teams from "./pages/Teams";
 import Tournaments from "./pages/Tournaments";
@@ -32,6 +34,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <SnowEffect />
+      <NotificationSystem />
+      <AchievementSystem />
       <Toaster />
       <Sonner />
       <BrowserRouter>

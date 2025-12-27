@@ -7,7 +7,7 @@ import Icon from '@/components/ui/icon';
 const BACKEND_URL = 'https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4';
 
 export default function ForgotPassword() {
-  const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
+  const [step, setStep] = useState<'email' | 'reset'>('email');
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -39,8 +39,8 @@ export default function ForgotPassword() {
         throw new Error(data.error || 'Ошибка запроса');
       }
 
-      setSuccess('Код восстановления отправлен на вашу почту');
-      setStep('code');
+      setSuccess('Код восстановления отправлен на вашу почту. Введите его ниже вместе с новым паролем');
+      setStep('reset');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -48,36 +48,7 @@ export default function ForgotPassword() {
     }
   };
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setLoading(true);
 
-    try {
-      const response = await fetch(BACKEND_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reset_password_verify',
-          token,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Неверный код');
-      }
-
-      setSuccess('Код принят. Введите новый пароль');
-      setStep('password');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +71,7 @@ export default function ForgotPassword() {
       const response = await fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.dumps({
+        body: JSON.stringify({
           action: 'reset_password',
           token,
           new_password: newPassword,
@@ -132,8 +103,7 @@ export default function ForgotPassword() {
             </h1>
             <p className="text-muted-foreground">
               {step === 'email' && 'Введите email, привязанный к вашему аккаунту'}
-              {step === 'code' && 'Введите код, отправленный на вашу почту'}
-              {step === 'password' && 'Создайте новый пароль'}
+              {step === 'reset' && 'Введите код из письма и новый пароль'}
             </p>
           </div>
 
@@ -185,8 +155,8 @@ export default function ForgotPassword() {
             </form>
           )}
 
-          {step === 'code' && (
-            <form onSubmit={handleVerifyCode} className="space-y-4">
+          {step === 'reset' && (
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Код восстановления</label>
                 <input
@@ -194,34 +164,11 @@ export default function ForgotPassword() {
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   className="w-full px-4 py-3 bg-background border border-border rounded focus:outline-none focus:border-primary transition-colors font-mono"
-                  placeholder="Введите код из письма"
+                  placeholder="Код из письма"
                   required
                 />
               </div>
 
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-primary to-secondary"
-                disabled={loading}
-              >
-                {loading ? 'Проверка...' : 'Проверить код'}
-              </Button>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleRequestReset}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  disabled={loading}
-                >
-                  Отправить код повторно
-                </button>
-              </div>
-            </form>
-          )}
-
-          {step === 'password' && (
-            <form onSubmit={handleResetPassword} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Новый пароль</label>
                 <input
