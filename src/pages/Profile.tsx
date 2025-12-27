@@ -1,346 +1,472 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService, User } from '@/lib/auth';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { playClickSound, playSuccessSound } from '@/utils/sounds';
-import CreateTeamDialog from '@/components/CreateTeamDialog';
-import EditTeamDialog from '@/components/EditTeamDialog';
-import DeleteTeamDialog from '@/components/DeleteTeamDialog';
-import TournamentRegistrations from '@/components/TournamentRegistrations';
-import ModerationPanel from '@/components/ModerationPanel';
-import UserManagementPanel from '@/components/UserManagementPanel';
-import AdminActions from '@/components/AdminActions';
-import ProfileHeader from '@/components/profile/ProfileHeader';
-import ProfileInfoCard from '@/components/profile/ProfileInfoCard';
-import ProfileAchievementsCard from '@/components/profile/ProfileAchievementsCard';
-import ProfileTeamCard from '@/components/profile/ProfileTeamCard';
+import Icon from '@/components/ui/icon';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
-const Profile = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+const PROFILE_API_URL = 'https://functions.poehali.dev/40668e0d-ec0a-41a3-95c1-34a0140e1c15';
+
+const ROLE_NAMES: Record<string, string> = {
+  'founder': 'Основатель',
+  'director': 'Руководитель',
+  'admin': 'Администратор',
+  'moderator': 'Модератор',
+  'chief_judge': 'Главный судья',
+  'legend': 'Легенда',
+  'authority': 'Авторитет',
+  'user': 'Пользователь'
+};
+
+const STATUS_NAMES: Record<string, string> = {
+  'Киберспортсмен': 'Киберспортсмен',
+  'Освоившийся': 'Освоившийся',
+  'Пользователь': 'Пользователь',
+  'Новичок': 'Новичок'
+};
+
+export default function Profile() {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
+  const [editData, setEditData] = useState({
     nickname: '',
     discord: '',
-    team: ''
+    team: '',
+    bio: '',
+    signature_url: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [team, setTeam] = useState<any>(null);
-  const [loadingTeam, setLoadingTeam] = useState(true);
-  const [showCreateTeam, setShowCreateTeam] = useState(false);
-  const [showEditTeam, setShowEditTeam] = useState(false);
-  const [showDeleteTeam, setShowDeleteTeam] = useState(false);
-  const [registrations, setRegistrations] = useState<any[]>([]);
-  const [showTeamManagement, setShowTeamManagement] = useState(false);
+
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadProfile();
-    loadTeam();
-    loadRegistrations();
+    
+    const interval = setInterval(() => {
+      trackActivity();
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const loadProfile = async () => {
-    try {
-      const profile = await authService.getProfile();
-      setUser(profile);
-      setFormData({
-        nickname: profile.nickname,
-        discord: profile.discord || '',
-        team: profile.team || ''
-      });
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить профиль",
-        variant: "destructive"
-      });
-      navigate('/');
-    }
-  };
+  const trackActivity = async () => {
+    const sessionToken = localStorage.getItem('session_token');
+    if (!sessionToken) return;
 
-  const handleLogout = async () => {
-    playClickSound();
-    await authService.logout();
-    toast({
-      title: "Выход выполнен",
-      description: "До встречи на арене!",
-    });
-    navigate('/');
-  };
-
-  const loadTeam = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch('https://functions.poehali.dev/c8cfc7ef-3e1a-4fa4-ad8e-70777d50b4f0', {
-        headers: { 'X-User-Id': user.id?.toString() || '' }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTeam(data);
-      }
-    } catch (error) {
-      console.log('No team found');
-    } finally {
-      setLoadingTeam(false);
-    }
-  };
-
-  const loadRegistrations = async () => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch('https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53', {
-        headers: { 'X-User-Id': user.id?.toString() || '' }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setRegistrations(data);
-      }
-    } catch (error) {
-      console.log('Failed to load registrations');
-    }
-  };
-
-  const handleRegisterTournament = async (tournamentName: string) => {
-    playClickSound();
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch('https://functions.poehali.dev/d2f5f9df-8162-4cb4-a2c4-6caf7e492d53', {
+      await fetch(PROFILE_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id?.toString() || ''
+          'X-Session-Token': sessionToken
         },
-        body: JSON.stringify({ tournament_name: tournamentName })
+        body: JSON.stringify({
+          action: 'track_activity',
+          duration_seconds: 60
+        })
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-
-      playSuccessSound();
-      toast({
-        title: "✅ Регистрация завершена!",
-        description: `Команда ${team?.name} зарегистрирована на турнир`,
-        className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
-      });
-      
-      loadRegistrations();
     } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: error instanceof Error ? error.message : 'Не удалось зарегистрироваться',
-        variant: "destructive"
-      });
+      console.log('Activity tracking failed');
     }
   };
 
-  const handleDeleteTeam = async () => {
-    playClickSound();
+  const loadProfile = async () => {
+    const sessionToken = localStorage.getItem('session_token');
+    
+    if (!sessionToken) {
+      navigate('/login');
+      return;
+    }
+
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch('https://functions.poehali.dev/c8cfc7ef-3e1a-4fa4-ad8e-70777d50b4f0', {
-        method: 'DELETE',
+      const response = await fetch(PROFILE_API_URL, {
+        method: 'GET',
         headers: {
-          'X-User-Id': user.id?.toString() || ''
+          'Content-Type': 'application/json',
+          'X-Session-Token': sessionToken
         }
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
+      const data = await response.json();
+
+      if (response.ok) {
+        setProfile(data);
+        setEditData({
+          nickname: data.nickname || '',
+          discord: data.discord || '',
+          team: data.team || '',
+          bio: data.bio || '',
+          signature_url: data.signature_url || ''
+        });
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error,
+          variant: 'destructive'
+        });
+        navigate('/login');
       }
-
-      playSuccessSound();
-      toast({
-        title: "✅ Команда удалена",
-        description: "Все данные команды успешно удалены",
-        className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
-      });
-      
-      setTeam(null);
-      loadRegistrations();
     } catch (error) {
       toast({
-        title: "Ошибка",
-        description: error instanceof Error ? error.message : 'Не удалось удалить команду',
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      const updated = await authService.updateProfile(formData);
-      setUser(updated);
-      setIsEditing(false);
-      playSuccessSound();
-      
-      toast({
-        title: "✅ Профиль обновлен!",
-        description: "Изменения успешно сохранены",
-        className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
-      });
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить профиль",
-        variant: "destructive"
+        title: 'Ошибка',
+        description: 'Не удалось загрузить профиль',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFormChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
-  };
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    if (user) {
-      setFormData({
-        nickname: user.nickname,
-        discord: user.discord || '',
-        team: user.team || ''
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Ошибка',
+        description: 'Размер файла не должен превышать 5 МБ',
+        variant: 'destructive'
       });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result?.toString().split(',')[1];
+        
+        const sessionToken = localStorage.getItem('session_token');
+        const response = await fetch(PROFILE_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Token': sessionToken!
+          },
+          body: JSON.stringify({
+            action: 'upload_avatar',
+            avatar_base64: base64,
+            file_type: file.type
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setProfile({ ...profile, avatar_url: data.avatar_url });
+          toast({
+            title: 'Успешно',
+            description: 'Аватар загружен'
+          });
+        } else {
+          toast({
+            title: 'Ошибка',
+            description: data.error,
+            variant: 'destructive'
+          });
+        }
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить аватар',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleTeamUpdate = () => {
-    loadTeam();
-    toast({
-      title: "✅ Состав обновлен!",
-      description: "Изменения успешно сохранены",
-      className: "bg-gradient-to-r from-primary to-secondary text-white border-0",
-    });
+  const handleSaveProfile = async () => {
+    if (!editData.nickname.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Имя пользователя обязательно',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const sessionToken = localStorage.getItem('session_token');
+      const response = await fetch(PROFILE_API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Token': sessionToken!
+        },
+        body: JSON.stringify(editData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно',
+          description: 'Профиль обновлен'
+        });
+        setEditDialogOpen(false);
+        loadProfile();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error,
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обновить профиль',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!user) {
+  if (loading && !profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-[#1a1a2e] flex items-center justify-center">
-        <div className="text-2xl font-bold text-primary">Загрузка...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Icon name="Loader2" size={48} className="animate-spin text-primary" />
       </div>
     );
   }
 
+  if (!profile) return null;
+
+  const getRoleBadgeColor = (role: string) => {
+    const colors: Record<string, string> = {
+      'founder': 'bg-gradient-to-r from-yellow-500 to-orange-500',
+      'director': 'bg-gradient-to-r from-purple-500 to-pink-500',
+      'admin': 'bg-gradient-to-r from-red-500 to-pink-600',
+      'moderator': 'bg-gradient-to-r from-blue-500 to-cyan-500',
+      'chief_judge': 'bg-gradient-to-r from-green-500 to-emerald-500',
+      'legend': 'bg-gradient-to-r from-indigo-500 to-purple-500',
+      'authority': 'bg-gradient-to-r from-teal-500 to-cyan-500',
+      'user': 'bg-gradient-to-r from-gray-600 to-gray-700'
+    };
+    return colors[role] || colors['user'];
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'Киберспортсмен': 'bg-gradient-to-r from-purple-600 to-pink-600',
+      'Освоившийся': 'bg-gradient-to-r from-blue-600 to-cyan-600',
+      'Пользователь': 'bg-gradient-to-r from-green-600 to-emerald-600',
+      'Новичок': 'bg-gradient-to-r from-gray-600 to-slate-600'
+    };
+    return colors[status] || colors['Новичок'];
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-[#1a1a2e]">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSJyZ2JhKDEzLDE0OCwyMzEsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-30"></div>
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
 
-      <ProfileHeader 
-        onNavigateHome={() => navigate('/')}
-        onLogout={handleLogout}
-      />
-
-      <section className="relative z-10 py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-black mb-4 text-white">Личный кабинет</h1>
-              <p className="text-muted-foreground">Управляйте своим профилем игрока</p>
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <ProfileInfoCard
-                  user={user}
-                  isEditing={isEditing}
-                  formData={formData}
-                  loading={loading}
-                  onEdit={() => setIsEditing(true)}
-                  onCancel={handleCancelEdit}
-                  onUpdate={handleUpdate}
-                  onFormChange={handleFormChange}
-                />
-
-                <ProfileAchievementsCard
-                  user={user}
-                  team={team}
-                  registrations={registrations}
-                  onNavigateToAchievements={() => navigate('/#achievements')}
-                />
-
-                <ProfileTeamCard
-                  team={team}
-                  loadingTeam={loadingTeam}
-                  showTeamManagement={showTeamManagement}
-                  onCreateTeam={() => setShowCreateTeam(true)}
-                  onEditTeam={() => setShowEditTeam(true)}
-                  onDeleteTeam={() => setShowDeleteTeam(true)}
-                  onToggleTeamManagement={() => setShowTeamManagement(!showTeamManagement)}
-                  onTeamUpdate={handleTeamUpdate}
-                />
-              </div>
-
-              <div className="space-y-6">
-                {user.is_organizer && (
-                  <AdminActions username={user.nickname} userId={user.id.toString()} />
-                )}
+      <main className="flex-1 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Card className="overflow-hidden border-primary/30">
+            <div className="h-48 bg-gradient-to-r from-primary via-secondary to-accent relative">
+              <div className="absolute -bottom-16 left-8 flex items-end gap-6">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-card">
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <Icon name="User" size={48} />
+                      </div>
+                    )}
+                  </div>
+                  <label className="absolute bottom-0 right-0 w-10 h-10 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors">
+                    <Icon name="Camera" size={20} className="text-white" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div className="mt-6 space-y-6">
-              {team && (
-                <Card className="border-primary/30 bg-card/80 backdrop-blur">
-                  <TournamentRegistrations
-                    registrations={registrations}
-                    onRegister={handleRegisterTournament}
-                  />
+            <div className="pt-20 px-8 pb-8">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h1 className="text-4xl font-bold mb-2">{profile.nickname}</h1>
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`px-3 py-1 rounded-full text-white text-sm font-bold ${getRoleBadgeColor(profile.role)}`}>
+                      {ROLE_NAMES[profile.role] || profile.role}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-white text-sm font-bold ${getStatusBadgeColor(profile.auto_status)}`}>
+                      {STATUS_NAMES[profile.auto_status] || profile.auto_status}
+                    </span>
+                  </div>
+                </div>
+
+                <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Icon name="Edit" size={20} />
+                      Изменить информацию
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Редактирование профиля</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <label className="text-sm font-semibold mb-2 block">Имя пользователя *</label>
+                        <Input
+                          value={editData.nickname}
+                          onChange={(e) => setEditData({ ...editData, nickname: e.target.value })}
+                          placeholder="Введите имя пользователя"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-semibold mb-2 block">Discord</label>
+                        <Input
+                          value={editData.discord}
+                          onChange={(e) => setEditData({ ...editData, discord: e.target.value })}
+                          placeholder="username#0000"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-semibold mb-2 block">Команда</label>
+                        <Input
+                          value={editData.team}
+                          onChange={(e) => setEditData({ ...editData, team: e.target.value })}
+                          placeholder="Название команды"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-semibold mb-2 block">Биография</label>
+                        <Textarea
+                          value={editData.bio}
+                          onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+                          placeholder="Расскажите о себе"
+                          rows={4}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-semibold mb-2 block">URL подписи (изображение/видео)</label>
+                        <Input
+                          value={editData.signature_url}
+                          onChange={(e) => setEditData({ ...editData, signature_url: e.target.value })}
+                          placeholder="https://example.com/signature.png"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleSaveProfile}
+                        disabled={loading}
+                        className="w-full"
+                      >
+                        {loading ? <Icon name="Loader2" className="animate-spin mr-2" size={20} /> : <Icon name="Save" className="mr-2" size={20} />}
+                        Сохранить
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <Card className="p-6 bg-card/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Icon name="Clock" size={24} className="text-primary" />
+                    <h3 className="text-lg font-bold">Статистика</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Время на сайте:</span>
+                      <span className="font-bold">{profile.total_time_hours} ч</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Очки достижений:</span>
+                      <span className="font-bold">{profile.achievement_points || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Дата регистрации:</span>
+                      <span className="font-bold">{new Date(profile.created_at).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-card/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Icon name="Users" size={24} className="text-primary" />
+                    <h3 className="text-lg font-bold">Информация</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {profile.team && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Команда:</span>
+                        <span className="font-bold">{profile.team}</span>
+                      </div>
+                    )}
+                    {profile.discord && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Discord:</span>
+                        <span className="font-bold">{profile.discord}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="font-bold text-sm">{profile.email}</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {profile.bio && (
+                <Card className="p-6 bg-card/50 mb-6">
+                  <h3 className="text-lg font-bold mb-3">О себе</h3>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{profile.bio}</p>
                 </Card>
               )}
 
-              {user.is_organizer && (
-                <>
-                  <Card className="border-primary/30 bg-card/80 backdrop-blur">
-                    <ModerationPanel />
-                  </Card>
-                  <Card className="border-primary/30 bg-card/80 backdrop-blur">
-                    <UserManagementPanel />
-                  </Card>
-                </>
+              {profile.signature_url && (
+                <Card className="p-6 bg-card/50">
+                  <h3 className="text-lg font-bold mb-3">Подпись</h3>
+                  {profile.signature_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                    <video src={profile.signature_url} controls className="w-full rounded-lg" />
+                  ) : (
+                    <img src={profile.signature_url} alt="Signature" className="w-full rounded-lg" />
+                  )}
+                </Card>
               )}
             </div>
-          </div>
+          </Card>
         </div>
-      </section>
+      </main>
 
-      <CreateTeamDialog
-        open={showCreateTeam}
-        onOpenChange={setShowCreateTeam}
-        onSuccess={() => {
-          loadTeam();
-          setShowCreateTeam(false);
-        }}
-      />
-
-      <EditTeamDialog
-        open={showEditTeam}
-        onOpenChange={setShowEditTeam}
-        team={team}
-        onSuccess={() => {
-          loadTeam();
-          setShowEditTeam(false);
-        }}
-      />
-
-      <DeleteTeamDialog
-        open={showDeleteTeam}
-        onOpenChange={setShowDeleteTeam}
-        onConfirm={() => {
-          handleDeleteTeam();
-          setShowDeleteTeam(false);
-        }}
-      />
+      <Footer />
     </div>
   );
-};
-
-export default Profile;
+}

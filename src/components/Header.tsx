@@ -36,7 +36,7 @@ export default function Header() {
   ];
 
   const socialLinks = [
-    { icon: 'MessageCircle', label: 'ВКонтакте', href: 'https://vk.com/disaster_esports' },
+    { icon: 'MessageCircle', label: 'ВКонтакте', href: 'https://vk.com/dizasterri' },
     { icon: 'Send', label: 'Telegram', href: 'https://t.me/dizasterri' },
     { icon: 'MessageSquare', label: 'Discord', href: '#' },
   ];
@@ -85,6 +85,14 @@ export default function Header() {
               </>
             ) : (
               <>
+                <Button
+                  onClick={() => navigate('/profile')}
+                  variant="ghost"
+                  className="font-semibold flex items-center gap-2"
+                >
+                  <Icon name="User" className="h-4 w-4" />
+                  ПРОФИЛЬ
+                </Button>
                 {isAdmin && (
                   <a
                     href="/admin"
