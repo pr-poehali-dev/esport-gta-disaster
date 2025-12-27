@@ -77,7 +77,17 @@ export default function Admin() {
 
         <main className="flex-1 p-8">
           {activeSection === 'dashboard' && <DashboardSection />}
-          {activeSection === 'users' && <UsersSection />}
+          {activeSection === 'users' && (
+            <div className="space-y-4">
+              <UsersSection />
+              <button
+                onClick={() => navigate('/admin/users')}
+                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition"
+              >
+                Управление ролями и статусами →
+              </button>
+            </div>
+          )}
           {activeSection === 'bans' && <BansSection />}
           {activeSection === 'mutes' && <MutesSection />}
           {activeSection === 'suspensions' && <SuspensionsSection />}

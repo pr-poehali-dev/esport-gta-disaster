@@ -53,6 +53,10 @@ def handler(event: dict, context) -> dict:
                 return reset_password_verify(cur, conn, body)
             elif action == 'reset_password':
                 return reset_password(cur, conn, body)
+            elif action == 'admin_get_users':
+                return admin_get_users(cur, conn, event)
+            elif action == 'admin_update_user':
+                return admin_update_user(cur, conn, body, event)
             else:
                 return error_response('Неизвестное действие', 400)
         
@@ -544,6 +548,95 @@ def reset_password(cur, conn, body: dict) -> dict:
         'isBase64Encoded': False
     }
 
+
+def admin_get_users(cur, conn, event: dict) -> dict:
+    '''Получение списка всех пользователей (только для админов)'''
+    admin_token = event.get('headers', {}).get('X-Admin-Token') or event.get('headers', {}).get('x-admin-token')
+    
+    if not admin_token:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE session_token = %s", (admin_token,))
+    admin = cur.fetchone()
+    
+    if not admin or admin[0] not in ['admin', 'founder']:
+        return error_response('Доступ запрещен', 403)
+    
+    cur.execute("""
+        SELECT id, nickname, email, role, status, avatar_url, signature, created_at
+        FROM t_p4831367_esport_gta_disaster.users
+        ORDER BY created_at DESC
+    """)
+    users = cur.fetchall()
+    
+    users_list = [{
+        'id': u[0],
+        'nickname': u[1],
+        'email': u[2],
+        'role': u[3],
+        'status': u[4],
+        'avatar_url': u[5],
+        'signature': u[6],
+        'created_at': u[7].isoformat() if u[7] else None
+    } for u in users]
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'users': users_list}),
+        'isBase64Encoded': False
+    }
+
+def admin_update_user(cur, conn, body: dict, event: dict) -> dict:
+    '''Обновление пользователя (только для админов)'''
+    admin_token = event.get('headers', {}).get('X-Admin-Token') or event.get('headers', {}).get('x-admin-token')
+    
+    if not admin_token:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE session_token = %s", (admin_token,))
+    admin = cur.fetchone()
+    
+    if not admin or admin[0] not in ['admin', 'founder']:
+        return error_response('Доступ запрещен', 403)
+    
+    user_id = body.get('user_id')
+    if not user_id:
+        return error_response('Не указан ID пользователя', 400)
+    
+    updates = []
+    values = []
+    
+    if 'role' in body:
+        updates.append('role = %s')
+        values.append(body['role'])
+    
+    if 'status' in body:
+        updates.append('status = %s')
+        values.append(body['status'])
+    
+    if 'avatar_url' in body:
+        updates.append('avatar_url = %s')
+        values.append(body['avatar_url'])
+    
+    if 'signature' in body:
+        updates.append('signature = %s')
+        values.append(body['signature'])
+    
+    if not updates:
+        return error_response('Нет данных для обновления', 400)
+    
+    values.append(user_id)
+    query = f"UPDATE t_p4831367_esport_gta_disaster.users SET {', '.join(updates)} WHERE id = %s"
+    cur.execute(query, values)
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
 
 def send_reset_email(to_email: str, nickname: str, token: str, smtp_email: str, smtp_password: str):
     '''Отправка email с кодом восстановления'''
