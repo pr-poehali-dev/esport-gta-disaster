@@ -1,9 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Logo from './Logo';
 import Icon from '@/components/ui/icon';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        setUserRole(userData.role);
+      } catch (e) {
+        console.error('Failed to parse user data');
+      }
+    }
+  }, []);
+
+  const isAdmin = userRole === 'admin' || userRole === 'founder' || userRole === 'organizer';
 
   const navLinks = [
     { label: 'Обсуждения', href: '#', external: true },
@@ -42,13 +57,15 @@ export default function Header() {
           </nav>
 
           <div className="hidden lg:flex items-center gap-4">
-            <a
-              href="/admin"
-              className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 hover:border-primary transition-all duration-300 font-semibold text-sm uppercase tracking-wide flex items-center gap-2"
-            >
-              <Icon name="Shield" className="h-4 w-4" />
-              Админ-Панель
-            </a>
+            {isAdmin && (
+              <a
+                href="/admin"
+                className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 hover:border-primary transition-all duration-300 font-semibold text-sm uppercase tracking-wide flex items-center gap-2"
+              >
+                <Icon name="Shield" className="h-4 w-4" />
+                Админ-Панель
+              </a>
+            )}
             {socialLinks.map((social) => (
               <a
                 key={social.label}
@@ -91,14 +108,16 @@ export default function Header() {
                 {link.label}
               </a>
             ))}
-            <a
-              href="/admin"
-              className="block px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 transition-all duration-300 font-semibold text-sm uppercase tracking-wide text-center"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <Icon name="Shield" className="h-4 w-4 inline mr-2" />
-              Админ-Панель
-            </a>
+            {isAdmin && (
+              <a
+                href="/admin"
+                className="block px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 transition-all duration-300 font-semibold text-sm uppercase tracking-wide text-center"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Icon name="Shield" className="h-4 w-4 inline mr-2" />
+                Админ-Панель
+              </a>
+            )}
             <div className="pt-4 flex items-center gap-3">
               {socialLinks.map((social) => (
                 <a
