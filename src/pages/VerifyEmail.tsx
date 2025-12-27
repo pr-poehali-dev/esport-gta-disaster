@@ -27,14 +27,21 @@ const VerifyEmail = () => {
     }
 
     try {
-      const response = await fetch(`https://functions.poehali.dev/4f5e7055-42ae-47c9-81c9-a19c851c78ec?action=verify-email&token=${token}`);
+      const response = await fetch('https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_email',
+          token,
+        }),
+      });
       const data = await response.json();
 
       if (response.ok) {
         setStatus('success');
         setMessage('Email успешно подтвержден!');
         
-        localStorage.setItem('sessionToken', data.session_token);
+        localStorage.setItem('session_token', data.session_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         playSuccessSound();
@@ -45,7 +52,8 @@ const VerifyEmail = () => {
         });
 
         setTimeout(() => {
-          navigate('/profile');
+          navigate('/');
+          window.location.reload();
         }, 2000);
       } else {
         setStatus('error');

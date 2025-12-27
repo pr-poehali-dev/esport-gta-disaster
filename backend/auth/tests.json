@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200,
+      "headers": {
+        "Access-Control-Allow-Origin": "*"
+      }
+    },
+    {
+      "name": "Check nickname availability",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "check_nickname",
+        "nickname": "testuser123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "available": "boolean"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

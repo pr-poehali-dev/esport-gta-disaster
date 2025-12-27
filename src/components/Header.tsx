@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import Icon from '@/components/ui/icon';
+import { Button } from '@/components/ui/button';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const user = localStorage.getItem('user');
-    if (user) {
+    const token = localStorage.getItem('session_token');
+    if (user && token) {
       try {
         const userData = JSON.parse(user);
         setUserRole(userData.role);
+        setIsAuthenticated(true);
       } catch (e) {
         console.error('Failed to parse user data');
       }
@@ -57,14 +63,36 @@ export default function Header() {
           </nav>
 
           <div className="hidden lg:flex items-center gap-4">
-            {isAdmin && (
-              <a
-                href="/admin"
-                className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 hover:border-primary transition-all duration-300 font-semibold text-sm uppercase tracking-wide flex items-center gap-2"
-              >
-                <Icon name="Shield" className="h-4 w-4" />
-                Админ-Панель
-              </a>
+            {!isAuthenticated ? (
+              <>
+                <Button
+                  onClick={() => navigate('/login')}
+                  variant="ghost"
+                  className="font-semibold"
+                >
+                  <Icon name="LogIn" className="h-4 w-4 mr-2" />
+                  ВХОД
+                </Button>
+                <Button
+                  onClick={() => navigate('/register')}
+                  className="bg-gradient-to-r from-primary to-secondary"
+                >
+                  <Icon name="UserPlus" className="h-4 w-4 mr-2" />
+                  РЕГИСТРАЦИЯ
+                </Button>
+              </>
+            ) : (
+              <>
+                {isAdmin && (
+                  <a
+                    href="/admin"
+                    className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 hover:border-primary transition-all duration-300 font-semibold text-sm uppercase tracking-wide flex items-center gap-2"
+                  >
+                    <Icon name="Shield" className="h-4 w-4" />
+                    Админ-Панель
+                  </a>
+                )}
+              </>
             )}
             {socialLinks.map((social) => (
               <a
