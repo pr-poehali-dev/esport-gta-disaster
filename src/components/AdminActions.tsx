@@ -1,26 +1,10 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import Icon from '@/components/ui/icon';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import AdminActionsCard from '@/components/admin-actions/AdminActionsCard';
+import AdminBanDialog from '@/components/admin-actions/AdminBanDialog';
+import AdminMuteDialog from '@/components/admin-actions/AdminMuteDialog';
+import AdminSuspendDialog from '@/components/admin-actions/AdminSuspendDialog';
+import AdminEmailVerification from '@/components/admin-actions/AdminEmailVerification';
 
 interface AdminActionsProps {
   username: string;
@@ -250,259 +234,56 @@ export default function AdminActions({ username, userId }: AdminActionsProps) {
 
   return (
     <>
-      <Card className="p-6 space-y-4 border-2 border-primary/30">
-        <div className="flex items-center gap-2 mb-4">
-          <Icon name="Shield" size={24} className="text-primary" />
-          <h3 className="text-xl font-bold">Административные Действия</h3>
-        </div>
+      <AdminActionsCard
+        onBanClick={() => setBanDialogOpen(true)}
+        onMuteClick={() => setMuteDialogOpen(true)}
+        onSuspendClick={() => setSuspendDialogOpen(true)}
+      />
 
-        <Button
-          variant="destructive"
-          className="w-full justify-start"
-          onClick={() => setBanDialogOpen(true)}
-        >
-          <Icon name="Ban" size={20} className="mr-2" />
-          Выдать Бан
-        </Button>
+      <AdminBanDialog
+        open={banDialogOpen}
+        onOpenChange={setBanDialogOpen}
+        username={username}
+        banDays={banDays}
+        setBanDays={setBanDays}
+        banReason={banReason}
+        setBanReason={setBanReason}
+        onConfirm={handleBanClick}
+        loading={loading}
+      />
 
-        <Button
-          variant="outline"
-          className="w-full justify-start border-orange-500/50 hover:bg-orange-500/10"
-          onClick={() => setMuteDialogOpen(true)}
-        >
-          <Icon name="VolumeX" size={20} className="mr-2" />
-          Замутить в Обсуждениях
-        </Button>
+      <AdminMuteDialog
+        open={muteDialogOpen}
+        onOpenChange={setMuteDialogOpen}
+        username={username}
+        muteDays={muteDays}
+        setMuteDays={setMuteDays}
+        muteReason={muteReason}
+        setMuteReason={setMuteReason}
+        onConfirm={handleMuteClick}
+        loading={loading}
+      />
 
-        <Button
-          variant="outline"
-          className="w-full justify-start border-yellow-500/50 hover:bg-yellow-500/10"
-          onClick={() => setSuspendDialogOpen(true)}
-        >
-          <Icon name="UserX" size={20} className="mr-2" />
-          Отстранить от Турнира
-        </Button>
+      <AdminSuspendDialog
+        open={suspendDialogOpen}
+        onOpenChange={setSuspendDialogOpen}
+        username={username}
+        selectedTournament={selectedTournament}
+        setSelectedTournament={setSelectedTournament}
+        suspendReason={suspendReason}
+        setSuspendReason={setSuspendReason}
+        onConfirm={handleSuspendClick}
+        loading={loading}
+      />
 
-        <div className="pt-4 border-t border-border space-y-2">
-          <Button variant="outline" className="w-full justify-start">
-            <Icon name="Edit" size={20} className="mr-2" />
-            Изменить Роль
-          </Button>
-          <Button variant="outline" className="w-full justify-start">
-            <Icon name="Mail" size={20} className="mr-2" />
-            Отправить Сообщение
-          </Button>
-          <Button variant="outline" className="w-full justify-start">
-            <Icon name="Eye" size={20} className="mr-2" />
-            История Действий
-          </Button>
-        </div>
-      </Card>
-
-      <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Выдать Бан</DialogTitle>
-            <DialogDescription>
-              Вы выдаете бан пользователю <strong>{username}</strong>
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="ban-duration">Срок бана</Label>
-              <Select value={banDays} onValueChange={setBanDays}>
-                <SelectTrigger id="ban-duration">
-                  <SelectValue placeholder="Выберите срок" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 день</SelectItem>
-                  <SelectItem value="3">3 дня</SelectItem>
-                  <SelectItem value="7">7 дней</SelectItem>
-                  <SelectItem value="14">14 дней</SelectItem>
-                  <SelectItem value="30">30 дней</SelectItem>
-                  <SelectItem value="forever">Навсегда</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ban-reason">Причина бана</Label>
-              <Textarea
-                id="ban-reason"
-                placeholder="Опишите причину выдачи бана..."
-                value={banReason}
-                onChange={(e) => setBanReason(e.target.value)}
-                rows={4}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBanDialogOpen(false)}>
-              Отмена
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleBanClick}
-              disabled={!banReason.trim() || loading}
-            >
-              {loading ? 'Отправка...' : 'Подтвердить Бан'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={muteDialogOpen} onOpenChange={setMuteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Выдать Мут</DialogTitle>
-            <DialogDescription>
-              Вы выдаете мут пользователю <strong>{username}</strong> в обсуждениях
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="mute-duration">Срок мута</Label>
-              <Select value={muteDays} onValueChange={setMuteDays}>
-                <SelectTrigger id="mute-duration">
-                  <SelectValue placeholder="Выберите срок" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 день</SelectItem>
-                  <SelectItem value="3">3 дня</SelectItem>
-                  <SelectItem value="7">7 дней</SelectItem>
-                  <SelectItem value="14">14 дней</SelectItem>
-                  <SelectItem value="30">30 дней</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mute-reason">Причина мута</Label>
-              <Textarea
-                id="mute-reason"
-                placeholder="Опишите причину выдачи мута..."
-                value={muteReason}
-                onChange={(e) => setMuteReason(e.target.value)}
-                rows={4}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMuteDialogOpen(false)}>
-              Отмена
-            </Button>
-            <Button
-              onClick={handleMuteClick}
-              disabled={!muteReason.trim() || loading}
-            >
-              {loading ? 'Отправка...' : 'Подтвердить Мут'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Отстранить от Турнира</DialogTitle>
-            <DialogDescription>
-              Вы отстраняете пользователя <strong>{username}</strong> от участия в турнире
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="tournament">Турнир</Label>
-              <Select value={selectedTournament} onValueChange={setSelectedTournament}>
-                <SelectTrigger id="tournament">
-                  <SelectValue placeholder="Выберите турнир" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">CS2 Championship 2025</SelectItem>
-                  <SelectItem value="2">Valorant Spring Cup</SelectItem>
-                  <SelectItem value="3">Dota 2 League</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="suspend-reason">Причина отстранения</Label>
-              <Textarea
-                id="suspend-reason"
-                placeholder="Опишите причину отстранения от турнира..."
-                value={suspendReason}
-                onChange={(e) => setSuspendReason(e.target.value)}
-                rows={4}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSuspendDialogOpen(false)}>
-              Отмена
-            </Button>
-            <Button
-              onClick={handleSuspendClick}
-              disabled={!suspendReason.trim() || !selectedTournament || loading}
-            >
-              {loading ? 'Отправка...' : 'Подтвердить Отстранение'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={emailVerificationOpen} onOpenChange={setEmailVerificationOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Icon name="Mail" size={24} className="text-primary" />
-              Подтверждение по Email
-            </DialogTitle>
-            <DialogDescription>
-              Код подтверждения отправлен на ваш email. Введите его для выполнения действия.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="verification-code">Код подтверждения</Label>
-              <Input
-                id="verification-code"
-                placeholder="000000"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                maxLength={6}
-                className="text-center text-2xl tracking-widest"
-              />
-              <p className="text-xs text-muted-foreground text-center">
-                Введите 6-значный код из письма
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setEmailVerificationOpen(false);
-                setVerificationCode('');
-              }}
-            >
-              Отмена
-            </Button>
-            <Button
-              onClick={verifyAndExecute}
-              disabled={verificationCode.length !== 6 || loading}
-            >
-              {loading ? 'Проверка...' : 'Подтвердить'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminEmailVerification
+        open={emailVerificationOpen}
+        onOpenChange={setEmailVerificationOpen}
+        verificationCode={verificationCode}
+        setVerificationCode={setVerificationCode}
+        onConfirm={verifyAndExecute}
+        loading={loading}
+      />
     </>
   );
 }
