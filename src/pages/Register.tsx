@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 import { showNotification } from '@/components/NotificationSystem';
 import { unlockAchievement } from '@/components/AchievementSystem';
+import { addXP, XP_REWARDS } from '@/components/LevelSystem';
 
 const AUTH_API_URL = 'https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4';
 
@@ -161,6 +162,10 @@ export default function Register() {
         });
         showNotification('success', 'Регистрация успешна!', 'Проверьте почту для подтверждения');
         unlockAchievement('first_registration');
+        const xpResult = addXP(XP_REWARDS.REGISTRATION);
+        if (xpResult.leveledUp) {
+          showNotification('success', 'Повышение уровня!', `Вы достигли ${xpResult.newLevel} уровня!`);
+        }
       } else {
         toast({
           title: 'Ошибка',

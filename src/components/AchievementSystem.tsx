@@ -81,6 +81,62 @@ const ACHIEVEMENTS: Achievement[] = [
     icon: 'Users',
     rarity: 'rare',
     unlocked: false
+  },
+  {
+    id: 'level_10',
+    title: 'Продвинутый',
+    description: 'Достигли 10 уровня',
+    icon: 'Zap',
+    rarity: 'rare',
+    unlocked: false
+  },
+  {
+    id: 'level_25',
+    title: 'Опытный боец',
+    description: 'Достигли 25 уровня',
+    icon: 'Flame',
+    rarity: 'epic',
+    unlocked: false
+  },
+  {
+    id: 'level_50',
+    title: 'Эксперт',
+    description: 'Достигли 50 уровня',
+    icon: 'Award',
+    rarity: 'epic',
+    unlocked: false
+  },
+  {
+    id: 'level_100',
+    title: 'Легенда',
+    description: 'Достигли 100 уровня',
+    icon: 'Star',
+    rarity: 'legendary',
+    unlocked: false
+  },
+  {
+    id: 'profile_complete',
+    title: 'Заполненный профиль',
+    description: 'Заполнили все поля профиля',
+    icon: 'User',
+    rarity: 'common',
+    unlocked: false
+  },
+  {
+    id: 'social_butterfly',
+    title: 'Социальная бабочка',
+    description: 'Оставили 50 сообщений на форуме',
+    icon: 'MessageCircle',
+    rarity: 'rare',
+    unlocked: false
+  },
+  {
+    id: 'discussion_starter',
+    title: 'Затейник',
+    description: 'Создали 10 тем на форуме',
+    icon: 'Sparkles',
+    rarity: 'epic',
+    unlocked: false
   }
 ];
 

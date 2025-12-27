@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { playSuccessSound } from '@/utils/sounds';
 import { showNotification } from '@/components/NotificationSystem';
 import { unlockAchievement } from '@/components/AchievementSystem';
+import { addXP, XP_REWARDS } from '@/components/LevelSystem';
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -54,6 +55,10 @@ const VerifyEmail = () => {
         });
         showNotification('success', 'Email подтвержден!', 'Добро пожаловать на DISASTER ESPORTS');
         unlockAchievement('email_verified');
+        const xpResult = addXP(XP_REWARDS.EMAIL_VERIFIED);
+        if (xpResult.leveledUp) {
+          showNotification('success', 'Повышение уровня!', `Вы достигли ${xpResult.newLevel} уровня!`);
+        }
 
         setTimeout(() => {
           navigate('/');

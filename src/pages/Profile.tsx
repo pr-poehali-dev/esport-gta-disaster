@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
+import LevelSystem, { getUserXP } from '@/components/LevelSystem';
 import {
   Dialog,
   DialogContent,
@@ -397,6 +398,8 @@ export default function Profile() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <LevelSystem totalXP={getUserXP()} />
+
                 <Card className="p-6 bg-card/50">
                   <div className="flex items-center gap-3 mb-4">
                     <Icon name="Clock" size={24} className="text-primary" />

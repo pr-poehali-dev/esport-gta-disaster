@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
-import { useAchievements } from '@/hooks/useAchievements';
+import { showNotification } from '@/components/NotificationSystem';
+import { unlockAchievement } from '@/components/AchievementSystem';
 
 const AUTH_API_URL = 'https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4';
 
@@ -18,7 +19,6 @@ export default function Login() {
   
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { unlockAchievement } = useAchievements();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -48,12 +48,11 @@ export default function Login() {
         localStorage.setItem('session_token', data.session_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        unlockAchievement('first_login');
-        
         toast({
           title: 'Успешно!',
           description: `Добро пожаловать, ${data.user.nickname}!`,
         });
+        showNotification('success', 'Вы вошли в систему!', `Добро пожаловать, ${data.user.nickname}!`);
         
         navigate('/');
         window.location.reload();
