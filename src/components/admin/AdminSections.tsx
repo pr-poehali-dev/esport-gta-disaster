@@ -3,3 +3,9 @@ export { AdminUsersSection as UsersSection } from './sections/AdminUsersSection'
 export { AdminBansSection as BansSection } from './sections/AdminBansSection';
 export { AdminMutesSection as MutesSection } from './sections/AdminMutesSection';
 export { AdminSuspensionsSection as SuspensionsSection } from './sections/AdminSuspensionsSection';
+export { AdminContentSection as ContentSection } from './sections/AdminContentSection';
+export { AdminTournamentsSection as TournamentsSection } from './sections/AdminTournamentsSection';
+export { AdminNewsSection as NewsSection } from './sections/AdminNewsSection';
+export { AdminModerationSection as ModerationSection } from './sections/AdminModerationSection';
+export { AdminSupportSection as SupportSection } from './sections/AdminSupportSection';
+export { AdminSettingsSection as SettingsSection } from './sections/AdminSettingsSection';
