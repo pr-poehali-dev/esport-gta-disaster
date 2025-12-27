@@ -42,6 +42,13 @@ export default function Header() {
           </nav>
 
           <div className="hidden lg:flex items-center gap-4">
+            <a
+              href="/admin"
+              className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 hover:border-primary transition-all duration-300 font-semibold text-sm uppercase tracking-wide flex items-center gap-2"
+            >
+              <Icon name="Shield" className="h-4 w-4" />
+              Админ-Панель
+            </a>
             {socialLinks.map((social) => (
               <a
                 key={social.label}
@@ -84,6 +91,14 @@ export default function Header() {
                 {link.label}
               </a>
             ))}
+            <a
+              href="/admin"
+              className="block px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 transition-all duration-300 font-semibold text-sm uppercase tracking-wide text-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Icon name="Shield" className="h-4 w-4 inline mr-2" />
+              Админ-Панель
+            </a>
             <div className="pt-4 flex items-center gap-3">
               {socialLinks.map((social) => (
                 <a

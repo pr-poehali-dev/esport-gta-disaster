@@ -18,6 +18,7 @@ import TeamManagement from '@/components/TeamManagement';
 import TournamentRegistrations from '@/components/TournamentRegistrations';
 import ModerationPanel from '@/components/ModerationPanel';
 import UserManagementPanel from '@/components/UserManagementPanel';
+import AdminActions from '@/components/AdminActions';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -248,36 +249,37 @@ const Profile = () => {
               <p className="text-muted-foreground">Управляйте своим профилем игрока</p>
             </div>
 
-            <div className="grid gap-6">
-              <Card className="border-primary/30 bg-card/80 backdrop-blur">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 ${user.is_organizer ? 'bg-gradient-to-br from-yellow-500 to-orange-500' : 'bg-gradient-to-br from-primary to-secondary'} rounded-full clip-corner flex items-center justify-center text-2xl`}>
-                        {user.is_organizer ? '👑' : user.nickname[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-2xl font-black">{user.nickname}</div>
-                          {user.is_organizer && <OrganizerBadge size="sm" variant="compact" />}
-                          <UserStatusBadge status={(user as any).user_status || 'Новичок'} />
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="border-primary/30 bg-card/80 backdrop-blur">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 ${user.is_organizer ? 'bg-gradient-to-br from-yellow-500 to-orange-500' : 'bg-gradient-to-br from-primary to-secondary'} rounded-full clip-corner flex items-center justify-center text-2xl`}>
+                          {user.is_organizer ? '👑' : user.nickname[0].toUpperCase()}
                         </div>
-                        <div className="text-sm text-muted-foreground font-normal">{user.email}</div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-2xl font-black">{user.nickname}</div>
+                            {user.is_organizer && <OrganizerBadge size="sm" variant="compact" />}
+                            <UserStatusBadge status={(user as any).user_status || 'Новичок'} />
+                          </div>
+                          <div className="text-sm text-muted-foreground font-normal">{user.email}</div>
+                        </div>
                       </div>
-                    </div>
-                    {!isEditing && (
-                      <Button 
-                        onClick={() => setIsEditing(true)}
-                        onMouseEnter={playHoverSound}
-                        variant="outline"
-                        className="border-primary/30 hover:bg-primary/10"
-                      >
-                        <Icon name="Edit" size={18} className="mr-2" />
-                        Редактировать
-                      </Button>
-                    )}
-                  </CardTitle>
-                </CardHeader>
+                      {!isEditing && (
+                        <Button 
+                          onClick={() => setIsEditing(true)}
+                          onMouseEnter={playHoverSound}
+                          variant="outline"
+                          className="border-primary/30 hover:bg-primary/10"
+                        >
+                          <Icon name="Edit" size={18} className="mr-2" />
+                          Редактировать
+                        </Button>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
                 <CardContent>
                   {!isEditing ? (
                     <div className="space-y-4">
@@ -554,7 +556,16 @@ const Profile = () => {
                   )}
                 </CardContent>
               </Card>
+              </div>
 
+              <div className="space-y-6">
+                {user.is_organizer && (
+                  <AdminActions username={user.nickname} userId={user.id.toString()} />
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-6">
               {team && (
                 <Card className="border-primary/30 bg-card/80 backdrop-blur">
                   <CardHeader>
