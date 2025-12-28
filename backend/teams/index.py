@@ -45,7 +45,25 @@ def handler(event: dict, context) -> dict:
             body = json.loads(event.get('body', '{}'))
             action = body.get('action')
             
-            if action == 'upload_screenshot':
+            if action == 'create_team':
+                return create_team(cur, conn, body, event)
+            elif action == 'invite_player':
+                return invite_player(cur, conn, body, event)
+            elif action == 'respond_invitation':
+                return respond_invitation(cur, conn, body, event)
+            elif action == 'get_invitations':
+                return get_invitations(cur, conn, event)
+            elif action == 'get_user_teams':
+                return get_user_teams(cur, conn, event)
+            elif action == 'search_users':
+                return search_users(cur, conn, body)
+            elif action == 'register_tournament':
+                return register_tournament(cur, conn, body, event)
+            elif action == 'get_bracket':
+                return get_bracket(cur, conn, body)
+            elif action == 'generate_bracket':
+                return generate_bracket(cur, conn, body, event)
+            elif action == 'upload_screenshot':
                 return upload_screenshot(cur, conn, body, event)
             elif action == 'confirm_result':
                 return confirm_result(cur, conn, body, event)
@@ -931,5 +949,528 @@ def error_response(message: str, status: int) -> dict:
         'statusCode': status,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'error': message}),
+        'isBase64Encoded': False
+    }
+
+def create_team(cur, conn, body: dict, event: dict) -> dict:
+    '''Создание новой команды'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (user_id,))
+    team_count = cur.fetchone()[0]
+    
+    if team_count >= 3:
+        return error_response('Вы не можете состоять более чем в 3 командах', 403)
+    
+    name = body.get('name', '').strip()
+    tag = body.get('tag', '').strip()
+    description = body.get('description', '').strip()
+    players = body.get('players', [])
+    
+    if not name:
+        return error_response('Название команды обязательно', 400)
+    
+    if len(players) > 7:
+        return error_response('Максимум 7 игроков (5 основных + 2 запасных)', 400)
+    
+    cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE name = %s", (name,))
+    if cur.fetchone():
+        return error_response('Команда с таким названием уже существует', 400)
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.teams 
+        (name, tag, description, captain_id, rating, wins, losses, draws, verified, created_at)
+        VALUES (%s, %s, %s, %s, 1000, 0, 0, 0, TRUE, NOW())
+        RETURNING id
+    """, (name, tag, description, user_id))
+    
+    team_id = cur.fetchone()[0]
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.team_members 
+        (team_id, user_id, player_role, is_captain, status, joined_at)
+        VALUES (%s, %s, 'main', TRUE, 'active', NOW())
+    """, (team_id, user_id))
+    
+    for idx, player in enumerate(players[:7]):
+        if player.get('user_id') and player['user_id'] != int(user_id):
+            role = 'reserve' if idx >= 5 else 'main'
+            
+            cur.execute("""
+                INSERT INTO t_p4831367_esport_gta_disaster.team_invitations 
+                (team_id, inviter_id, invited_user_id, player_role, status, created_at)
+                VALUES (%s, %s, %s, %s, 'pending', NOW())
+                ON CONFLICT (team_id, invited_user_id) DO NOTHING
+            """, (team_id, user_id, player['user_id'], role))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'team_id': team_id, 'message': f'Команда "{name}" создана'}),
+        'isBase64Encoded': False
+    }
+
+def invite_player(cur, conn, body: dict, event: dict) -> dict:
+    '''Приглашение игрока в команду'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    team_id = body.get('team_id')
+    invited_user_id = body.get('invited_user_id')
+    player_role = body.get('player_role', 'main')
+    
+    if not team_id or not invited_user_id:
+        return error_response('Укажите команду и пользователя', 400)
+    
+    cur.execute("""
+        SELECT captain_id FROM t_p4831367_esport_gta_disaster.teams 
+        WHERE id = %s
+    """, (team_id,))
+    
+    team = cur.fetchone()
+    if not team:
+        return error_response('Команда не найдена', 404)
+    
+    if team[0] != int(user_id):
+        return error_response('Только капитан может приглашать игроков', 403)
+    
+    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (invited_user_id,))
+    team_count = cur.fetchone()[0]
+    
+    if team_count >= 3:
+        return error_response('Этот игрок уже состоит в 3 командах', 403)
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.team_invitations 
+        (team_id, inviter_id, invited_user_id, player_role, status, created_at)
+        VALUES (%s, %s, %s, %s, 'pending', NOW())
+        ON CONFLICT (team_id, invited_user_id) DO UPDATE SET status = 'pending', created_at = NOW()
+        RETURNING id
+    """, (team_id, user_id, invited_user_id, player_role))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Приглашение отправлено'}),
+        'isBase64Encoded': False
+    }
+
+def respond_invitation(cur, conn, body: dict, event: dict) -> dict:
+    '''Ответ на приглашение в команду'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    invitation_id = body.get('invitation_id')
+    accept = body.get('accept', False)
+    
+    if not invitation_id:
+        return error_response('Укажите приглашение', 400)
+    
+    cur.execute("""
+        SELECT team_id, invited_user_id, player_role 
+        FROM t_p4831367_esport_gta_disaster.team_invitations 
+        WHERE id = %s AND invited_user_id = %s AND status = 'pending'
+    """, (invitation_id, user_id))
+    
+    invitation = cur.fetchone()
+    if not invitation:
+        return error_response('Приглашение не найдено', 404)
+    
+    team_id, invited_user, role = invitation
+    
+    if accept:
+        cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (user_id,))
+        team_count = cur.fetchone()[0]
+        
+        if team_count >= 3:
+            return error_response('Вы уже состоите в 3 командах', 403)
+        
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.team_members 
+            (team_id, user_id, player_role, is_captain, status, joined_at)
+            VALUES (%s, %s, %s, FALSE, 'active', NOW())
+        """, (team_id, user_id, role))
+        
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.team_invitations 
+            SET status = 'accepted', responded_at = NOW() 
+            WHERE id = %s
+        """, (invitation_id,))
+        
+        message = 'Вы вступили в команду'
+    else:
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.team_invitations 
+            SET status = 'declined', responded_at = NOW() 
+            WHERE id = %s
+        """, (invitation_id,))
+        
+        message = 'Приглашение отклонено'
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': message}),
+        'isBase64Encoded': False
+    }
+
+def get_invitations(cur, conn, event: dict) -> dict:
+    '''Получение приглашений пользователя'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("""
+        SELECT 
+            i.id,
+            i.team_id,
+            t.name as team_name,
+            t.tag,
+            t.logo_url,
+            u.nickname as inviter_name,
+            i.player_role,
+            i.created_at,
+            i.status
+        FROM t_p4831367_esport_gta_disaster.team_invitations i
+        JOIN t_p4831367_esport_gta_disaster.teams t ON i.team_id = t.id
+        JOIN t_p4831367_esport_gta_disaster.users u ON i.inviter_id = u.id
+        WHERE i.invited_user_id = %s
+        ORDER BY i.created_at DESC
+        LIMIT 50
+    """, (user_id,))
+    
+    invitations = []
+    for row in cur.fetchall():
+        invitations.append({
+            'id': row[0],
+            'team_id': row[1],
+            'team_name': row[2],
+            'tag': row[3],
+            'logo_url': row[4],
+            'inviter_name': row[5],
+            'player_role': row[6],
+            'created_at': row[7].isoformat() if row[7] else None,
+            'status': row[8]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'invitations': invitations}),
+        'isBase64Encoded': False
+    }
+
+def get_user_teams(cur, conn, event: dict) -> dict:
+    '''Получение команд пользователя'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("""
+        SELECT 
+            t.id,
+            t.name,
+            t.tag,
+            t.logo_url,
+            t.rating,
+            t.wins,
+            t.losses,
+            t.draws,
+            tm.is_captain,
+            tm.player_role
+        FROM t_p4831367_esport_gta_disaster.team_members tm
+        JOIN t_p4831367_esport_gta_disaster.teams t ON tm.team_id = t.id
+        WHERE tm.user_id = %s AND tm.status = 'active'
+        ORDER BY tm.is_captain DESC, tm.joined_at DESC
+    """, (user_id,))
+    
+    teams = []
+    for row in cur.fetchall():
+        teams.append({
+            'id': row[0],
+            'name': row[1],
+            'tag': row[2],
+            'logo_url': row[3],
+            'rating': row[4],
+            'wins': row[5],
+            'losses': row[6],
+            'draws': row[7],
+            'is_captain': row[8],
+            'player_role': row[9]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'teams': teams}),
+        'isBase64Encoded': False
+    }
+
+def search_users(cur, conn, body: dict) -> dict:
+    '''Поиск пользователей по никнейму'''
+    query = body.get('query', '').strip()
+    
+    if len(query) < 2:
+        return error_response('Минимум 2 символа для поиска', 400)
+    
+    cur.execute("""
+        SELECT id, nickname, avatar_url, rating
+        FROM t_p4831367_esport_gta_disaster.users
+        WHERE nickname ILIKE %s
+        ORDER BY rating DESC
+        LIMIT 20
+    """, (f'%{query}%',))
+    
+    users = []
+    for row in cur.fetchall():
+        users.append({
+            'id': row[0],
+            'nickname': row[1],
+            'avatar_url': row[2],
+            'rating': row[3]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'users': users}),
+        'isBase64Encoded': False
+    }
+
+def register_tournament(cur, conn, body: dict, event: dict) -> dict:
+    '''Регистрация команды на турнир'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    tournament_id = body.get('tournament_id')
+    team_id = body.get('team_id')
+    
+    if not tournament_id or not team_id:
+        return error_response('Укажите турнир и команду', 400)
+    
+    cur.execute("""
+        SELECT captain_id FROM t_p4831367_esport_gta_disaster.teams 
+        WHERE id = %s
+    """, (team_id,))
+    
+    team = cur.fetchone()
+    if not team:
+        return error_response('Команда не найдена', 404)
+    
+    if team[0] != int(user_id):
+        return error_response('Только капитан может регистрировать команду', 403)
+    
+    cur.execute("""
+        SELECT registration_open FROM t_p4831367_esport_gta_disaster.tournaments 
+        WHERE id = %s
+    """, (tournament_id,))
+    
+    tournament = cur.fetchone()
+    if not tournament or not tournament[0]:
+        return error_response('Регистрация на турнир закрыта', 403)
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.tournament_registrations 
+        (tournament_id, team_id, status, approved, registered_at)
+        VALUES (%s, %s, 'pending', FALSE, NOW())
+        ON CONFLICT (tournament_id, team_id) DO NOTHING
+        RETURNING id
+    """, (tournament_id, team_id))
+    
+    result = cur.fetchone()
+    if not result:
+        return error_response('Команда уже зарегистрирована', 400)
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Заявка на участие отправлена'}),
+        'isBase64Encoded': False
+    }
+
+def get_bracket(cur, conn, body: dict) -> dict:
+    '''Получение турнирной сетки'''
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return error_response('Укажите турнир', 400)
+    
+    cur.execute("""
+        SELECT 
+            m.id,
+            m.team1_id,
+            m.team2_id,
+            m.team1_score,
+            m.team2_score,
+            m.status,
+            m.scheduled_at,
+            m.match_number,
+            m.stage_id,
+            m.winner_id,
+            m.next_match_id,
+            t1.name as team1_name,
+            t1.logo_url as team1_logo,
+            t2.name as team2_name,
+            t2.logo_url as team2_logo,
+            bs.stage_name,
+            bs.stage_order
+        FROM t_p4831367_esport_gta_disaster.matches m
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON m.team1_id = t1.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON m.team2_id = t2.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.bracket_stages bs ON m.stage_id = bs.id
+        WHERE m.tournament_id = %s
+        ORDER BY bs.stage_order, m.match_number
+    """, (tournament_id,))
+    
+    matches = []
+    for row in cur.fetchall():
+        matches.append({
+            'id': row[0],
+            'team1_id': row[1],
+            'team2_id': row[2],
+            'team1_score': row[3],
+            'team2_score': row[4],
+            'status': row[5],
+            'scheduled_at': row[6].isoformat() if row[6] else None,
+            'match_number': row[7],
+            'stage_id': row[8],
+            'winner_id': row[9],
+            'next_match_id': row[10],
+            'team1_name': row[11],
+            'team1_logo': row[12],
+            'team2_name': row[13],
+            'team2_logo': row[14],
+            'stage_name': row[15],
+            'stage_order': row[16]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'matches': matches}),
+        'isBase64Encoded': False
+    }
+
+def generate_bracket(cur, conn, body: dict, event: dict) -> dict:
+    '''Генерация турнирной сетки'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
+    user_role = cur.fetchone()
+    
+    if not user_role or user_role[0] not in ['founder', 'organizer', 'admin']:
+        return error_response('Недостаточно прав', 403)
+    
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return error_response('Укажите турнир', 400)
+    
+    cur.execute("""
+        SELECT team_id FROM t_p4831367_esport_gta_disaster.tournament_registrations 
+        WHERE tournament_id = %s AND approved = TRUE
+        ORDER BY registered_at
+    """, (tournament_id,))
+    
+    teams = [row[0] for row in cur.fetchall()]
+    
+    if len(teams) < 2:
+        return error_response('Недостаточно команд для создания сетки', 400)
+    
+    import math
+    bracket_size = 2 ** math.ceil(math.log2(len(teams)))
+    
+    stages = []
+    current_size = bracket_size
+    stage_num = 1
+    
+    while current_size >= 2:
+        stage_name = {
+            2: 'Финал',
+            4: 'Полуфинал',
+            8: 'Четвертьфинал',
+            16: '1/8 финала',
+            32: '1/16 финала'
+        }.get(current_size, f'Раунд {stage_num}')
+        
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.bracket_stages 
+            (tournament_id, stage_name, stage_order, best_of)
+            VALUES (%s, %s, %s, 1)
+            RETURNING id
+        """, (tournament_id, stage_name, stage_num))
+        
+        stages.append({'id': cur.fetchone()[0], 'name': stage_name, 'matches': current_size // 2})
+        current_size //= 2
+        stage_num += 1
+    
+    stages.reverse()
+    
+    random.shuffle(teams)
+    teams += [None] * (bracket_size - len(teams))
+    
+    match_id_map = {}
+    
+    for stage_idx, stage in enumerate(stages):
+        matches_in_stage = stage['matches']
+        
+        for match_num in range(matches_in_stage):
+            if stage_idx == 0:
+                team1_idx = match_num * 2
+                team2_idx = match_num * 2 + 1
+                team1_id = teams[team1_idx]
+                team2_id = teams[team2_idx]
+            else:
+                team1_id = None
+                team2_id = None
+            
+            next_match_num = match_num // 2 if stage_idx < len(stages) - 1 else None
+            
+            cur.execute("""
+                INSERT INTO t_p4831367_esport_gta_disaster.matches 
+                (tournament_id, team1_id, team2_id, status, stage_id, match_number, team1_score, team2_score)
+                VALUES (%s, %s, %s, 'pending', %s, %s, 0, 0)
+                RETURNING id
+            """, (tournament_id, team1_id, team2_id, stage['id'], match_num + 1))
+            
+            match_id = cur.fetchone()[0]
+            match_id_map[(stage_idx, match_num)] = match_id
+            
+            if next_match_num is not None and (stage_idx + 1, next_match_num) in match_id_map:
+                next_match_id = match_id_map[(stage_idx + 1, next_match_num)]
+                cur.execute("""
+                    UPDATE t_p4831367_esport_gta_disaster.matches 
+                    SET next_match_id = %s 
+                    WHERE id = %s
+                """, (next_match_id, match_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Турнирная сетка сгенерирована', 'teams_count': len([t for t in teams if t])}),
         'isBase64Encoded': False
     }

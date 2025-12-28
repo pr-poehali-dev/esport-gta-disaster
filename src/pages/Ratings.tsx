@@ -44,9 +44,9 @@ export default function Ratings() {
 
   const loadTeams = async () => {
     try {
-      const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      const API_URL = 'https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515';
       const response = await fetch(API_URL, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         },

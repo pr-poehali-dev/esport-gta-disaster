@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 import LevelSystem, { getUserXP } from '@/components/LevelSystem';
+import ProfileInvitationsCard from '@/components/profile/ProfileInvitationsCard';
 import {
   Dialog,
   DialogContent,
@@ -472,6 +473,8 @@ export default function Profile() {
                   )}
                 </Card>
               )}
+
+              <ProfileInvitationsCard userId={profile.id} />
             </div>
           </Card>
         </div>

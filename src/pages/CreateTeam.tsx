@@ -2,267 +2,254 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
-import { useToast } from '@/hooks/use-toast';
 
-const AUTH_API_URL = 'https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4';
-
-interface TeamMember {
-  email: string;
-  isReserve: boolean;
-}
+const TEAMS_API = 'https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515';
 
 export default function CreateTeam() {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
   const [teamName, setTeamName] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState('');
-  const [website, setWebsite] = useState('');
-  const [members, setMembers] = useState<TeamMember[]>([
-    { email: '', isReserve: false }
-  ]);
+  const [tag, setTag] = useState('');
+  const [description, setDescription] = useState('');
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-  const addMember = () => {
-    if (members.length < 5) {
-      setMembers([...members, { email: '', isReserve: members.length >= 3 }]);
-    }
-  };
-
-  const removeMember = (index: number) => {
-    setMembers(members.filter((_, i) => i !== index));
-  };
-
-  const updateMember = (index: number, field: keyof TeamMember, value: string | boolean) => {
-    const updated = [...members];
-    updated[index] = { ...updated[index], [field]: value };
-    setMembers(updated);
-  };
-
-  const createTeam = async () => {
-    if (!teamName.trim()) {
-      toast({
-        title: 'Ошибка',
-        description: 'Укажите название команды',
-        variant: 'destructive'
-      });
+  const searchPlayers = async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([]);
       return;
     }
 
-    const mainPlayers = members.filter(m => !m.isReserve && m.email.trim());
-    if (mainPlayers.length < 1) {
-      toast({
-        title: 'Ошибка',
-        description: 'Добавьте хотя бы одного игрока',
-        variant: 'destructive'
+    try {
+      const response = await fetch(TEAMS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'search_users', query }),
       });
+
+      const data = await response.json();
+      if (data.users) {
+        setSearchResults(data.users.filter((u: any) => u.id !== user.id));
+      }
+    } catch (error) {
+      console.error('Ошибка поиска:', error);
+    }
+  };
+
+  const addPlayer = (player: any, role: 'main' | 'reserve') => {
+    if (selectedPlayers.length >= 6) {
+      toast({ title: 'Ошибка', description: 'Максимум 6 дополнительных игроков', variant: 'destructive' });
+      return;
+    }
+    
+    if (selectedPlayers.find(p => p.id === player.id)) {
+      toast({ title: 'Ошибка', description: 'Игрок уже добавлен', variant: 'destructive' });
+      return;
+    }
+
+    setSelectedPlayers([...selectedPlayers, { ...player, role }]);
+    setPlayerSearch('');
+    setSearchResults([]);
+  };
+
+  const removePlayer = (playerId: number) => {
+    setSelectedPlayers(selectedPlayers.filter(p => p.id !== playerId));
+  };
+
+  const handleCreate = async () => {
+    if (!teamName.trim()) {
+      toast({ title: 'Ошибка', description: 'Введите название команды', variant: 'destructive' });
+      return;
+    }
+
+    const mainPlayers = selectedPlayers.filter(p => p.role === 'main');
+    const reservePlayers = selectedPlayers.filter(p => p.role === 'reserve');
+
+    if (mainPlayers.length + 1 < 5) {
+      toast({ title: 'Ошибка', description: 'Минимум 5 основных игроков (включая капитана)', variant: 'destructive' });
       return;
     }
 
     setLoading(true);
     try {
-      const sessionToken = localStorage.getItem('session_token');
-      
-      const teamData: any = {
-        action: 'create_team',
-        name: teamName,
-        website: website || null,
-        members: members.filter(m => m.email.trim()).map(m => ({
-          email: m.email,
-          is_reserve: m.isReserve
-        }))
-      };
-
-      if (logoFile) {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          teamData.logo_base64 = (reader.result as string).split(',')[1];
-          await submitTeam(teamData, sessionToken);
-        };
-        reader.readAsDataURL(logoFile);
-      } else {
-        await submitTeam(teamData, sessionToken);
-      }
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось создать команду',
-        variant: 'destructive'
+      const response = await fetch(TEAMS_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'create_team',
+          name: teamName,
+          tag,
+          description,
+          players: selectedPlayers.map(p => ({ user_id: p.id, role: p.role })),
+        }),
       });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({ title: 'Успешно!', description: data.message });
+        navigate('/teams');
+      } else {
+        toast({ title: 'Ошибка', description: data.error || 'Не удалось создать команду', variant: 'destructive' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    } finally {
       setLoading(false);
     }
   };
 
-  const submitTeam = async (teamData: any, sessionToken: string | null) => {
-    const response = await fetch(AUTH_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Session-Token': sessionToken || ''
-      },
-      body: JSON.stringify(teamData)
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      toast({
-        title: 'Команда создана!',
-        description: 'Приглашения отправлены участникам'
-      });
-      navigate('/teams');
-    } else {
-      toast({
-        title: 'Ошибка',
-        description: data.error || 'Не удалось создать команду',
-        variant: 'destructive'
-      });
-    }
-    setLoading(false);
-  };
-
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col">
       <Header />
+      <main className="flex-1 container mx-auto py-8 px-4">
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Icon name="Users" size={28} />
+              Создание команды
+            </CardTitle>
+            <CardDescription>
+              Заполните данные и пригласите до 6 игроков (4 основных + 2 запасных)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label>Название команды *</Label>
+                <Input
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  placeholder="Введите название..."
+                  maxLength={50}
+                />
+              </div>
 
-      <main className="flex-1 py-12">
-        <div className="max-w-4xl mx-auto px-4">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
-            <Icon name="ArrowLeft" className="h-4 w-4 mr-2" />
-            Назад
-          </Button>
+              <div>
+                <Label>Тег команды</Label>
+                <Input
+                  value={tag}
+                  onChange={(e) => setTag(e.target.value.toUpperCase())}
+                  placeholder="TAG"
+                  maxLength={5}
+                />
+              </div>
 
-          <h1 className="text-4xl font-black mb-8">Создать команду</h1>
-
-          <Card className="p-6 space-y-6">
-            <div>
-              <label className="text-sm font-semibold mb-2 block">Название команды *</label>
-              <Input
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="Team Awesome"
-                maxLength={100}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold mb-2 block">Логотип команды</label>
-              <div className="flex items-center gap-4">
-                {logoPreview && (
-                  <img src={logoPreview} alt="Logo preview" className="w-20 h-20 rounded object-cover" />
-                )}
-                <label className="cursor-pointer">
-                  <div className="px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded border border-primary/30 flex items-center gap-2 transition-colors">
-                    <Icon name="Upload" className="h-4 w-4" />
-                    <span>Загрузить логотип</span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoChange}
-                    className="hidden"
-                  />
-                </label>
+              <div>
+                <Label>Описание</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Расскажите о команде..."
+                  rows={3}
+                />
               </div>
             </div>
 
-            <div>
-              <label className="text-sm font-semibold mb-2 block">Сайт команды</label>
-              <Input
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://teamawesome.com"
-                type="url"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <label className="text-sm font-semibold">Участники команды *</label>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={addMember}
-                  disabled={members.length >= 5}
-                >
-                  <Icon name="Plus" className="h-4 w-4 mr-2" />
-                  Добавить
-                </Button>
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Состав команды</h3>
+              
+              <div className="mb-4 p-3 bg-muted rounded">
+                <div className="flex items-center gap-2">
+                  <Icon name="Crown" size={18} className="text-yellow-500" />
+                  <span className="font-medium">{user.nickname || 'Вы'}</span>
+                  <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Капитан (Основной)</span>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                {members.map((member, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <Input
-                        value={member.email}
-                        onChange={(e) => updateMember(index, 'email', e.target.value)}
-                        placeholder="Email участника"
-                        type="email"
-                      />
+              <div className="space-y-2 mb-4">
+                {selectedPlayers.map((player) => (
+                  <div key={player.id} className="flex items-center justify-between p-3 bg-muted rounded">
+                    <div className="flex items-center gap-2">
+                      {player.avatar_url && (
+                        <img src={player.avatar_url} alt={player.nickname} className="w-8 h-8 rounded-full" />
+                      )}
+                      <span className="font-medium">{player.nickname}</span>
+                      <span className={`text-xs px-2 py-1 rounded ${player.role === 'main' ? 'bg-green-600 text-white' : 'bg-orange-600 text-white'}`}>
+                        {player.role === 'main' ? 'Основной' : 'Запасной'}
+                      </span>
                     </div>
-                    {index >= 3 && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Icon name="Users" className="h-4 w-4" />
-                        <span>Запасной</span>
-                      </div>
-                    )}
-                    {members.length > 1 && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeMember(index)}
-                      >
-                        <Icon name="X" className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button size="sm" variant="destructive" onClick={() => removePlayer(player.id)}>
+                      <Icon name="X" size={16} />
+                    </Button>
                   </div>
                 ))}
               </div>
 
-              <p className="text-xs text-muted-foreground mt-3">
-                Минимум 1 игрок, максимум 5 (3 основных + 2 запасных).
-                Игроки получат приглашение и должны подтвердить его в личном кабинете.
+              <div className="relative">
+                <Label>Поиск игроков по никнейму</Label>
+                <Input
+                  value={playerSearch}
+                  onChange={(e) => {
+                    setPlayerSearch(e.target.value);
+                    searchPlayers(e.target.value);
+                  }}
+                  placeholder="Начните вводить никнейм..."
+                />
+                
+                {searchResults.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {searchResults.map((player) => (
+                      <div
+                        key={player.id}
+                        className="p-3 hover:bg-muted cursor-pointer flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          {player.avatar_url && (
+                            <img src={player.avatar_url} alt={player.nickname} className="w-8 h-8 rounded-full" />
+                          )}
+                          <span>{player.nickname}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            onClick={() => addPlayer(player, 'main')}
+                            disabled={selectedPlayers.filter(p => p.role === 'main').length >= 4}
+                          >
+                            Основной
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addPlayer(player, 'reserve')}
+                            disabled={selectedPlayers.filter(p => p.role === 'reserve').length >= 2}
+                          >
+                            Запасной
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-sm text-muted-foreground mt-2">
+                Основных игроков: {selectedPlayers.filter(p => p.role === 'main').length + 1}/5 • 
+                Запасных: {selectedPlayers.filter(p => p.role === 'reserve').length}/2
               </p>
             </div>
 
-            <Button
-              className="w-full"
-              onClick={createTeam}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Icon name="Loader2" className="animate-spin mr-2 h-4 w-4" />
-                  Создание...
-                </>
-              ) : (
-                <>
-                  <Icon name="Check" className="mr-2 h-4 w-4" />
-                  Создать команду
-                </>
-              )}
+            <Button onClick={handleCreate} disabled={loading} className="w-full" size="lg">
+              <Icon name="Check" size={18} className="mr-2" />
+              {loading ? 'Создание...' : 'Создать команду'}
             </Button>
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
       </main>
-
       <Footer />
     </div>
   );

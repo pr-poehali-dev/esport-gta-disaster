@@ -10,6 +10,7 @@ interface NewsCardProps {
   category: string;
   slug: string;
   index: number;
+  tournamentId?: number;
 }
 
 export default function NewsCard({
@@ -20,6 +21,7 @@ export default function NewsCard({
   category,
   slug,
   index,
+  tournamentId,
 }: NewsCardProps) {
   const cardAnimation = useScrollAnimation({ threshold: 0.2 });
 
@@ -59,14 +61,25 @@ export default function NewsCard({
           {description}
         </p>
 
-        <Button
-          variant="outline"
-          className="w-full border-primary/30 text-primary hover:bg-primary/10 font-bold font-mono"
-          onClick={() => (window.location.href = `/news/${slug}`)}
-        >
-          ЧИТАТЬ ДАЛЕЕ
-          <Icon name="ArrowRight" className="ml-2 h-4 w-4" />
-        </Button>
+        <div className="space-y-2">
+          {tournamentId && (
+            <Button
+              className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold font-mono"
+              onClick={() => (window.location.href = `/tournaments/${tournamentId}`)}
+            >
+              <Icon name="Swords" className="mr-2 h-5 w-5" />
+              СРАЗИТЬСЯ!
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="w-full border-primary/30 text-primary hover:bg-primary/10 font-bold font-mono"
+            onClick={() => (window.location.href = `/news/${slug}`)}
+          >
+            ЧИТАТЬ ДАЛЕЕ
+            <Icon name="ArrowRight" className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </article>
   );
