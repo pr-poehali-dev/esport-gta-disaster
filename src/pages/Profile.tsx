@@ -43,7 +43,7 @@ export default function Profile() {
     if (!sessionToken) return;
 
     try {
-      await fetch(PROFILE_API_URL, {
+      const response = await fetch(PROFILE_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,6 +54,10 @@ export default function Profile() {
           duration_seconds: 60
         })
       });
+      
+      if (response.status === 402) {
+        return;
+      }
     } catch (error) {
       console.log('Activity tracking failed');
     }
@@ -75,6 +79,11 @@ export default function Profile() {
           'X-Session-Token': sessionToken
         }
       });
+
+      if (response.status === 402) {
+        setLoading(false);
+        return;
+      }
 
       const data = await response.json();
 

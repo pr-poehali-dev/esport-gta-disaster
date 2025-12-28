@@ -51,6 +51,11 @@ export default function News() {
         }),
       });
 
+      if (response.status === 402) {
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
       if (data.news) {
         setNews(data.news);

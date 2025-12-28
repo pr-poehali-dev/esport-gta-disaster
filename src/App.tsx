@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import SnowEffect from "./components/SnowEffect";
 import NotificationSystem from "./components/NotificationSystem";
 import AchievementSystem from "./components/AchievementSystem";
+import ServerLimitNotification from "./components/ServerLimitNotification";
 import Index from "./pages/Index";
 import Teams from "./pages/Teams";
 import Tournaments from "./pages/Tournaments";
@@ -49,6 +50,7 @@ const App = () => (
       <SnowEffect />
       <NotificationSystem />
       <AchievementSystem />
+      <ServerLimitNotification />
       <Toaster />
       <Sonner />
       <BrowserRouter>
