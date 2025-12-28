@@ -1,7 +1,6 @@
 import json
 import os
 import psycopg2
-import boto3
 import base64
 import random
 from datetime import datetime
@@ -77,13 +76,15 @@ def get_verified_teams(conn) -> dict:
                     t.verified,
                     t.description,
                     t.created_at,
+                    COALESCE(t.level, 2) as level,
+                    COALESCE(t.xp, 100) as xp,
+                    COALESCE(t.team_color, '#FFFFFF') as team_color,
                     CASE 
                         WHEN (t.wins + t.losses) > 0 THEN ROUND((t.wins::decimal / (t.wins + t.losses)) * 100)
                         ELSE 0 
                     END as win_rate
                 FROM t_p4831367_esport_gta_disaster.teams t
-                WHERE t.verified = TRUE
-                ORDER BY t.rating DESC, t.wins DESC
+                ORDER BY t.rating DESC, t.level DESC
             """)
             teams = cursor.fetchall()
             
@@ -254,8 +255,8 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Требуется авторизация', 401)
     
     cur.execute("""
-        SELECT u.id, u.role FROM t_p4831367_esport_gta_disaster.users u
-        JOIN t_p4831367_esport_gta_disaster.sessions s ON u.id = s.user_id
+        SELECT u.id, u.role FROM users u
+        JOIN sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
     
@@ -296,6 +297,8 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Максимум 5 скриншотов на команду', 400)
     
     try:
+        import boto3
+        
         image_data = base64.b64decode(image_base64.split(',')[1] if ',' in image_base64 else image_base64)
         
         s3 = boto3.client('s3',

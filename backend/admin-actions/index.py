@@ -70,6 +70,28 @@ def handler(event: dict, context) -> dict:
                 return remove_ban(cur, conn, admin_id, body)
             elif action == 'remove_mute':
                 return remove_mute(cur, conn, admin_id, body)
+            elif action == 'create_tournament':
+                return create_tournament(cur, conn, admin_id, body)
+            elif action == 'get_tournaments':
+                return get_tournaments(cur, conn)
+            elif action == 'get_tournament':
+                return get_tournament(cur, conn, body)
+            elif action == 'register_team':
+                return register_team(cur, conn, body)
+            elif action == 'update_tournament_status':
+                return update_tournament_status(cur, conn, admin_id, body)
+            elif action == 'get_match_chat':
+                return get_match_chat(cur, conn, body)
+            elif action == 'send_chat_message':
+                return send_chat_message(cur, conn, admin_id, body)
+            elif action == 'get_ban_pick':
+                return get_ban_pick(cur, conn, body)
+            elif action == 'make_ban_pick':
+                return make_ban_pick(cur, conn, body)
+            elif action == 'calculate_match_rating':
+                return calculate_match_rating(cur, conn, admin_id, body)
+            elif action == 'get_team_ratings':
+                return get_team_ratings(cur, conn)
             else:
                 return {
                     'statusCode': 400,
@@ -500,5 +522,372 @@ def remove_mute(cur, conn, admin_id: str, body: dict) -> dict:
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'success': True, 'message': 'Мут снят'}),
+        'isBase64Encoded': False
+    }
+
+def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
+    """Создает новый турнир"""
+    
+    name = body.get('name')
+    description = body.get('description')
+    prize_pool = body.get('prize_pool')
+    location = body.get('location')
+    game_project = body.get('game_project')
+    map_pool = body.get('map_pool', [])
+    format_type = body.get('format')
+    team_size = body.get('team_size')
+    best_of = body.get('best_of')
+    start_date = body.get('start_date')
+    
+    cur.execute("""
+        INSERT INTO tournaments (name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_by)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming', %s)
+        RETURNING id
+    """, (name, description, prize_pool, location, game_project, json.dumps(map_pool), format_type, team_size, best_of, start_date, admin_id))
+    
+    tournament_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'tournament_id': tournament_id}),
+        'isBase64Encoded': False
+    }
+
+def get_tournaments(cur, conn) -> dict:
+    """Получает список всех турниров"""
+    
+    cur.execute("""
+        SELECT id, name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_at
+        FROM tournaments
+        ORDER BY start_date DESC
+    """)
+    
+    tournaments = []
+    for row in cur.fetchall():
+        tournaments.append({
+            'id': row[0],
+            'name': row[1],
+            'description': row[2],
+            'prize_pool': row[3],
+            'location': row[4],
+            'game_project': row[5],
+            'map_pool': json.loads(row[6]) if row[6] else [],
+            'format': row[7],
+            'team_size': row[8],
+            'best_of': row[9],
+            'start_date': row[10].isoformat() if row[10] else None,
+            'status': row[11],
+            'created_at': row[12].isoformat() if row[12] else None
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'tournaments': tournaments}),
+        'isBase64Encoded': False
+    }
+
+def get_tournament(cur, conn, body: dict) -> dict:
+    """Получает детали турнира"""
+    
+    tournament_id = body.get('tournament_id')
+    
+    cur.execute("""
+        SELECT id, name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_at
+        FROM tournaments
+        WHERE id = %s
+    """, (tournament_id,))
+    
+    row = cur.fetchone()
+    if not row:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Турнир не найден'}),
+            'isBase64Encoded': False
+        }
+    
+    tournament = {
+        'id': row[0],
+        'name': row[1],
+        'description': row[2],
+        'prize_pool': row[3],
+        'location': row[4],
+        'game_project': row[5],
+        'map_pool': json.loads(row[6]) if row[6] else [],
+        'format': row[7],
+        'team_size': row[8],
+        'best_of': row[9],
+        'start_date': row[10].isoformat() if row[10] else None,
+        'status': row[11],
+        'created_at': row[12].isoformat() if row[12] else None
+    }
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'tournament': tournament}),
+        'isBase64Encoded': False
+    }
+
+def register_team(cur, conn, body: dict) -> dict:
+    """Регистрирует команду на турнир"""
+    
+    tournament_id = body.get('tournament_id')
+    team_id = body.get('team_id')
+    
+    cur.execute("SELECT team_size FROM tournaments WHERE id = %s", (tournament_id,))
+    tournament = cur.fetchone()
+    if not tournament:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Турнир не найден'}),
+            'isBase64Encoded': False
+        }
+    
+    required_team_size = tournament[0]
+    
+    cur.execute("SELECT COUNT(*) FROM team_members WHERE team_id = %s", (team_id,))
+    current_team_size = cur.fetchone()[0]
+    
+    if current_team_size < required_team_size:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Размер команды должен быть {required_team_size}, сейчас {current_team_size}'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute("""
+        INSERT INTO tournament_teams (tournament_id, team_id, registered_at)
+        VALUES (%s, %s, NOW())
+        ON CONFLICT DO NOTHING
+    """, (tournament_id, team_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Команда зарегистрирована'}),
+        'isBase64Encoded': False
+    }
+
+def update_tournament_status(cur, conn, admin_id: str, body: dict) -> dict:
+    """Обновляет статус турнира"""
+    
+    tournament_id = body.get('tournament_id')
+    status = body.get('status')
+    
+    cur.execute("UPDATE tournaments SET status = %s WHERE id = %s", (status, tournament_id))
+    
+    cur.execute("""
+        INSERT INTO admin_actions_log (admin_id, action_type, details)
+        VALUES (%s, 'update_tournament_status', %s)
+    """, (admin_id, json.dumps({'tournament_id': tournament_id, 'status': status})))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
+
+def get_match_chat(cur, conn, body: dict) -> dict:
+    """Получает сообщения чата матча"""
+    
+    match_id = body.get('match_id')
+    
+    cur.execute("""
+        SELECT mc.id, mc.user_id, u.username, mc.message, mc.message_type, mc.created_at
+        FROM match_chat mc
+        JOIN users u ON mc.user_id = u.id
+        WHERE mc.match_id = %s
+        ORDER BY mc.created_at ASC
+    """, (match_id,))
+    
+    messages = []
+    for row in cur.fetchall():
+        messages.append({
+            'id': row[0],
+            'user_id': row[1],
+            'username': row[2],
+            'message': row[3],
+            'message_type': row[4],
+            'created_at': row[5].isoformat() if row[5] else None
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'messages': messages}),
+        'isBase64Encoded': False
+    }
+
+def send_chat_message(cur, conn, admin_id: str, body: dict) -> dict:
+    """Отправляет сообщение в чат матча"""
+    
+    match_id = body.get('match_id')
+    message = body.get('message')
+    message_type = body.get('message_type', 'message')
+    
+    cur.execute("""
+        INSERT INTO match_chat (match_id, user_id, message, message_type, created_at)
+        VALUES (%s, %s, %s, %s, NOW())
+        RETURNING id
+    """, (match_id, admin_id, message, message_type))
+    
+    message_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message_id': message_id}),
+        'isBase64Encoded': False
+    }
+
+def get_ban_pick(cur, conn, body: dict) -> dict:
+    """Получает бан-пик карт для матча"""
+    
+    match_id = body.get('match_id')
+    
+    cur.execute("""
+        SELECT id, team_id, map_name, action, created_at
+        FROM match_ban_pick
+        WHERE match_id = %s
+        ORDER BY created_at ASC
+    """, (match_id,))
+    
+    ban_picks = []
+    for row in cur.fetchall():
+        ban_picks.append({
+            'id': row[0],
+            'team_id': row[1],
+            'map_name': row[2],
+            'action': row[3],
+            'created_at': row[4].isoformat() if row[4] else None
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'ban_picks': ban_picks}),
+        'isBase64Encoded': False
+    }
+
+def make_ban_pick(cur, conn, body: dict) -> dict:
+    """Делает бан или пик карты"""
+    
+    match_id = body.get('match_id')
+    team_id = body.get('team_id')
+    map_name = body.get('map_name')
+    action = body.get('action', 'ban')
+    
+    cur.execute("""
+        INSERT INTO match_ban_pick (match_id, team_id, map_name, action, created_at)
+        VALUES (%s, %s, %s, %s, NOW())
+        RETURNING id
+    """, (match_id, team_id, map_name, action))
+    
+    ban_pick_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'ban_pick_id': ban_pick_id}),
+        'isBase64Encoded': False
+    }
+
+def calculate_match_rating(cur, conn, admin_id: str, body: dict) -> dict:
+    """Начисляет рейтинг за завершенный матч"""
+    
+    match_id = body.get('match_id')
+    
+    cur.execute("""
+        SELECT team1_id, team2_id, team1_score, team2_score
+        FROM matches
+        WHERE id = %s AND status = 'completed'
+    """, (match_id,))
+    
+    match = cur.fetchone()
+    if not match:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Матч не найден или не завершен'}),
+            'isBase64Encoded': False
+        }
+    
+    team1_id, team2_id, team1_score, team2_score = match
+    
+    if team1_score > team2_score:
+        winner_id, loser_id = team1_id, team2_id
+        rating_change = 25
+    elif team2_score > team1_score:
+        winner_id, loser_id = team2_id, team1_id
+        rating_change = 25
+    else:
+        cur.execute("UPDATE team_ratings SET rating = rating + 5 WHERE team_id IN (%s, %s)", (team1_id, team2_id))
+        conn.commit()
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Ничья, +5 рейтинга обеим командам'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute("""
+        INSERT INTO team_ratings (team_id, rating) VALUES (%s, 1000 + %s)
+        ON CONFLICT (team_id) DO UPDATE SET rating = team_ratings.rating + %s
+    """, (winner_id, rating_change, rating_change))
+    
+    cur.execute("""
+        INSERT INTO team_ratings (team_id, rating) VALUES (%s, 1000 - %s)
+        ON CONFLICT (team_id) DO UPDATE SET rating = GREATEST(team_ratings.rating - %s, 0)
+    """, (loser_id, rating_change, rating_change))
+    
+    cur.execute("""
+        INSERT INTO admin_actions_log (admin_id, action_type, details)
+        VALUES (%s, 'calculate_rating', %s)
+    """, (admin_id, json.dumps({'match_id': match_id, 'rating_change': rating_change})))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'rating_change': rating_change}),
+        'isBase64Encoded': False
+    }
+
+def get_team_ratings(cur, conn) -> dict:
+    """Получает рейтинги всех команд"""
+    
+    cur.execute("""
+        SELECT tr.team_id, t.name, tr.rating
+        FROM team_ratings tr
+        JOIN teams t ON tr.team_id = t.id
+        ORDER BY tr.rating DESC
+    """)
+    
+    ratings = []
+    for row in cur.fetchall():
+        ratings.append({
+            'team_id': row[0],
+            'team_name': row[1],
+            'rating': row[2]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'ratings': ratings}),
         'isBase64Encoded': False
     }
