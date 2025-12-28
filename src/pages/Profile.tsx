@@ -133,6 +133,69 @@ export default function Profile() {
     }
   };
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Ошибка',
+        description: 'Размер файла не должен превышать 5 МБ',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result?.toString().split(',')[1];
+        
+        const sessionToken = localStorage.getItem('session_token');
+        const response = await fetch(PROFILE_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Token': sessionToken!
+          },
+          body: JSON.stringify({
+            action: 'upload_banner',
+            banner_base64: base64,
+            file_type: file.type
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setProfile({ ...profile, banner_url: data.banner_url });
+          toast({
+            title: 'Успешно',
+            description: 'Баннер загружен'
+          });
+        } else {
+          toast({
+            title: 'Ошибка',
+            description: data.error,
+            variant: 'destructive'
+          });
+        }
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить баннер',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -287,7 +350,23 @@ export default function Profile() {
       <main className="flex-1 py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <Card className="overflow-hidden border-primary/30">
-            <div className="h-48 bg-gradient-to-r from-primary via-secondary to-accent relative">
+            <div className="h-48 relative group">
+              {profile.banner_url ? (
+                <img src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-primary via-secondary to-accent" />
+              )}
+              <label className="absolute top-4 right-4 px-4 py-2 bg-background/80 backdrop-blur-sm rounded cursor-pointer hover:bg-background transition-colors opacity-0 group-hover:opacity-100 flex items-center gap-2">
+                <Icon name="ImagePlus" size={18} />
+                <span className="text-sm font-medium">Загрузить баннер</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
               <div className="absolute -bottom-16 left-8 flex items-end gap-6">
                 <div className="relative">
                   <div className="w-32 h-32 rounded-full border-4 border-background overflow-hidden bg-card">

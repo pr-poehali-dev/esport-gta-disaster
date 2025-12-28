@@ -142,6 +142,8 @@ def handler(event: dict, context) -> dict:
                 return delete_discussion(cur, conn, body)
             elif action == 'edit_discussion':
                 return edit_discussion(cur, conn, admin_id, body)
+            elif action == 'create_news_with_image':
+                return create_news_with_image(cur, conn, admin_id, body, admin_role[0])
             else:
                 return {
                     'statusCode': 400,
@@ -1998,6 +2000,80 @@ def edit_discussion(cur, conn, user_id: str, body: dict) -> dict:
     
     conn.commit()
     
+    return success_response({
+        'success': True,
+        'message': 'Обсуждение обновлено'
+    })
+
+def create_news_with_image(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Создание новости с изображением"""
+    
+    if role not in ['admin', 'founder', 'organizer']:
+        return error_response('Недостаточно прав', 403)
+    
+    title = body.get('title', '').strip()
+    content = body.get('content', '').strip()
+    image_base64 = body.get('image', '')
+    published = body.get('published', True)
+    
+    if not title or not content:
+        return error_response('Заполните все поля', 400)
+    
+    image_url = None
+    if image_base64:
+        try:
+            import base64
+            import boto3
+            from datetime import datetime
+            
+            image_data = base64.b64decode(image_base64)
+            
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+            )
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            file_key = f'news/{timestamp}_{title.replace(" ", "_")[:30]}.png'
+            
+            s3.put_object(
+                Bucket='files',
+                Key=file_key,
+                Body=image_data,
+                ContentType='image/png'
+            )
+            
+            image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
+        except Exception as e:
+            return error_response(f'Ошибка загрузки изображения: {str(e)}', 500)
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.news 
+        (title, content, author_id, image_url, published, created_at)
+        VALUES (%s, %s, %s, %s, %s, NOW())
+        RETURNING id
+    """, (title, content, admin_id, image_url, published))
+    
+    news_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'news_id': news_id,
+        'image_url': image_url,
+        'message': 'Новость создана'
+    })
+
+def error_response(message: str, status: int) -> dict:
+    return {
+        'statusCode': status,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'error': message}),
+        'isBase64Encoded': False
+    }
+
+def success_response(data: dict) -> dict:
     return success_response({
         'success': True,
         'message': 'Обсуждение обновлено'

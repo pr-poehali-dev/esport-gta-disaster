@@ -49,6 +49,8 @@ def handler(event: dict, context) -> dict:
             
             if action == 'upload_avatar':
                 return upload_avatar(cur, conn, user_id, body)
+            elif action == 'upload_banner':
+                return upload_banner(cur, conn, user_id, body)
             elif action == 'track_activity':
                 return track_activity(cur, conn, user_id, body)
             else:
@@ -76,7 +78,7 @@ def get_profile(cur, user_id: int) -> dict:
     cur.execute("""
         SELECT id, nickname, email, discord, team, avatar_url, role, 
                auto_status, bio, signature_url, total_time_seconds, 
-               created_at, achievement_points
+               created_at, achievement_points, banner_url
         FROM t_p4831367_esport_gta_disaster.users 
         WHERE id = %s
     """, (user_id,))
@@ -103,7 +105,8 @@ def get_profile(cur, user_id: int) -> dict:
             'total_time_seconds': user[10],
             'total_time_hours': round(user[10] / 3600, 1) if user[10] else 0,
             'created_at': user[11].isoformat() if user[11] else None,
-            'achievement_points': user[12]
+            'achievement_points': user[12],
+            'banner_url': user[13]
         }),
         'isBase64Encoded': False
     }
@@ -279,6 +282,56 @@ def track_activity(cur, conn, user_id: int, body: dict) -> dict:
         }),
         'isBase64Encoded': False
     }
+
+def upload_banner(cur, conn, user_id: int, body: dict) -> dict:
+    """Загрузка баннера профиля в S3"""
+    banner_base64 = body.get('banner_base64')
+    file_type = body.get('file_type', 'image/jpeg')
+    
+    if not banner_base64:
+        return error_response('Изображение не предоставлено', 400)
+    
+    try:
+        image_data = base64.b64decode(banner_base64)
+        file_extension = file_type.split('/')[-1]
+        filename = f"banners/{user_id}_{secrets.token_hex(8)}.{file_extension}"
+        
+        s3 = boto3.client('s3',
+            endpoint_url='https://bucket.poehali.dev',
+            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+        )
+        
+        s3.put_object(
+            Bucket='files',
+            Key=filename,
+            Body=image_data,
+            ContentType=file_type
+        )
+        
+        cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+        
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.users 
+            SET banner_url = %s, updated_at = NOW()
+            WHERE id = %s
+        """, (cdn_url, user_id))
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'banner_url': cdn_url,
+                'message': 'Баннер загружен'
+            }),
+            'isBase64Encoded': False
+        }
+    
+    except Exception as e:
+        return error_response(f'Ошибка загрузки: {str(e)}', 500)
 
 def error_response(message: str, status_code: int) -> dict:
     return {

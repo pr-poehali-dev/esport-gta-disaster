@@ -36,6 +36,7 @@ import UserProfile from "./pages/UserProfile";
 import MatchDetails from "./pages/MatchDetails";
 import Rules from "./pages/Rules";
 import Support from "./pages/Support";
+import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
           <Route path="/matches/:matchId" element={<MatchDetails />} />
           <Route path="/rules" element={<Rules />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/news" element={<News />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

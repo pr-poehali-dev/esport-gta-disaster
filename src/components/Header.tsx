@@ -27,12 +27,11 @@ export default function Header() {
   const isAdmin = userRole === 'admin' || userRole === 'founder' || userRole === 'organizer';
 
   const navLinks = [
+    { label: 'Новости', href: '/news', external: false },
     { label: 'Обсуждения', href: '/forum', external: false },
     { label: 'Команды', href: '/teams', external: false },
     { label: 'Турниры', href: '/tournaments', external: false },
     { label: 'Рейтинг', href: '/rating', external: false },
-    { label: 'Поддержка', href: '#', external: true },
-    { label: 'Правила турниров', href: '#', external: true },
   ];
 
   const socialLinks = [
@@ -44,9 +43,19 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-8">
-          <div className="flex-shrink-0">
-            <Logo showText={true} animated={true} />
+        <div className="flex items-center justify-between h-16 gap-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="hover:bg-primary/10"
+            >
+              <Icon name="ArrowLeft" className="h-5 w-5" />
+            </Button>
+            <div className="flex-shrink-0">
+              <Logo showText={true} animated={true} />
+            </div>
           </div>
 
           <nav className="hidden lg:flex items-center gap-6">
@@ -56,7 +65,7 @@ export default function Header() {
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors uppercase tracking-wide relative group"
+                className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors uppercase tracking-wide relative group"
               >
                 {link.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
