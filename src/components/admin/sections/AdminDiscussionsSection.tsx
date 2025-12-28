@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import Icon from '@/components/ui/icon';
+import DiscussionList from './discussions/DiscussionList';
+import DiscussionDetail from './discussions/DiscussionDetail';
+import CreateDiscussionDialog from './discussions/CreateDiscussionDialog';
+import EditDiscussionDialog from './discussions/EditDiscussionDialog';
 
 const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
@@ -305,13 +302,6 @@ export default function AdminDiscussionsSection() {
     }
   };
 
-  const handleOpenEdit = (discussion: any) => {
-    setEditingDiscussionId(discussion.id);
-    setEditTitle(discussion.title);
-    setEditContent(discussion.content);
-    setIsEditDialogOpen(true);
-  };
-
   const handleEditDiscussion = async () => {
     if (!editTitle.trim() || !editContent.trim()) {
       toast({
@@ -331,7 +321,7 @@ export default function AdminDiscussionsSection() {
           'X-Admin-Id': user.id.toString(),
         },
         body: JSON.stringify({
-          action: 'edit_discussion',
+          action: 'update_discussion',
           discussion_id: editingDiscussionId,
           title: editTitle,
           content: editContent,
@@ -345,8 +335,10 @@ export default function AdminDiscussionsSection() {
           title: 'Успешно',
           description: data.message,
         });
-        setIsEditDialogOpen(false);
+        setEditTitle('');
+        setEditContent('');
         setEditingDiscussionId(null);
+        setIsEditDialogOpen(false);
         loadDiscussions();
         if (selectedDiscussion?.id === editingDiscussionId) {
           loadDiscussion(editingDiscussionId);
@@ -369,277 +361,60 @@ export default function AdminDiscussionsSection() {
     }
   };
 
-  if (!canModerate) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Обсуждения</CardTitle>
-          <CardDescription>Только модераторы могут просматривать обсуждения</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">У вас нет прав для просмотра этого раздела.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (selectedDiscussion) {
-    return (
-      <div className="space-y-6">
-        <Button onClick={() => setSelectedDiscussion(null)} variant="ghost">
-          <Icon name="ArrowLeft" size={18} className="mr-2" />
-          Назад к списку
-        </Button>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  {selectedDiscussion.is_pinned && <Icon name="Pin" size={20} className="text-yellow-500" />}
-                  {selectedDiscussion.is_locked && <Icon name="Lock" size={20} className="text-red-500" />}
-                  {selectedDiscussion.title}
-                </CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-2">
-                  <img
-                    src={selectedDiscussion.author_avatar || '/default-avatar.png'}
-                    alt={selectedDiscussion.author_name}
-                    className="w-6 h-6 rounded-full"
-                  />
-                  {selectedDiscussion.author_name} •{' '}
-                  {new Date(selectedDiscussion.created_at).toLocaleString('ru-RU')}
-                </CardDescription>
-              </div>
-              {canModerate && (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleToggleLock(selectedDiscussion.id, selectedDiscussion.is_locked)}
-                  >
-                    <Icon name={selectedDiscussion.is_locked ? 'Unlock' : 'Lock'} size={16} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleTogglePin(selectedDiscussion.id, selectedDiscussion.is_pinned)}
-                  >
-                    <Icon name="Pin" size={16} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleOpenEdit(selectedDiscussion)}
-                  >
-                    <Icon name="Edit" size={16} />
-                  </Button>
-                  {['admin', 'founder', 'organizer'].includes(user.role) && (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDeleteDiscussion(selectedDiscussion.id)}
-                    >
-                      <Icon name="Trash2" size={16} />
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap">{selectedDiscussion.content}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Комментарии ({selectedDiscussion.comments?.length || 0})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedDiscussion.comments?.map((comment: any) => (
-              <div key={comment.id} className="border-b pb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <img
-                    src={comment.author_avatar || '/default-avatar.png'}
-                    alt={comment.author_name}
-                    className="w-6 h-6 rounded-full"
-                  />
-                  <span className="font-medium text-sm">{comment.author_name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(comment.created_at).toLocaleString('ru-RU')}
-                  </span>
-                </div>
-                <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-              </div>
-            ))}
-
-            {(!selectedDiscussion.is_locked || canModerate) && (
-              <div className="space-y-2">
-                <Label>Добавить комментарий</Label>
-                <Textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Ваш комментарий..."
-                  rows={3}
-                />
-                <Button onClick={handleAddComment} disabled={loading}>
-                  <Icon name="Send" size={16} className="mr-2" />
-                  Отправить
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const openEditDialog = (discussion: any) => {
+    setEditingDiscussionId(discussion.id);
+    setEditTitle(discussion.title);
+    setEditContent(discussion.content);
+    setIsEditDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Icon name="MessageCircle" size={24} />
-              Обсуждения модераторов
-            </CardTitle>
-            <CardDescription>Внутренний форум для обсуждения</CardDescription>
-          </div>
-          {canModerate && (
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Icon name="Plus" size={18} className="mr-2" />
-                  Создать тему
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Новая тема обсуждения</DialogTitle>
-                  <DialogDescription>Создайте новую тему для обсуждения</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Заголовок</Label>
-                    <Input
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder="Введите заголовок..."
-                    />
-                  </div>
-                  <div>
-                    <Label>Содержание</Label>
-                    <Textarea
-                      value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
-                      placeholder="Опишите тему обсуждения..."
-                      rows={5}
-                    />
-                  </div>
-                  <Button onClick={handleCreateDiscussion} disabled={loading}>
-                    Создать
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {discussions.map((disc) => (
-              <Card
-                key={disc.id}
-                className="cursor-pointer hover:border-primary transition"
-                onClick={() => loadDiscussion(disc.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1">
-                      <img
-                        src={disc.author_avatar || '/default-avatar.png'}
-                        alt={disc.author_name}
-                        className="w-10 h-10 rounded-full mt-1"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold flex items-center gap-2">
-                          {disc.is_pinned && <Icon name="Pin" size={16} className="text-yellow-500" />}
-                          {disc.is_locked && <Icon name="Lock" size={16} className="text-red-500" />}
-                          {disc.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">{disc.content}</p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                          <span>{disc.author_name}</span>
-                          <span>•</span>
-                          <span>{disc.comment_count} комментариев</span>
-                          <span>•</span>
-                          <span>{disc.views} просмотров</span>
-                          <span>•</span>
-                          <span>{new Date(disc.updated_at).toLocaleString('ru-RU')}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {canModerate && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleLock(disc.id, disc.is_locked);
-                          }}
-                        >
-                          <Icon name={disc.is_locked ? 'Unlock' : 'Lock'} size={14} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTogglePin(disc.id, disc.is_pinned);
-                          }}
-                        >
-                          <Icon name="Pin" size={14} />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <DiscussionList
+          discussions={discussions}
+          selectedDiscussion={selectedDiscussion}
+          onSelectDiscussion={loadDiscussion}
+          onTogglePin={handleTogglePin}
+          onToggleLock={handleToggleLock}
+          onEditDiscussion={openEditDialog}
+          onDeleteDiscussion={handleDeleteDiscussion}
+          onOpenCreateDialog={() => setIsCreateDialogOpen(true)}
+          canModerate={canModerate}
+          userRole={user.role}
+        />
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Редактировать обсуждение</DialogTitle>
-            <DialogDescription>Измените заголовок или содержание темы</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Заголовок</Label>
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="Введите заголовок..."
-              />
-            </div>
-            <div>
-              <Label>Содержание</Label>
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                placeholder="Опишите тему обсуждения..."
-                rows={5}
-              />
-            </div>
-            <Button onClick={handleEditDiscussion} disabled={loading}>
-              Сохранить
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <DiscussionDetail
+          selectedDiscussion={selectedDiscussion}
+          commentText={commentText}
+          setCommentText={setCommentText}
+          onAddComment={handleAddComment}
+          loading={loading}
+          canModerate={canModerate}
+        />
+      </div>
+
+      <CreateDiscussionDialog
+        isOpen={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        newTitle={newTitle}
+        setNewTitle={setNewTitle}
+        newContent={newContent}
+        setNewContent={setNewContent}
+        onSubmit={handleCreateDiscussion}
+        loading={loading}
+      />
+
+      <EditDiscussionDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        editTitle={editTitle}
+        setEditTitle={setEditTitle}
+        editContent={editContent}
+        setEditContent={setEditContent}
+        onSubmit={handleEditDiscussion}
+        loading={loading}
+      />
     </div>
   );
 }
