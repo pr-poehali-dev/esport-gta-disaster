@@ -1,12 +1,12 @@
 {
   "tests": [
     {
-      "name": "Get verified teams",
+      "name": "Get tournaments",
       "method": "GET",
-      "path": "/",
+      "path": "/?resource=tournaments",
       "expectedStatus": 200,
       "expectedBody": {
-        "teams": []
+        "tournaments": "array"
       },
       "bodyMatcher": "partial"
     },
