@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-const ADMIN_API = 'https://functions.poehali.dev/3dd07aca-80df-42bc-8da1-db4d15d85ba5';
+const ADMIN_API = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
 export default function News() {
   const [news, setNews] = useState<any[]>([]);
@@ -143,8 +143,7 @@ export default function News() {
   };
 
   const openNewsDetails = (item: any) => {
-    setSelectedNews(item);
-    setDetailsDialogOpen(true);
+    navigate(`/news/${item.id}`);
   };
 
   if (loading && news.length === 0) {

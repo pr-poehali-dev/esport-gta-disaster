@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from './Logo';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ export default function Header() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -25,6 +26,15 @@ export default function Header() {
   }, []);
 
   const isAdmin = userRole === 'admin' || userRole === 'founder' || userRole === 'organizer';
+
+  const isHomePage = location.pathname === '/';
+  const canGoBack = window.history.length > 1 && !isHomePage;
+
+  const handleBack = () => {
+    if (canGoBack) {
+      navigate(-1);
+    }
+  };
 
   const navLinks = [
     { label: 'Новости', href: '/news', external: false },
@@ -45,14 +55,17 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-8">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/')}
-              className="hover:bg-primary/10"
-            >
-              <Icon name="ArrowLeft" className="h-5 w-5" />
-            </Button>
+            {!isHomePage && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBack}
+                className="hover:bg-primary/10"
+                title="Назад"
+              >
+                <Icon name="ArrowLeft" className="h-5 w-5" />
+              </Button>
+            )}
             <div className="flex-shrink-0">
               <Logo showText={true} animated={true} />
             </div>

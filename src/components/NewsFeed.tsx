@@ -49,14 +49,14 @@ export default function NewsFeed() {
           id: item.id.toString(),
           title: item.title,
           description: item.content.substring(0, 150) + '...',
-          image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
+          image: item.image_url || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
           date: new Date(item.created_at).toLocaleDateString('ru-RU', {
             day: 'numeric',
             month: 'long',
             year: 'numeric'
           }),
           category: 'Новости',
-          slug: `news-${item.id}`,
+          slug: `news/${item.id}`,
           content: item.content
         }));
         setNews(formattedNews);

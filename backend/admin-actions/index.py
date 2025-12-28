@@ -1310,16 +1310,16 @@ def get_news(cur, conn, body: dict) -> dict:
     
     if include_unpublished:
         cur.execute("""
-            SELECT n.id, n.title, n.content, n.published, n.created_at, n.updated_at, u.nickname
-            FROM news n
-            JOIN users u ON n.author_id = u.id
+            SELECT n.id, n.title, n.content, n.image_url, n.published, n.created_at, n.updated_at, u.nickname
+            FROM t_p4831367_esport_gta_disaster.news n
+            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
             ORDER BY n.created_at DESC
         """)
     else:
         cur.execute("""
-            SELECT n.id, n.title, n.content, n.published, n.created_at, n.updated_at, u.nickname
-            FROM news n
-            JOIN users u ON n.author_id = u.id
+            SELECT n.id, n.title, n.content, n.image_url, n.published, n.created_at, n.updated_at, u.nickname
+            FROM t_p4831367_esport_gta_disaster.news n
+            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
             WHERE n.published = true
             ORDER BY n.created_at DESC
         """)
@@ -1330,10 +1330,11 @@ def get_news(cur, conn, body: dict) -> dict:
             'id': row[0],
             'title': row[1],
             'content': row[2],
-            'published': row[3],
-            'created_at': row[4].isoformat() if row[4] else None,
-            'updated_at': row[5].isoformat() if row[5] else None,
-            'author_name': row[6]
+            'image_url': row[3],
+            'published': row[4],
+            'created_at': row[5].isoformat() if row[5] else None,
+            'updated_at': row[6].isoformat() if row[6] else None,
+            'author_name': row[7]
         })
     
     return {
