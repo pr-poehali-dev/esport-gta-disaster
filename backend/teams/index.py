@@ -3,6 +3,7 @@ import os
 import psycopg2
 import base64
 import random
+import math
 from datetime import datetime
 from psycopg2.extras import RealDictCursor
 
@@ -1253,7 +1254,7 @@ def search_users(cur, conn, body: dict) -> dict:
     }
 
 def register_tournament(cur, conn, body: dict, event: dict) -> dict:
-    '''Регистрация команды на турнир'''
+    '''Регистрация команды на турнир с выбором 5 основных + 2 запасных игроков'''
     user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
     
     if not user_id:
@@ -1261,9 +1262,17 @@ def register_tournament(cur, conn, body: dict, event: dict) -> dict:
     
     tournament_id = body.get('tournament_id')
     team_id = body.get('team_id')
+    main_players = body.get('main_players', [])
+    reserve_players = body.get('reserve_players', [])
     
     if not tournament_id or not team_id:
         return error_response('Укажите турнир и команду', 400)
+    
+    if len(main_players) < 1 or len(main_players) > 5:
+        return error_response('Необходимо выбрать от 1 до 5 основных игроков', 400)
+    
+    if len(reserve_players) > 2:
+        return error_response('Можно выбрать максимум 2 запасных игрока', 400)
     
     cur.execute("""
         SELECT captain_id FROM t_p4831367_esport_gta_disaster.teams 
@@ -1278,25 +1287,40 @@ def register_tournament(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Только капитан может регистрировать команду', 403)
     
     cur.execute("""
-        SELECT registration_open FROM t_p4831367_esport_gta_disaster.tournaments 
+        SELECT is_started FROM t_p4831367_esport_gta_disaster.tournaments 
         WHERE id = %s
     """, (tournament_id,))
     
     tournament = cur.fetchone()
-    if not tournament or not tournament[0]:
-        return error_response('Регистрация на турнир закрыта', 403)
+    if not tournament:
+        return error_response('Турнир не найден', 404)
+    
+    if tournament[0]:
+        return error_response('Регистрация на турнир закрыта (турнир начат)', 403)
+    
+    for player_id in main_players + reserve_players:
+        cur.execute("""
+            SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members 
+            WHERE team_id = %s AND user_id = %s AND status = 'active'
+        """, (team_id, player_id))
+        
+        if cur.fetchone()[0] == 0:
+            return error_response(f'Игрок {player_id} не состоит в команде', 400)
     
     cur.execute("""
         INSERT INTO t_p4831367_esport_gta_disaster.tournament_registrations 
-        (tournament_id, team_id, status, approved, registered_at)
-        VALUES (%s, %s, 'pending', FALSE, NOW())
-        ON CONFLICT (tournament_id, team_id) DO NOTHING
+        (tournament_id, team_id, approved, registered_at, main_players, reserve_players)
+        VALUES (%s, %s, FALSE, NOW(), %s, %s)
+        ON CONFLICT (tournament_id, team_id) DO UPDATE
+        SET main_players = EXCLUDED.main_players,
+            reserve_players = EXCLUDED.reserve_players,
+            registered_at = NOW()
         RETURNING id
-    """, (tournament_id, team_id))
+    """, (tournament_id, team_id, json.dumps(main_players), json.dumps(reserve_players)))
     
     result = cur.fetchone()
     if not result:
-        return error_response('Команда уже зарегистрирована', 400)
+        return error_response('Ошибка регистрации', 500)
     
     conn.commit()
     

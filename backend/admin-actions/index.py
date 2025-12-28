@@ -144,6 +144,16 @@ def handler(event: dict, context) -> dict:
                 return edit_discussion(cur, conn, admin_id, body)
             elif action == 'create_news_with_image':
                 return create_news_with_image(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'delete_tournament':
+                return delete_tournament(cur, conn, admin_id, body)
+            elif action == 'hide_tournament':
+                return hide_tournament(cur, conn, admin_id, body)
+            elif action == 'start_tournament':
+                return start_tournament(cur, conn, admin_id, body)
+            elif action == 'get_admin_tournaments':
+                return get_admin_tournaments(cur, conn)
+            elif action == 'approve_registration':
+                return approve_registration(cur, conn, admin_id, body)
             else:
                 return {
                     'statusCode': 400,
@@ -2065,18 +2075,215 @@ def create_news_with_image(cur, conn, admin_id: str, body: dict, role: str) -> d
         'message': 'Новость создана'
     })
 
-def error_response(message: str, status: int) -> dict:
-    return {
-        'statusCode': status,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'error': message}),
-        'isBase64Encoded': False
-    }
-
-def success_response(data: dict) -> dict:
+def delete_tournament(cur, conn, admin_id: str, body: dict) -> dict:
+    """Удаление турнира (hard delete)"""
+    
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return error_response('Не указан ID турнира', 400)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.tournaments 
+        SET deleted_at = NOW() 
+        WHERE id = %s
+    """, (tournament_id,))
+    
+    conn.commit()
+    
     return success_response({
         'success': True,
-        'message': 'Обсуждение обновлено'
+        'message': 'Турнир удален'
+    })
+
+def hide_tournament(cur, conn, admin_id: str, body: dict) -> dict:
+    """Скрытие/показ турнира"""
+    
+    tournament_id = body.get('tournament_id')
+    is_hidden = body.get('is_hidden', True)
+    
+    if not tournament_id:
+        return error_response('Не указан ID турнира', 400)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.tournaments 
+        SET is_hidden = %s 
+        WHERE id = %s
+    """, (is_hidden, tournament_id))
+    
+    conn.commit()
+    
+    status = 'скрыт' if is_hidden else 'показан'
+    return success_response({
+        'success': True,
+        'message': f'Турнир {status}'
+    })
+
+def start_tournament(cur, conn, admin_id: str, body: dict) -> dict:
+    """Начать турнир и сгенерировать сетку"""
+    
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return error_response('Не указан ID турнира', 400)
+    
+    cur.execute("""
+        SELECT max_participants, is_started 
+        FROM t_p4831367_esport_gta_disaster.tournaments 
+        WHERE id = %s
+    """, (tournament_id,))
+    
+    result = cur.fetchone()
+    if not result:
+        return error_response('Турнир не найден', 404)
+    
+    max_participants, is_started = result
+    
+    if is_started:
+        return error_response('Турнир уже начат', 400)
+    
+    cur.execute("""
+        SELECT COUNT(*) 
+        FROM t_p4831367_esport_gta_disaster.tournament_registrations 
+        WHERE tournament_id = %s AND approved = TRUE
+    """, (tournament_id,))
+    
+    approved_count = cur.fetchone()[0]
+    
+    if approved_count == 0:
+        return error_response('Нет утвержденных заявок', 400)
+    
+    cur.execute("""
+        SELECT tr.id, t.id, t.name
+        FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+        JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
+        WHERE tr.tournament_id = %s AND tr.approved = TRUE
+    """, (tournament_id,))
+    
+    teams = cur.fetchall()
+    import math
+    bracket_size = max_participants or 16
+    
+    stage_names = {
+        2: 'Финал',
+        4: 'Полуфинал',
+        8: '1/4 финала',
+        16: '1/8 финала',
+        32: '1/16 финала',
+        64: '1/32 финала',
+        128: '1/64 финала'
+    }
+    
+    stages = []
+    current_size = bracket_size
+    stage_order = 0
+    
+    while current_size >= 2:
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.bracket_stages 
+            (tournament_id, stage_name, stage_order, best_of)
+            VALUES (%s, %s, %s, 1)
+            RETURNING id
+        """, (tournament_id, stage_names.get(current_size, f'Раунд {stage_order + 1}'), stage_order))
+        
+        stage_id = cur.fetchone()[0]
+        stages.append((stage_id, current_size))
+        current_size = current_size // 2
+        stage_order += 1
+    
+    random.shuffle(teams)
+    
+    first_stage_id = stages[0][0]
+    first_stage_size = stages[0][1]
+    
+    matches_to_create = first_stage_size // 2
+    
+    for match_num in range(matches_to_create):
+        team1_idx = match_num * 2
+        team2_idx = match_num * 2 + 1
+        
+        team1_id = teams[team1_idx][1] if team1_idx < len(teams) else None
+        team2_id = teams[team2_idx][1] if team2_idx < len(teams) else None
+        
+        next_match_num = match_num // 2 if len(stages) > 1 else None
+        
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.matches 
+            (tournament_id, stage_id, match_number, team1_id, team2_id, status, match_date)
+            VALUES (%s, %s, %s, %s, %s, 'upcoming', NOW())
+        """, (tournament_id, first_stage_id, match_num, team1_id, team2_id))
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.tournaments 
+        SET is_started = TRUE, status = 'active'
+        WHERE id = %s
+    """, (tournament_id,))
+    
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'message': f'Турнир начат, создано {matches_to_create} матчей'
+    })
+
+def get_admin_tournaments(cur, conn) -> dict:
+    """Получить все турниры для админ-панели"""
+    
+    cur.execute("""
+        SELECT 
+            t.id, 
+            t.name, 
+            t.status, 
+            t.max_participants,
+            t.is_hidden,
+            t.is_started,
+            t.start_date,
+            t.prize_pool,
+            COUNT(tr.id) as registrations_count
+        FROM t_p4831367_esport_gta_disaster.tournaments t
+        LEFT JOIN t_p4831367_esport_gta_disaster.tournament_registrations tr ON t.id = tr.tournament_id
+        WHERE t.deleted_at IS NULL
+        GROUP BY t.id
+        ORDER BY t.created_at DESC
+    """)
+    
+    tournaments = []
+    for row in cur.fetchall():
+        tournaments.append({
+            'id': row[0],
+            'name': row[1],
+            'status': row[2],
+            'max_participants': row[3],
+            'is_hidden': row[4],
+            'is_started': row[5],
+            'start_date': row[6].isoformat() if row[6] else None,
+            'prize_pool': row[7],
+            'registrations_count': row[8]
+        })
+    
+    return success_response({'tournaments': tournaments})
+
+def approve_registration(cur, conn, admin_id: str, body: dict) -> dict:
+    """Одобрить заявку команды на турнир"""
+    
+    registration_id = body.get('registration_id')
+    approved = body.get('approved', True)
+    
+    if not registration_id:
+        return error_response('Не указан ID заявки', 400)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.tournament_registrations 
+        SET approved = %s 
+        WHERE id = %s
+    """, (approved, registration_id))
+    
+    conn.commit()
+    
+    status = 'одобрена' if approved else 'отклонена'
+    return success_response({
+        'success': True,
+        'message': f'Заявка {status}'
     })
 
 def success_response(data: dict) -> dict:
