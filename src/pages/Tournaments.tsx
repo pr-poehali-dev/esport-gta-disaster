@@ -54,7 +54,11 @@ export default function Tournaments() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {tournaments.map((tournament) => (
-              <Card key={tournament.id} className="hover:border-primary transition-colors">
+              <Card 
+                key={tournament.id} 
+                className="hover:border-primary transition-colors cursor-pointer"
+                onClick={() => navigate(`/tournaments/${tournament.id}`)}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">
                     <CardTitle className="text-xl">{tournament.name}</CardTitle>
@@ -80,14 +84,26 @@ export default function Tournaments() {
                     <span>{tournament.prizePool}</span>
                   </div>
                 
-                <div className="pt-3">
+                <div className="pt-3 flex gap-2">
+                  <Button 
+                    variant="default" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/tournaments/${tournament.id}`);
+                    }}
+                  >
+                    <Icon name="Info" className="h-4 w-4 mr-2" />
+                    Подробнее
+                  </Button>
                   <Button 
                     variant="outline" 
-                    className="w-full"
-                    onClick={() => navigate(`/tournaments/${tournament.id}/bracket`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/tournaments/${tournament.id}/bracket`);
+                    }}
                   >
-                    <Icon name="GitBranch" className="h-4 w-4 mr-2" />
-                    Турнирная сетка
+                    <Icon name="GitBranch" className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

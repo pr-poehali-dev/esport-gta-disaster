@@ -49,8 +49,7 @@ export default function Ratings() {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ action: 'get_team_ratings' })
+        }
       });
 
       const data = await response.json();

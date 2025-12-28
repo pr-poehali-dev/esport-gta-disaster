@@ -1,108 +1,187 @@
-import { Card } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 
-export function AdminSupportSection() {
-  const mockTickets = [
-    { id: 1, user: 'Player123', subject: 'Не могу войти в аккаунт', priority: 'Высокий', status: 'Открыт', date: '2025-01-15' },
-    { id: 2, user: 'ProGamer', subject: 'Вопрос по турниру', priority: 'Средний', status: 'В работе', date: '2025-01-15' },
-    { id: 3, user: 'NewUser', subject: 'Как изменить никнейм?', priority: 'Низкий', status: 'Закрыт', date: '2025-01-14' },
-  ];
+const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Высокий': return 'bg-red-500/20 text-red-500';
-      case 'Средний': return 'bg-yellow-500/20 text-yellow-500';
-      case 'Низкий': return 'bg-green-500/20 text-green-500';
-      default: return 'bg-gray-500/20 text-gray-500';
+export function AdminSupportSection() {
+  const [supportData, setSupportData] = useState<any>({ email: '', telegram: '', discord: '', vk: '' });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  useEffect(() => {
+    loadSupport();
+  }, []);
+
+  const loadSupport = async () => {
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString(),
+        },
+        body: JSON.stringify({ action: 'get_support' }),
+      });
+
+      const data = await response.json();
+      if (data.support) {
+        setSupportData({
+          email: data.support.email || '',
+          telegram: data.support.telegram || '',
+          discord: data.support.discord || '',
+          vk: data.support.vk || '',
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки данных поддержки:', error);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Открыт': return 'bg-blue-500/20 text-blue-500';
-      case 'В работе': return 'bg-yellow-500/20 text-yellow-500';
-      case 'Закрыт': return 'bg-gray-500/20 text-gray-500';
-      default: return 'bg-gray-500/20 text-gray-500';
+  const handleUpdate = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'update_support',
+          ...supportData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: 'Успешно',
+          description: data.message,
+        });
+        loadSupport();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось обновить контакты',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-4xl font-bold">Поддержка</h1>
-        <Button variant="outline">
-          <Icon name="RefreshCw" size={20} className="mr-2" />
-          Обновить
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 space-y-2">
-          <Icon name="Inbox" size={32} className="text-primary" />
-          <h3 className="text-2xl font-bold">12</h3>
-          <p className="text-muted-foreground">Открытых обращений</p>
-        </Card>
-        
-        <Card className="p-6 space-y-2">
-          <Icon name="Clock" size={32} className="text-yellow-500" />
-          <h3 className="text-2xl font-bold">8</h3>
-          <p className="text-muted-foreground">В работе</p>
-        </Card>
-        
-        <Card className="p-6 space-y-2">
-          <Icon name="CheckCircle" size={32} className="text-green-500" />
-          <h3 className="text-2xl font-bold">94%</h3>
-          <p className="text-muted-foreground">Решено за день</p>
-        </Card>
+      <div>
+        <h1 className="text-4xl font-bold flex items-center gap-3">
+          <Icon name="Headset" size={36} />
+          Поддержка
+        </h1>
+        <p className="text-muted-foreground mt-2">Контакты службы поддержки, которые видят пользователи</p>
       </div>
 
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-border">
-              <tr>
-                <th className="text-left p-4 font-semibold">Пользователь</th>
-                <th className="text-left p-4 font-semibold">Тема</th>
-                <th className="text-left p-4 font-semibold">Приоритет</th>
-                <th className="text-left p-4 font-semibold">Статус</th>
-                <th className="text-left p-4 font-semibold">Дата</th>
-                <th className="text-left p-4 font-semibold">Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockTickets.map((ticket) => (
-                <tr key={ticket.id} className="border-b border-border hover:bg-muted/30">
-                  <td className="p-4 font-medium">{ticket.user}</td>
-                  <td className="p-4">{ticket.subject}</td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded text-sm ${getPriorityColor(ticket.priority)}`}>
-                      {ticket.priority}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded text-sm ${getStatusColor(ticket.status)}`}>
-                      {ticket.status}
-                    </span>
-                  </td>
-                  <td className="p-4 text-muted-foreground">
-                    {new Date(ticket.date).toLocaleDateString('ru-RU')}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
-                        <Icon name="Eye" size={16} />
-                      </Button>
-                      <Button size="sm" variant="default">
-                        <Icon name="MessageCircle" size={16} />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <CardHeader>
+          <CardTitle>Контактная информация</CardTitle>
+          <CardDescription>Эти данные отображаются на странице поддержки сайта</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Icon name="Mail" size={16} />
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={supportData.email}
+                onChange={(e) => setSupportData({ ...supportData, email: e.target.value })}
+                placeholder="support@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="telegram" className="flex items-center gap-2">
+                <Icon name="Send" size={16} />
+                Telegram
+              </Label>
+              <Input
+                id="telegram"
+                value={supportData.telegram}
+                onChange={(e) => setSupportData({ ...supportData, telegram: e.target.value })}
+                placeholder="@support_bot или https://t.me/..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discord" className="flex items-center gap-2">
+                <Icon name="MessageCircle" size={16} />
+                Discord
+              </Label>
+              <Input
+                id="discord"
+                value={supportData.discord}
+                onChange={(e) => setSupportData({ ...supportData, discord: e.target.value })}
+                placeholder="https://discord.gg/..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="vk" className="flex items-center gap-2">
+                <Icon name="Users" size={16} />
+                VK
+              </Label>
+              <Input
+                id="vk"
+                value={supportData.vk}
+                onChange={(e) => setSupportData({ ...supportData, vk: e.target.value })}
+                placeholder="https://vk.com/..."
+              />
+            </div>
+          </div>
+
+          <Button onClick={handleUpdate} disabled={loading} size="lg">
+            <Icon name="Save" size={18} className="mr-2" />
+            Сохранить изменения
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-muted/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Icon name="Info" size={20} />
+            Информация
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            • Контакты отображаются на странице <strong>/support</strong>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            • Пользователи смогут связаться с вами через указанные каналы
+          </p>
+          <p className="text-sm text-muted-foreground">
+            • Рекомендуется указать хотя бы один способ связи
+          </p>
+        </CardContent>
       </Card>
     </div>
   );

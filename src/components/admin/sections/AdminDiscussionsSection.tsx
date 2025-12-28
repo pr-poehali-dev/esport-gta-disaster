@@ -18,6 +18,10 @@ export default function AdminDiscussionsSection() {
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editingDiscussionId, setEditingDiscussionId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -33,7 +37,7 @@ export default function AdminDiscussionsSection() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id.toString(),
+          'X-Admin-Id': user.id.toString(),
         },
         body: JSON.stringify({ action: 'get_discussions' }),
       });
@@ -53,7 +57,7 @@ export default function AdminDiscussionsSection() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id.toString(),
+          'X-Admin-Id': user.id.toString(),
         },
         body: JSON.stringify({ action: 'get_discussion', discussion_id: id }),
       });
@@ -83,7 +87,7 @@ export default function AdminDiscussionsSection() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id.toString(),
+          'X-Admin-Id': user.id.toString(),
         },
         body: JSON.stringify({
           action: 'create_discussion',
@@ -130,7 +134,7 @@ export default function AdminDiscussionsSection() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id.toString(),
+          'X-Admin-Id': user.id.toString(),
         },
         body: JSON.stringify({
           action: 'add_comment',
@@ -172,7 +176,7 @@ export default function AdminDiscussionsSection() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id.toString(),
+          'X-Admin-Id': user.id.toString(),
         },
         body: JSON.stringify({
           action: 'lock_discussion',
@@ -214,7 +218,7 @@ export default function AdminDiscussionsSection() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id.toString(),
+          'X-Admin-Id': user.id.toString(),
         },
         body: JSON.stringify({
           action: 'pin_discussion',
@@ -244,6 +248,124 @@ export default function AdminDiscussionsSection() {
         description: error.message,
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleDeleteDiscussion = async (id: number) => {
+    if (!['admin', 'founder', 'organizer'].includes(user.role)) {
+      toast({
+        title: 'Ошибка',
+        description: 'Только администратор и выше может удалять обсуждения',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!confirm('Вы уверены, что хотите удалить это обсуждение? Действие нельзя отменить.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'delete_discussion',
+          discussion_id: id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: 'Успешно',
+          description: data.message,
+        });
+        if (selectedDiscussion?.id === id) {
+          setSelectedDiscussion(null);
+        }
+        loadDiscussions();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error,
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleOpenEdit = (discussion: any) => {
+    setEditingDiscussionId(discussion.id);
+    setEditTitle(discussion.title);
+    setEditContent(discussion.content);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditDiscussion = async () => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Заполните заголовок и содержание',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'edit_discussion',
+          discussion_id: editingDiscussionId,
+          title: editTitle,
+          content: editContent,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: 'Успешно',
+          description: data.message,
+        });
+        setIsEditDialogOpen(false);
+        setEditingDiscussionId(null);
+        loadDiscussions();
+        if (selectedDiscussion?.id === editingDiscussionId) {
+          loadDiscussion(editingDiscussionId);
+        }
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось обновить обсуждение',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -304,6 +426,22 @@ export default function AdminDiscussionsSection() {
                   >
                     <Icon name="Pin" size={16} />
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenEdit(selectedDiscussion)}
+                  >
+                    <Icon name="Edit" size={16} />
+                  </Button>
+                  {['admin', 'founder', 'organizer'].includes(user.role) && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeleteDiscussion(selectedDiscussion.id)}
+                    >
+                      <Icon name="Trash2" size={16} />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -471,6 +609,37 @@ export default function AdminDiscussionsSection() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать обсуждение</DialogTitle>
+            <DialogDescription>Измените заголовок или содержание темы</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Заголовок</Label>
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Введите заголовок..."
+              />
+            </div>
+            <div>
+              <Label>Содержание</Label>
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="Опишите тему обсуждения..."
+                rows={5}
+              />
+            </div>
+            <Button onClick={handleEditDiscussion} disabled={loading}>
+              Сохранить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

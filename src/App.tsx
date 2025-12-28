@@ -38,6 +38,7 @@ import Rules from "./pages/Rules";
 import Support from "./pages/Support";
 import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
+import TournamentDetail from "./pages/TournamentDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,7 @@ const App = () => (
           <Route path="/forum/:slug" element={<ForumTopic />} />
           <Route path="/cms" element={<ProtectedRoute requireAdmin><CMS /></ProtectedRoute>} />
           <Route path="/cms/page-editor" element={<ProtectedRoute requireAdmin><PageEditor /></ProtectedRoute>} />
+          <Route path="/tournaments/:id" element={<TournamentDetail />} />
           <Route path="/tournaments/:id/bracket" element={<TournamentBracket />} />
           <Route path="/teams/create" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
           <Route path="/teams/:id" element={<TeamProfile />} />

@@ -8,6 +8,12 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+def escape_sql(value):
+    """Escape single quotes in SQL strings by doubling them"""
+    if value is None:
+        return 'NULL'
+    return str(value).replace("'", "''")
+
 def handler(event: dict, context) -> dict:
     """API для административных действий: бан, мут, отстранение от турниров"""
     
@@ -39,7 +45,7 @@ def handler(event: dict, context) -> dict:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
         cur = conn.cursor()
         
-        cur.execute("SELECT role FROM users WHERE id = %s", (admin_id,))
+        cur.execute(f"SELECT role FROM users WHERE id = '{escape_sql(admin_id)}'")
         admin_role = cur.fetchone()
         
         if not admin_role or admin_role[0] not in ['admin', 'founder', 'organizer']:
@@ -154,6 +160,20 @@ def handler(event: dict, context) -> dict:
                 return get_admin_tournaments(cur, conn)
             elif action == 'approve_registration':
                 return approve_registration(cur, conn, admin_id, body)
+            elif action == 'get_moderation_logs':
+                return get_moderation_logs(cur, conn)
+            elif action == 'get_active_bans':
+                return get_active_bans(cur, conn)
+            elif action == 'get_active_mutes':
+                return get_active_mutes(cur, conn)
+            elif action == 'update_ban_status':
+                return update_ban_status(cur, conn, admin_id, body)
+            elif action == 'update_mute_status':
+                return update_mute_status(cur, conn, admin_id, body)
+            elif action == 'get_settings':
+                return get_settings(cur, conn)
+            elif action == 'update_setting':
+                return update_setting(cur, conn, admin_id, body, admin_role[0])
             else:
                 return {
                     'statusCode': 400,
@@ -187,20 +207,40 @@ def send_verification_code(cur, conn, admin_id: str, body: dict) -> dict:
     action_data = json.dumps(body.get('action_data', {}))
     expires_at = datetime.now() + timedelta(minutes=10)
     
-    cur.execute("""
+    cur.execute(f"""
         INSERT INTO admin_verification_codes (admin_id, code, action_type, action_data, expires_at)
-        VALUES (%s, %s, %s, %s, %s)
-        RETURNING id
-    """, (admin_id, code, action_type, action_data, expires_at))
-    
-    code_id = cur.fetchone()[0]
+        VALUES ('{escape_sql(admin_id)}', '{escape_sql(code)}', '{escape_sql(action_type)}', '{escape_sql(action_data)}', '{expires_at}')
+    """)
     conn.commit()
     
-    cur.execute("SELECT email FROM users WHERE id = %s", (admin_id,))
+    cur.execute(f"SELECT email FROM users WHERE id = '{escape_sql(admin_id)}'")
     admin_email = cur.fetchone()[0]
     
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    
+    msg = MIMEMultipart()
+    msg['From'] = smtp_user
+    msg['To'] = admin_email
+    msg['Subject'] = 'Код подтверждения административного действия'
+    
+    body_text = f"""
+    Ваш код подтверждения: {code}
+    
+    Код действителен в течение 10 минут.
+    Действие: {action_type}
+    """
+    
+    msg.attach(MIMEText(body_text, 'plain'))
+    
     try:
-        send_email(admin_email, code, action_type)
+        server = smtplib.SMTP(smtp_host, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
     except Exception as e:
         return {
             'statusCode': 500,
@@ -212,108 +252,21 @@ def send_verification_code(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'code_id': code_id, 'message': f'Код отправлен на {admin_email}'}),
+        'body': json.dumps({'message': 'Код подтверждения отправлен на email'}),
         'isBase64Encoded': False
     }
-
-def send_email(to_email: str, code: str, action_type: str):
-    """Отправляет email с кодом подтверждения"""
-    
-    smtp_email = os.environ.get('SMTP_EMAIL')
-    smtp_password = os.environ.get('SMTP_PASSWORD')
-    
-    if not smtp_email or not smtp_password:
-        raise Exception('SMTP настройки не заданы')
-    
-    action_names = {
-        'ban': 'Бан пользователя',
-        'mute': 'Мут пользователя',
-        'suspend': 'Отстранение от турнира'
-    }
-    
-    action_name = action_names.get(action_type, 'Административное действие')
-    
-    msg = MIMEMultipart()
-    msg['From'] = smtp_email
-    msg['To'] = to_email
-    msg['Subject'] = f'Disaster Esports - Код подтверждения действия'
-    
-    body = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; color: #333;">
-        <h2 style="color: #0D94E7;">Подтверждение административного действия</h2>
-        <p><strong>Действие:</strong> {action_name}</p>
-        <p>Для подтверждения действия введите код:</p>
-        <h1 style="color: #A855F7; letter-spacing: 5px; font-size: 36px;">{code}</h1>
-        <p style="color: #666;">Код действителен 10 минут</p>
-        <hr style="border: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 12px; color: #999;">Disaster Esports Admin Panel</p>
-    </body>
-    </html>
-    """
-    
-    msg.attach(MIMEText(body, 'html'))
-    
-    if '@gmail.com' in smtp_email:
-        smtp_server = 'smtp.gmail.com'
-        smtp_port = 587
-    elif '@yandex.ru' in smtp_email or '@yandex.com' in smtp_email:
-        smtp_server = 'smtp.yandex.ru'
-        smtp_port = 587
-    else:
-        smtp_server = 'smtp.gmail.com'
-        smtp_port = 587
-    
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(smtp_email, smtp_password)
-    server.send_message(msg)
-    server.quit()
-
-def send_user_notification(to_email: str, subject: str, html_body: str):
-    """Отправляет email уведомление пользователю"""
-    
-    smtp_email = os.environ.get('SMTP_EMAIL')
-    smtp_password = os.environ.get('SMTP_PASSWORD')
-    
-    if not smtp_email or not smtp_password:
-        raise Exception('SMTP настройки не заданы')
-    
-    msg = MIMEMultipart()
-    msg['From'] = smtp_email
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    
-    msg.attach(MIMEText(html_body, 'html'))
-    
-    if '@gmail.com' in smtp_email:
-        smtp_server = 'smtp.gmail.com'
-        smtp_port = 587
-    elif '@yandex.ru' in smtp_email or '@yandex.com' in smtp_email:
-        smtp_server = 'smtp.yandex.ru'
-        smtp_port = 587
-    else:
-        smtp_server = 'smtp.gmail.com'
-        smtp_port = 587
-    
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(smtp_email, smtp_password)
-    server.send_message(msg)
-    server.quit()
 
 def verify_and_execute(cur, conn, admin_id: str, body: dict) -> dict:
     """Проверяет код и выполняет административное действие"""
     
     code = body.get('code')
     
-    cur.execute("""
-        SELECT id, action_type, action_data, expires_at, is_used
-        FROM admin_verification_codes
-        WHERE admin_id = %s AND code = %s
-        ORDER BY created_at DESC
-        LIMIT 1
-    """, (admin_id, code))
+    cur.execute(f"""
+        SELECT action_type, action_data FROM admin_verification_codes
+        WHERE admin_id = '{escape_sql(admin_id)}' AND code = '{escape_sql(code)}'
+        AND expires_at > NOW() AND used = FALSE
+        ORDER BY created_at DESC LIMIT 1
+    """)
     
     result = cur.fetchone()
     
@@ -321,38 +274,26 @@ def verify_and_execute(cur, conn, admin_id: str, body: dict) -> dict:
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Неверный код'}),
+            'body': json.dumps({'error': 'Неверный или истекший код'}),
             'isBase64Encoded': False
         }
     
-    code_id, action_type, action_data_str, expires_at, is_used = result
+    action_type, action_data = result
+    action_data = json.loads(action_data)
     
-    if is_used:
-        return {
-            'statusCode': 400,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Код уже использован'}),
-            'isBase64Encoded': False
-        }
-    
-    if datetime.now() > expires_at:
-        return {
-            'statusCode': 400,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Код истек'}),
-            'isBase64Encoded': False
-        }
-    
-    action_data = json.loads(action_data_str)
-    
-    cur.execute("UPDATE admin_verification_codes SET is_used = TRUE WHERE id = %s", (code_id,))
+    cur.execute(f"""
+        UPDATE admin_verification_codes
+        SET used = TRUE
+        WHERE admin_id = '{escape_sql(admin_id)}' AND code = '{escape_sql(code)}'
+    """)
+    conn.commit()
     
     if action_type == 'ban':
-        result = execute_ban(cur, conn, admin_id, action_data)
+        return execute_ban(cur, conn, admin_id, action_data)
     elif action_type == 'mute':
-        result = execute_mute(cur, conn, admin_id, action_data)
-    elif action_type == 'suspend':
-        result = execute_suspension(cur, conn, admin_id, action_data)
+        return execute_mute(cur, conn, admin_id, action_data)
+    elif action_type == 'tournament_exclusion':
+        return execute_tournament_exclusion(cur, conn, admin_id, action_data)
     else:
         return {
             'statusCode': 400,
@@ -360,10 +301,6 @@ def verify_and_execute(cur, conn, admin_id: str, body: dict) -> dict:
             'body': json.dumps({'error': 'Неизвестный тип действия'}),
             'isBase64Encoded': False
         }
-    
-    conn.commit()
-    
-    return result
 
 def execute_ban(cur, conn, admin_id: str, data: dict) -> dict:
     """Выполняет бан пользователя"""
@@ -371,69 +308,25 @@ def execute_ban(cur, conn, admin_id: str, data: dict) -> dict:
     user_id = data.get('user_id')
     reason = data.get('reason')
     duration_days = data.get('duration_days')
-    is_permanent = data.get('is_permanent', False)
     
-    ban_end_date = None if is_permanent else datetime.now() + timedelta(days=int(duration_days))
-    
-    cur.execute("UPDATE users SET is_banned = TRUE WHERE id = %s", (user_id,))
-    
-    cur.execute("""
-        INSERT INTO bans (user_id, admin_id, reason, ban_end_date, is_permanent)
-        VALUES (%s, %s, %s, %s, %s)
-        ON CONFLICT (user_id) DO UPDATE
-        SET admin_id = EXCLUDED.admin_id,
-            reason = EXCLUDED.reason,
-            ban_start_date = NOW(),
-            ban_end_date = EXCLUDED.ban_end_date,
-            is_permanent = EXCLUDED.is_permanent
-    """, (user_id, admin_id, reason, ban_end_date, is_permanent))
-    
-    cur.execute("""
-        INSERT INTO admin_actions_log (admin_id, action_type, target_user_id, details)
-        VALUES (%s, 'ban', %s, %s)
-    """, (admin_id, user_id, json.dumps(data)))
-    
-    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
-    user_data = cur.fetchone()
-    
-    if user_data:
-        user_email, user_nickname = user_data
-        duration_text = 'навсегда' if is_permanent else f'{duration_days} дней'
-        
-        try:
-            send_user_notification(
-                user_email,
-                f'{user_nickname}, вы получили бан',
-                f'''
-                <html>
-                <body style="font-family: Arial, sans-serif; color: #333;">
-                    <h2 style="color: #DC2626;">Вы получили бан на сайте Disaster Esports</h2>
-                    <p><strong>Причина:</strong> {reason}</p>
-                    <p><strong>Длительность:</strong> {duration_text}</p>
-                    <p>Если вы считаете это ошибкой, обратитесь в поддержку.</p>
-                    <hr style="border: 1px solid #eee; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
-                </body>
-                </html>
-                '''
-            )
-            
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
-                VALUES (%s, 'ban', %s, %s, TRUE)
-            """, (user_id, 'Бан аккаунта', f'Причина: {reason}, Длительность: {duration_text}'))
-        except Exception as e:
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
-                VALUES (%s, 'ban', %s, %s, FALSE, %s)
-            """, (user_id, 'Бан аккаунта', f'Причина: {reason}', str(e)))
+    if duration_days:
+        expires_at = datetime.now() + timedelta(days=duration_days)
+        cur.execute(f"""
+            INSERT INTO bans (user_id, admin_id, reason, expires_at)
+            VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}', '{expires_at}')
+        """)
+    else:
+        cur.execute(f"""
+            INSERT INTO bans (user_id, admin_id, reason)
+            VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}')
+        """)
     
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Пользователь забанен, уведомление отправлено'}),
+        'body': json.dumps({'message': 'Пользователь забанен'}),
         'isBase64Encoded': False
     }
 
@@ -443,93 +336,53 @@ def execute_mute(cur, conn, admin_id: str, data: dict) -> dict:
     user_id = data.get('user_id')
     reason = data.get('reason')
     duration_days = data.get('duration_days')
-    is_permanent = data.get('is_permanent', False)
     
-    mute_end_date = None if is_permanent else datetime.now() + timedelta(days=int(duration_days))
-    
-    cur.execute("UPDATE users SET is_muted = TRUE WHERE id = %s", (user_id,))
-    
-    cur.execute("""
-        INSERT INTO mutes (user_id, admin_id, reason, mute_end_date, is_permanent)
-        VALUES (%s, %s, %s, %s, %s)
-        ON CONFLICT (user_id) DO UPDATE
-        SET admin_id = EXCLUDED.admin_id,
-            reason = EXCLUDED.reason,
-            mute_start_date = NOW(),
-            mute_end_date = EXCLUDED.mute_end_date,
-            is_permanent = EXCLUDED.is_permanent
-    """, (user_id, admin_id, reason, mute_end_date, is_permanent))
-    
-    cur.execute("""
-        INSERT INTO admin_actions_log (admin_id, action_type, target_user_id, details)
-        VALUES (%s, 'mute', %s, %s)
-    """, (admin_id, user_id, json.dumps(data)))
-    
-    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
-    user_data = cur.fetchone()
-    
-    if user_data:
-        user_email, user_nickname = user_data
-        duration_text = 'навсегда' if is_permanent else f'{duration_days} дней'
-        
-        try:
-            send_user_notification(
-                user_email,
-                f'{user_nickname}, вы получили мут',
-                f'''
-                <html>
-                <body style="font-family: Arial, sans-serif; color: #333;">
-                    <h2 style="color: #F97316;">Вы получили мут на сайте Disaster Esports</h2>
-                    <p><strong>Причина:</strong> {reason}</p>
-                    <p><strong>Длительность:</strong> {duration_text}</p>
-                    <p>Вы не сможете отправлять сообщения в чате до окончания срока мута.</p>
-                    <hr style="border: 1px solid #eee; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
-                </body>
-                </html>
-                '''
-            )
-            
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
-                VALUES (%s, 'mute', %s, %s, TRUE)
-            """, (user_id, 'Мут аккаунта', f'Причина: {reason}, Длительность: {duration_text}'))
-        except Exception as e:
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
-                VALUES (%s, 'mute', %s, %s, FALSE, %s)
-            """, (user_id, 'Мут аккаунта', f'Причина: {reason}', str(e)))
+    if duration_days:
+        expires_at = datetime.now() + timedelta(days=duration_days)
+        cur.execute(f"""
+            INSERT INTO mutes (user_id, admin_id, reason, expires_at)
+            VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}', '{expires_at}')
+        """)
+    else:
+        cur.execute(f"""
+            INSERT INTO mutes (user_id, admin_id, reason)
+            VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}')
+        """)
     
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Мут выдан, уведомление отправлено'}),
+        'body': json.dumps({'message': 'Пользователь замучен'}),
         'isBase64Encoded': False
     }
 
-def execute_suspension(cur, conn, admin_id: str, data: dict) -> dict:
-    """Выполняет отстранение от турнира"""
+def execute_tournament_exclusion(cur, conn, admin_id: str, data: dict) -> dict:
+    """Выполняет отстранение от турниров"""
     
     user_id = data.get('user_id')
-    tournament_id = data.get('tournament_id')
     reason = data.get('reason')
+    duration_days = data.get('duration_days')
     
-    cur.execute("""
-        INSERT INTO tournament_exclusions (user_id, tournament_id, admin_id, reason)
-        VALUES (%s, %s, %s, %s)
-    """, (user_id, tournament_id, admin_id, reason))
+    if duration_days:
+        expires_at = datetime.now() + timedelta(days=duration_days)
+        cur.execute(f"""
+            INSERT INTO tournament_exclusions (user_id, admin_id, reason, expires_at)
+            VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}', '{expires_at}')
+        """)
+    else:
+        cur.execute(f"""
+            INSERT INTO tournament_exclusions (user_id, admin_id, reason)
+            VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}')
+        """)
     
-    cur.execute("""
-        INSERT INTO admin_actions_log (admin_id, action_type, target_user_id, details)
-        VALUES (%s, 'suspend', %s, %s)
-    """, (admin_id, user_id, json.dumps(data)))
+    conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Пользователь отстранен от турнира'}),
+        'body': json.dumps({'message': 'Пользователь отстранен от турниров'}),
         'isBase64Encoded': False
     }
 
@@ -537,19 +390,12 @@ def get_bans(cur, conn) -> dict:
     """Получает список всех банов"""
     
     cur.execute("""
-        SELECT 
-            b.id,
-            u.id as user_id,
-            u.nickname,
-            a.nickname as admin_name,
-            b.reason,
-            b.ban_start_date,
-            b.ban_end_date,
-            b.is_permanent
+        SELECT b.id, b.user_id, u.username, b.admin_id, a.username as admin_username,
+               b.reason, b.created_at, b.expires_at, b.active
         FROM bans b
         JOIN users u ON b.user_id = u.id
         JOIN users a ON b.admin_id = a.id
-        WHERE u.is_banned = TRUE
+        WHERE b.active = TRUE
         ORDER BY b.created_at DESC
     """)
     
@@ -559,11 +405,12 @@ def get_bans(cur, conn) -> dict:
             'id': row[0],
             'user_id': row[1],
             'username': row[2],
-            'admin_name': row[3],
-            'reason': row[4],
-            'ban_start_date': row[5].isoformat() if row[5] else None,
-            'ban_end_date': row[6].isoformat() if row[6] else None,
-            'is_permanent': row[7]
+            'admin_id': row[3],
+            'admin_username': row[4],
+            'reason': row[5],
+            'created_at': row[6].isoformat() if row[6] else None,
+            'expires_at': row[7].isoformat() if row[7] else None,
+            'active': row[8]
         })
     
     return {
@@ -577,19 +424,12 @@ def get_mutes(cur, conn) -> dict:
     """Получает список всех мутов"""
     
     cur.execute("""
-        SELECT 
-            m.id,
-            u.id as user_id,
-            u.nickname,
-            a.nickname as admin_name,
-            m.reason,
-            m.mute_start_date,
-            m.mute_end_date,
-            m.is_permanent
+        SELECT m.id, m.user_id, u.username, m.admin_id, a.username as admin_username,
+               m.reason, m.created_at, m.expires_at, m.active
         FROM mutes m
         JOIN users u ON m.user_id = u.id
         JOIN users a ON m.admin_id = a.id
-        WHERE u.is_muted = TRUE
+        WHERE m.active = TRUE
         ORDER BY m.created_at DESC
     """)
     
@@ -599,11 +439,12 @@ def get_mutes(cur, conn) -> dict:
             'id': row[0],
             'user_id': row[1],
             'username': row[2],
-            'admin_name': row[3],
-            'reason': row[4],
-            'mute_start_date': row[5].isoformat() if row[5] else None,
-            'mute_end_date': row[6].isoformat() if row[6] else None,
-            'is_permanent': row[7]
+            'admin_id': row[3],
+            'admin_username': row[4],
+            'reason': row[5],
+            'created_at': row[6].isoformat() if row[6] else None,
+            'expires_at': row[7].isoformat() if row[7] else None,
+            'active': row[8]
         })
     
     return {
@@ -614,21 +455,15 @@ def get_mutes(cur, conn) -> dict:
     }
 
 def get_exclusions(cur, conn) -> dict:
-    """Получает список всех отстранений"""
+    """Получает список всех отстранений от турниров"""
     
     cur.execute("""
-        SELECT 
-            e.id,
-            u.id as user_id,
-            u.nickname,
-            t.name as tournament_name,
-            a.nickname as admin_name,
-            e.reason,
-            e.exclusion_date
+        SELECT e.id, e.user_id, u.username, e.admin_id, a.username as admin_username,
+               e.reason, e.created_at, e.expires_at, e.active
         FROM tournament_exclusions e
         JOIN users u ON e.user_id = u.id
-        LEFT JOIN tournaments t ON e.tournament_id = t.id
         JOIN users a ON e.admin_id = a.id
+        WHERE e.active = TRUE
         ORDER BY e.created_at DESC
     """)
     
@@ -638,10 +473,12 @@ def get_exclusions(cur, conn) -> dict:
             'id': row[0],
             'user_id': row[1],
             'username': row[2],
-            'tournament_name': row[3] or 'Все турниры',
-            'admin_name': row[4],
+            'admin_id': row[3],
+            'admin_username': row[4],
             'reason': row[5],
-            'exclusion_date': row[6].isoformat() if row[6] else None
+            'created_at': row[6].isoformat() if row[6] else None,
+            'expires_at': row[7].isoformat() if row[7] else None,
+            'active': row[8]
         })
     
     return {
@@ -654,186 +491,65 @@ def get_exclusions(cur, conn) -> dict:
 def remove_ban(cur, conn, admin_id: str, body: dict) -> dict:
     """Снимает бан с пользователя"""
     
-    user_id = body.get('user_id')
+    ban_id = body.get('ban_id')
     
-    cur.execute("UPDATE users SET is_banned = FALSE WHERE id = %s", (user_id,))
-    
-    cur.execute("""
-        INSERT INTO admin_actions_log (admin_id, action_type, target_user_id, details)
-        VALUES (%s, 'unban', %s, %s)
-    """, (admin_id, user_id, json.dumps({'action': 'unban'})))
-    
-    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
-    user_data = cur.fetchone()
-    
-    if user_data:
-        user_email, user_nickname = user_data
-        
-        try:
-            send_user_notification(
-                user_email,
-                f'{user_nickname}, бан снят',
-                f'''
-                <html>
-                <body style="font-family: Arial, sans-serif; color: #333;">
-                    <h2 style="color: #10B981;">Бан снят на сайте Disaster Esports</h2>
-                    <p>Ваш аккаунт был разблокирован администратором.</p>
-                    <p>Вы снова можете пользоваться всеми функциями сайта.</p>
-                    <hr style="border: 1px solid #eee; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
-                </body>
-                </html>
-                '''
-            )
-            
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
-                VALUES (%s, 'unban', %s, %s, TRUE)
-            """, (user_id, 'Бан снят', 'Ваш аккаунт разблокирован'))
-        except Exception as e:
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
-                VALUES (%s, 'unban', %s, %s, FALSE, %s)
-            """, (user_id, 'Бан снят', 'Ваш аккаунт разблокирован', str(e)))
-    
+    cur.execute(f"""
+        UPDATE bans SET active = FALSE
+        WHERE id = {int(ban_id)}
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Бан снят, уведомление отправлено'}),
+        'body': json.dumps({'message': 'Бан снят'}),
         'isBase64Encoded': False
     }
 
 def remove_mute(cur, conn, admin_id: str, body: dict) -> dict:
     """Снимает мут с пользователя"""
     
-    user_id = body.get('user_id')
+    mute_id = body.get('mute_id')
     
-    cur.execute("UPDATE users SET is_muted = FALSE WHERE id = %s", (user_id,))
-    
-    cur.execute("""
-        INSERT INTO admin_actions_log (admin_id, action_type, target_user_id, details)
-        VALUES (%s, 'unmute', %s, %s)
-    """, (admin_id, user_id, json.dumps({'action': 'unmute'})))
-    
-    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
-    user_data = cur.fetchone()
-    
-    if user_data:
-        user_email, user_nickname = user_data
-        
-        try:
-            send_user_notification(
-                user_email,
-                f'{user_nickname}, мут снят',
-                f'''
-                <html>
-                <body style="font-family: Arial, sans-serif; color: #333;">
-                    <h2 style="color: #10B981;">Мут снят на сайте Disaster Esports</h2>
-                    <p>Вы снова можете отправлять сообщения в чате.</p>
-                    <hr style="border: 1px solid #eee; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
-                </body>
-                </html>
-                '''
-            )
-            
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
-                VALUES (%s, 'unmute', %s, %s, TRUE)
-            """, (user_id, 'Мут снят', 'Вы можете снова писать в чате'))
-        except Exception as e:
-            cur.execute("""
-                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
-                VALUES (%s, 'unmute', %s, %s, FALSE, %s)
-            """, (user_id, 'Мут снят', 'Вы можете снова писать в чате', str(e)))
-    
+    cur.execute(f"""
+        UPDATE mutes SET active = FALSE
+        WHERE id = {int(mute_id)}
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Мут снят, уведомление отправлено'}),
+        'body': json.dumps({'message': 'Мут снят'}),
         'isBase64Encoded': False
     }
 
 def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
-    """Создает новый турнир"""
+    """Создает турнир"""
     
     name = body.get('name')
     description = body.get('description')
-    prize_pool = body.get('prize_pool')
-    location = body.get('location')
-    game_project = body.get('game_project')
-    map_pool = body.get('map_pool', [])
-    format_type = body.get('format')
-    team_size = body.get('team_size')
-    best_of = body.get('best_of')
+    game = body.get('game')
     start_date = body.get('start_date')
-    image_base64 = body.get('image')
+    end_date = body.get('end_date')
+    max_teams = body.get('max_teams')
+    prize_pool = body.get('prize_pool')
+    rules = body.get('rules')
+    format_type = body.get('format_type', 'single_elimination')
     
-    image_url = None
-    if image_base64:
-        try:
-            import base64
-            import boto3
-            from datetime import datetime
-            
-            image_data = base64.b64decode(image_base64.split(',')[1] if ',' in image_base64 else image_base64)
-            
-            s3 = boto3.client('s3',
-                endpoint_url='https://bucket.poehali.dev',
-                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
-            )
-            
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_key = f'tournaments/{timestamp}_{name.replace(" ", "_")}.png'
-            
-            s3.put_object(
-                Bucket='files',
-                Key=file_key,
-                Body=image_data,
-                ContentType='image/png'
-            )
-            
-            image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
-        except Exception as e:
-            pass
-    
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.tournaments 
-        (name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_by, image_url)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming', %s, %s)
+    cur.execute(f"""
+        INSERT INTO tournaments (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_type, created_by)
+        VALUES ('{escape_sql(name)}', '{escape_sql(description)}', '{escape_sql(game)}', '{escape_sql(start_date)}', '{escape_sql(end_date)}', {int(max_teams)}, '{escape_sql(prize_pool)}', '{escape_sql(rules)}', '{escape_sql(format_type)}', '{escape_sql(admin_id)}')
         RETURNING id
-    """, (name, description, prize_pool, location, game_project, json.dumps(map_pool), format_type, team_size, best_of, start_date, admin_id, image_url))
+    """)
     
     tournament_id = cur.fetchone()[0]
-    
-    if image_url:
-        news_content = f"""
-        🏆 Объявлен новый турнир: {name}!
-        
-        📅 Дата начала: {start_date}
-        💰 Призовой фонд: {prize_pool}
-        📍 Локация: {location}
-        
-        {description}
-        """
-        
-        cur.execute("""
-            INSERT INTO t_p4831367_esport_gta_disaster.news 
-            (title, content, image_url, author_id, tournament_id, published)
-            VALUES (%s, %s, %s, %s, %s, TRUE)
-        """, (f'Турнир {name}', news_content, image_url, admin_id, tournament_id))
-    
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'tournament_id': tournament_id, 'image_url': image_url}),
+        'body': json.dumps({'message': 'Турнир создан', 'tournament_id': tournament_id}),
         'isBase64Encoded': False
     }
 
@@ -841,7 +557,8 @@ def get_tournaments(cur, conn) -> dict:
     """Получает список всех турниров"""
     
     cur.execute("""
-        SELECT id, name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_at
+        SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
+               rules, format_type, status, created_by, created_at
         FROM tournaments
         ORDER BY start_date DESC
     """)
@@ -852,15 +569,15 @@ def get_tournaments(cur, conn) -> dict:
             'id': row[0],
             'name': row[1],
             'description': row[2],
-            'prize_pool': row[3],
-            'location': row[4],
-            'game_project': row[5],
-            'map_pool': json.loads(row[6]) if row[6] else [],
-            'format': row[7],
-            'team_size': row[8],
-            'best_of': row[9],
-            'start_date': row[10].isoformat() if row[10] else None,
-            'status': row[11],
+            'game': row[3],
+            'start_date': row[4].isoformat() if row[4] else None,
+            'end_date': row[5].isoformat() if row[5] else None,
+            'max_teams': row[6],
+            'prize_pool': row[7],
+            'rules': row[8],
+            'format_type': row[9],
+            'status': row[10],
+            'created_by': row[11],
             'created_at': row[12].isoformat() if row[12] else None
         })
     
@@ -872,17 +589,19 @@ def get_tournaments(cur, conn) -> dict:
     }
 
 def get_tournament(cur, conn, body: dict) -> dict:
-    """Получает детали турнира"""
+    """Получает информацию о турнире"""
     
     tournament_id = body.get('tournament_id')
     
-    cur.execute("""
-        SELECT id, name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_at
+    cur.execute(f"""
+        SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool,
+               rules, format_type, status, created_by, created_at
         FROM tournaments
-        WHERE id = %s
-    """, (tournament_id,))
+        WHERE id = {int(tournament_id)}
+    """)
     
     row = cur.fetchone()
+    
     if not row:
         return {
             'statusCode': 404,
@@ -895,17 +614,37 @@ def get_tournament(cur, conn, body: dict) -> dict:
         'id': row[0],
         'name': row[1],
         'description': row[2],
-        'prize_pool': row[3],
-        'location': row[4],
-        'game_project': row[5],
-        'map_pool': json.loads(row[6]) if row[6] else [],
-        'format': row[7],
-        'team_size': row[8],
-        'best_of': row[9],
-        'start_date': row[10].isoformat() if row[10] else None,
-        'status': row[11],
+        'game': row[3],
+        'start_date': row[4].isoformat() if row[4] else None,
+        'end_date': row[5].isoformat() if row[5] else None,
+        'max_teams': row[6],
+        'prize_pool': row[7],
+        'rules': row[8],
+        'format_type': row[9],
+        'status': row[10],
+        'created_by': row[11],
         'created_at': row[12].isoformat() if row[12] else None
     }
+    
+    cur.execute(f"""
+        SELECT tr.id, tr.team_id, t.name, tr.status, tr.registered_at
+        FROM tournament_registrations tr
+        JOIN teams t ON tr.team_id = t.id
+        WHERE tr.tournament_id = {int(tournament_id)}
+        ORDER BY tr.registered_at
+    """)
+    
+    registrations = []
+    for row in cur.fetchall():
+        registrations.append({
+            'id': row[0],
+            'team_id': row[1],
+            'team_name': row[2],
+            'status': row[3],
+            'registered_at': row[4].isoformat() if row[4] else None
+        })
+    
+    tournament['registrations'] = registrations
     
     return {
         'statusCode': 200,
@@ -920,9 +659,13 @@ def register_team(cur, conn, body: dict) -> dict:
     tournament_id = body.get('tournament_id')
     team_id = body.get('team_id')
     
-    cur.execute("SELECT team_size FROM tournaments WHERE id = %s", (tournament_id,))
-    tournament = cur.fetchone()
-    if not tournament:
+    cur.execute(f"""
+        SELECT status FROM tournaments WHERE id = {int(tournament_id)}
+    """)
+    
+    tournament_status = cur.fetchone()
+    
+    if not tournament_status:
         return {
             'statusCode': 404,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -930,31 +673,24 @@ def register_team(cur, conn, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    required_team_size = tournament[0]
-    
-    cur.execute("SELECT COUNT(*) FROM team_members WHERE team_id = %s", (team_id,))
-    current_team_size = cur.fetchone()[0]
-    
-    if current_team_size < required_team_size:
+    if tournament_status[0] != 'open':
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'Размер команды должен быть {required_team_size}, сейчас {current_team_size}'}),
+            'body': json.dumps({'error': 'Регистрация на турнир закрыта'}),
             'isBase64Encoded': False
         }
     
-    cur.execute("""
-        INSERT INTO tournament_teams (tournament_id, team_id, registered_at)
-        VALUES (%s, %s, NOW())
-        ON CONFLICT DO NOTHING
-    """, (tournament_id, team_id))
-    
+    cur.execute(f"""
+        INSERT INTO tournament_registrations (tournament_id, team_id, status)
+        VALUES ({int(tournament_id)}, {int(team_id)}, 'pending')
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Команда зарегистрирована'}),
+        'body': json.dumps({'message': 'Команда зарегистрирована на турнир'}),
         'isBase64Encoded': False
     }
 
@@ -964,34 +700,32 @@ def update_tournament_status(cur, conn, admin_id: str, body: dict) -> dict:
     tournament_id = body.get('tournament_id')
     status = body.get('status')
     
-    cur.execute("UPDATE tournaments SET status = %s WHERE id = %s", (status, tournament_id))
-    
-    cur.execute("""
-        INSERT INTO admin_actions_log (admin_id, action_type, details)
-        VALUES (%s, 'update_tournament_status', %s)
-    """, (admin_id, json.dumps({'tournament_id': tournament_id, 'status': status})))
-    
+    cur.execute(f"""
+        UPDATE tournaments
+        SET status = '{escape_sql(status)}'
+        WHERE id = {int(tournament_id)}
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True}),
+        'body': json.dumps({'message': 'Статус турнира обновлен'}),
         'isBase64Encoded': False
     }
 
 def get_match_chat(cur, conn, body: dict) -> dict:
-    """Получает сообщения чата матча"""
+    """Получает чат матча"""
     
     match_id = body.get('match_id')
     
-    cur.execute("""
-        SELECT mc.id, mc.user_id, u.username, mc.message, mc.message_type, mc.created_at
+    cur.execute(f"""
+        SELECT mc.id, mc.user_id, u.username, mc.message, mc.created_at, mc.message_type
         FROM match_chat mc
         JOIN users u ON mc.user_id = u.id
-        WHERE mc.match_id = %s
-        ORDER BY mc.created_at ASC
-    """, (match_id,))
+        WHERE mc.match_id = {int(match_id)}
+        ORDER BY mc.created_at
+    """)
     
     messages = []
     for row in cur.fetchall():
@@ -1000,8 +734,8 @@ def get_match_chat(cur, conn, body: dict) -> dict:
             'user_id': row[1],
             'username': row[2],
             'message': row[3],
-            'message_type': row[4],
-            'created_at': row[5].isoformat() if row[5] else None
+            'created_at': row[4].isoformat() if row[4] else None,
+            'message_type': row[5]
         })
     
     return {
@@ -1016,13 +750,13 @@ def send_chat_message(cur, conn, admin_id: str, body: dict) -> dict:
     
     match_id = body.get('match_id')
     message = body.get('message')
-    message_type = body.get('message_type', 'message')
+    message_type = body.get('message_type', 'text')
     
-    cur.execute("""
-        INSERT INTO match_chat (match_id, user_id, message, message_type, created_at)
-        VALUES (%s, %s, %s, %s, NOW())
+    cur.execute(f"""
+        INSERT INTO match_chat (match_id, user_id, message, message_type)
+        VALUES ({int(match_id)}, '{escape_sql(admin_id)}', '{escape_sql(message)}', '{escape_sql(message_type)}')
         RETURNING id
-    """, (match_id, admin_id, message, message_type))
+    """)
     
     message_id = cur.fetchone()[0]
     conn.commit()
@@ -1030,30 +764,33 @@ def send_chat_message(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message_id': message_id}),
+        'body': json.dumps({'message': 'Сообщение отправлено', 'message_id': message_id}),
         'isBase64Encoded': False
     }
 
 def get_ban_pick(cur, conn, body: dict) -> dict:
-    """Получает бан-пик карт для матча"""
+    """Получает информацию о банах и пиках героев"""
     
     match_id = body.get('match_id')
     
-    cur.execute("""
-        SELECT id, team_id, map_name, action, created_at
-        FROM match_ban_pick
-        WHERE match_id = %s
-        ORDER BY created_at ASC
-    """, (match_id,))
+    cur.execute(f"""
+        SELECT bp.id, bp.team_id, t.name, bp.hero_name, bp.action_type, bp.action_order, bp.created_at
+        FROM ban_pick bp
+        JOIN teams t ON bp.team_id = t.id
+        WHERE bp.match_id = {int(match_id)}
+        ORDER BY bp.action_order
+    """)
     
     ban_picks = []
     for row in cur.fetchall():
         ban_picks.append({
             'id': row[0],
             'team_id': row[1],
-            'map_name': row[2],
-            'action': row[3],
-            'created_at': row[4].isoformat() if row[4] else None
+            'team_name': row[2],
+            'hero_name': row[3],
+            'action_type': row[4],
+            'action_order': row[5],
+            'created_at': row[6].isoformat() if row[6] else None
         })
     
     return {
@@ -1064,18 +801,26 @@ def get_ban_pick(cur, conn, body: dict) -> dict:
     }
 
 def make_ban_pick(cur, conn, body: dict) -> dict:
-    """Делает бан или пик карты"""
+    """Выполняет бан или пик героя"""
     
     match_id = body.get('match_id')
     team_id = body.get('team_id')
-    map_name = body.get('map_name')
-    action = body.get('action', 'ban')
+    hero_name = body.get('hero_name')
+    action_type = body.get('action_type')
     
-    cur.execute("""
-        INSERT INTO match_ban_pick (match_id, team_id, map_name, action, created_at)
-        VALUES (%s, %s, %s, %s, NOW())
+    cur.execute(f"""
+        SELECT COALESCE(MAX(action_order), 0) + 1
+        FROM ban_pick
+        WHERE match_id = {int(match_id)}
+    """)
+    
+    action_order = cur.fetchone()[0]
+    
+    cur.execute(f"""
+        INSERT INTO ban_pick (match_id, team_id, hero_name, action_type, action_order)
+        VALUES ({int(match_id)}, {int(team_id)}, '{escape_sql(hero_name)}', '{escape_sql(action_type)}', {int(action_order)})
         RETURNING id
-    """, (match_id, team_id, map_name, action))
+    """)
     
     ban_pick_id = cur.fetchone()[0]
     conn.commit()
@@ -1083,77 +828,79 @@ def make_ban_pick(cur, conn, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'ban_pick_id': ban_pick_id}),
+        'body': json.dumps({'message': 'Действие выполнено', 'ban_pick_id': ban_pick_id}),
         'isBase64Encoded': False
     }
 
 def calculate_match_rating(cur, conn, admin_id: str, body: dict) -> dict:
-    """Начисляет рейтинг за завершенный матч"""
+    """Рассчитывает рейтинг команд после матча"""
     
     match_id = body.get('match_id')
+    winner_id = body.get('winner_id')
+    loser_id = body.get('loser_id')
     
-    cur.execute("""
-        SELECT team1_id, team2_id, team1_score, team2_score
-        FROM matches
-        WHERE id = %s AND status = 'completed'
-    """, (match_id,))
+    K = 32
     
-    match = cur.fetchone()
-    if not match:
-        return {
-            'statusCode': 404,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Матч не найден или не завершен'}),
-            'isBase64Encoded': False
-        }
+    cur.execute(f"""
+        SELECT rating FROM team_ratings WHERE team_id = {int(winner_id)}
+    """)
+    winner_rating_row = cur.fetchone()
+    winner_rating = winner_rating_row[0] if winner_rating_row else 1000
     
-    team1_id, team2_id, team1_score, team2_score = match
+    cur.execute(f"""
+        SELECT rating FROM team_ratings WHERE team_id = {int(loser_id)}
+    """)
+    loser_rating_row = cur.fetchone()
+    loser_rating = loser_rating_row[0] if loser_rating_row else 1000
     
-    if team1_score > team2_score:
-        winner_id, loser_id = team1_id, team2_id
-        rating_change = 25
-    elif team2_score > team1_score:
-        winner_id, loser_id = team2_id, team1_id
-        rating_change = 25
+    expected_winner = 1 / (1 + 10 ** ((loser_rating - winner_rating) / 400))
+    expected_loser = 1 / (1 + 10 ** ((winner_rating - loser_rating) / 400))
+    
+    new_winner_rating = winner_rating + K * (1 - expected_winner)
+    new_loser_rating = loser_rating + K * (0 - expected_loser)
+    
+    if winner_rating_row:
+        cur.execute(f"""
+            UPDATE team_ratings
+            SET rating = {new_winner_rating}, matches_played = matches_played + 1, wins = wins + 1
+            WHERE team_id = {int(winner_id)}
+        """)
     else:
-        cur.execute("UPDATE team_ratings SET rating = rating + 5 WHERE team_id IN (%s, %s)", (team1_id, team2_id))
-        conn.commit()
-        return {
-            'statusCode': 200,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'success': True, 'message': 'Ничья, +5 рейтинга обеим командам'}),
-            'isBase64Encoded': False
-        }
+        cur.execute(f"""
+            INSERT INTO team_ratings (team_id, rating, matches_played, wins)
+            VALUES ({int(winner_id)}, {new_winner_rating}, 1, 1)
+        """)
     
-    cur.execute("""
-        INSERT INTO team_ratings (team_id, rating) VALUES (%s, 1000 + %s)
-        ON CONFLICT (team_id) DO UPDATE SET rating = team_ratings.rating + %s
-    """, (winner_id, rating_change, rating_change))
-    
-    cur.execute("""
-        INSERT INTO team_ratings (team_id, rating) VALUES (%s, 1000 - %s)
-        ON CONFLICT (team_id) DO UPDATE SET rating = GREATEST(team_ratings.rating - %s, 0)
-    """, (loser_id, rating_change, rating_change))
-    
-    cur.execute("""
-        INSERT INTO admin_actions_log (admin_id, action_type, details)
-        VALUES (%s, 'calculate_rating', %s)
-    """, (admin_id, json.dumps({'match_id': match_id, 'rating_change': rating_change})))
+    if loser_rating_row:
+        cur.execute(f"""
+            UPDATE team_ratings
+            SET rating = {new_loser_rating}, matches_played = matches_played + 1, losses = losses + 1
+            WHERE team_id = {int(loser_id)}
+        """)
+    else:
+        cur.execute(f"""
+            INSERT INTO team_ratings (team_id, rating, matches_played, losses)
+            VALUES ({int(loser_id)}, {new_loser_rating}, 1, 1)
+        """)
     
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'rating_change': rating_change}),
+        'body': json.dumps({
+            'message': 'Рейтинг обновлен',
+            'winner_new_rating': new_winner_rating,
+            'loser_new_rating': new_loser_rating
+        }),
         'isBase64Encoded': False
     }
 
 def get_team_ratings(cur, conn) -> dict:
-    """Получает рейтинги всех команд"""
+    """Получает рейтинг всех команд"""
     
     cur.execute("""
-        SELECT tr.team_id, t.name, tr.rating
+        SELECT tr.team_id, t.name, tr.rating, tr.matches_played, tr.wins, tr.losses
         FROM team_ratings tr
         JOIN teams t ON tr.team_id = t.id
         ORDER BY tr.rating DESC
@@ -1164,7 +911,10 @@ def get_team_ratings(cur, conn) -> dict:
         ratings.append({
             'team_id': row[0],
             'team_name': row[1],
-            'rating': row[2]
+            'rating': row[2],
+            'matches_played': row[3],
+            'wins': row[4],
+            'losses': row[5]
         })
     
     return {
@@ -1175,66 +925,62 @@ def get_team_ratings(cur, conn) -> dict:
     }
 
 def verify_admin_password(cur, conn, body: dict) -> dict:
-    """Проверяет пароль админ панели"""
+    """Проверяет пароль администратора"""
     
+    admin_id = body.get('admin_id')
     password = body.get('password')
     
-    if not password:
+    cur.execute(f"""
+        SELECT password_hash FROM users WHERE id = '{escape_sql(admin_id)}'
+    """)
+    
+    password_hash = cur.fetchone()
+    
+    if not password_hash:
         return {
-            'statusCode': 400,
+            'statusCode': 404,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Укажите пароль'}),
+            'body': json.dumps({'error': 'Пользователь не найден'}),
             'isBase64Encoded': False
         }
     
-    cur.execute("SELECT password_hash FROM admin_passwords ORDER BY id DESC LIMIT 1")
-    result = cur.fetchone()
+    import bcrypt
     
-    if not result:
-        return {
-            'statusCode': 500,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Пароль админ панели не установлен'}),
-            'isBase64Encoded': False
-        }
-    
-    stored_password = result[0]
-    
-    if password == stored_password:
+    if bcrypt.checkpw(password.encode('utf-8'), password_hash[0].encode('utf-8')):
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'success': True}),
+            'body': json.dumps({'valid': True}),
             'isBase64Encoded': False
         }
     else:
         return {
-            'statusCode': 401,
+            'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Неверный пароль'}),
+            'body': json.dumps({'valid': False}),
             'isBase64Encoded': False
         }
 
-def create_news(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Создает новость (admin, founder)"""
+def create_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Создает новость"""
     
-    if role not in ['admin', 'founder']:
+    if admin_role not in ['admin', 'founder']:
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'body': json.dumps({'error': 'Недостаточно прав для создания новостей'}),
             'isBase64Encoded': False
         }
     
     title = body.get('title')
     content = body.get('content')
-    published = body.get('published', False)
+    category = body.get('category', 'general')
     
-    cur.execute("""
-        INSERT INTO news (title, content, author_id, published)
-        VALUES (%s, %s, %s, %s)
+    cur.execute(f"""
+        INSERT INTO news (title, content, category, author_id)
+        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}')
         RETURNING id
-    """, (title, content, admin_id, published))
+    """)
     
     news_id = cur.fetchone()[0]
     conn.commit()
@@ -1242,128 +988,129 @@ def create_news(cur, conn, admin_id: str, body: dict, role: str) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'news_id': news_id}),
+        'body': json.dumps({'message': 'Новость создана', 'news_id': news_id}),
         'isBase64Encoded': False
     }
 
-def update_news(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Обновляет новость (admin, founder)"""
+def update_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Обновляет новость"""
     
-    if role not in ['admin', 'founder']:
+    if admin_role not in ['admin', 'founder']:
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'body': json.dumps({'error': 'Недостаточно прав для редактирования новостей'}),
             'isBase64Encoded': False
         }
     
     news_id = body.get('news_id')
     title = body.get('title')
     content = body.get('content')
-    published = body.get('published')
+    category = body.get('category')
     
-    cur.execute("""
-        UPDATE news 
-        SET title = COALESCE(%s, title),
-            content = COALESCE(%s, content),
-            published = COALESCE(%s, published),
-            updated_at = NOW()
-        WHERE id = %s
-    """, (title, content, published, news_id))
-    
+    cur.execute(f"""
+        UPDATE news
+        SET title = '{escape_sql(title)}', content = '{escape_sql(content)}', category = '{escape_sql(category)}'
+        WHERE id = {int(news_id)}
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True}),
+        'body': json.dumps({'message': 'Новость обновлена'}),
         'isBase64Encoded': False
     }
 
-def delete_news(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Удаляет новость (admin, founder)"""
+def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Удаляет новость"""
     
-    if role not in ['admin', 'founder']:
+    if admin_role not in ['admin', 'founder']:
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'body': json.dumps({'error': 'Недостаточно прав для удаления новостей'}),
             'isBase64Encoded': False
         }
     
     news_id = body.get('news_id')
     
-    cur.execute("UPDATE news SET published = false WHERE id = %s", (news_id,))
+    cur.execute(f"""
+        DELETE FROM news WHERE id = {int(news_id)}
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True}),
+        'body': json.dumps({'message': 'Новость удалена'}),
         'isBase64Encoded': False
     }
 
 def get_news(cur, conn, body: dict) -> dict:
-    """Получает новости (published или все для админов)"""
+    """Получает новости"""
     
-    include_unpublished = body.get('include_unpublished', False)
+    limit = body.get('limit', 10)
+    offset = body.get('offset', 0)
+    category = body.get('category')
     
-    if include_unpublished:
-        cur.execute("""
-            SELECT n.id, n.title, n.content, n.image_url, n.published, n.created_at, n.updated_at, u.nickname
-            FROM t_p4831367_esport_gta_disaster.news n
-            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
+    if category:
+        cur.execute(f"""
+            SELECT n.id, n.title, n.content, n.category, n.author_id, u.username, n.created_at
+            FROM news n
+            JOIN users u ON n.author_id = u.id
+            WHERE n.category = '{escape_sql(category)}'
             ORDER BY n.created_at DESC
+            LIMIT {int(limit)} OFFSET {int(offset)}
         """)
     else:
-        cur.execute("""
-            SELECT n.id, n.title, n.content, n.image_url, n.published, n.created_at, n.updated_at, u.nickname
-            FROM t_p4831367_esport_gta_disaster.news n
-            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
-            WHERE n.published = true
+        cur.execute(f"""
+            SELECT n.id, n.title, n.content, n.category, n.author_id, u.username, n.created_at
+            FROM news n
+            JOIN users u ON n.author_id = u.id
             ORDER BY n.created_at DESC
+            LIMIT {int(limit)} OFFSET {int(offset)}
         """)
     
-    news = []
+    news_list = []
     for row in cur.fetchall():
-        news.append({
+        news_list.append({
             'id': row[0],
             'title': row[1],
             'content': row[2],
-            'image_url': row[3],
-            'published': row[4],
-            'created_at': row[5].isoformat() if row[5] else None,
-            'updated_at': row[6].isoformat() if row[6] else None,
-            'author_name': row[7]
+            'category': row[3],
+            'author_id': row[4],
+            'author_username': row[5],
+            'created_at': row[6].isoformat() if row[6] else None
         })
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'news': news}),
+        'body': json.dumps({'news': news_list}),
         'isBase64Encoded': False
     }
 
-def create_rule(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Создает правило (admin, founder)"""
+def create_rule(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Создает правило"""
     
-    if role not in ['admin', 'founder']:
+    if admin_role not in ['admin', 'founder']:
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'body': json.dumps({'error': 'Недостаточно прав для создания правил'}),
             'isBase64Encoded': False
         }
     
     title = body.get('title')
     content = body.get('content')
-    order_index = body.get('order_index', 0)
+    category = body.get('category', 'general')
     
-    cur.execute("""
-        INSERT INTO rules (title, content, order_index, author_id)
-        VALUES (%s, %s, %s, %s)
+    cur.execute(f"""
+        INSERT INTO rules (title, content, category, created_by)
+        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}')
         RETURNING id
-    """, (title, content, order_index, admin_id))
+    """)
     
     rule_id = cur.fetchone()[0]
     conn.commit()
@@ -1371,64 +1118,62 @@ def create_rule(cur, conn, admin_id: str, body: dict, role: str) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'rule_id': rule_id}),
+        'body': json.dumps({'message': 'Правило создано', 'rule_id': rule_id}),
         'isBase64Encoded': False
     }
 
-def update_rule(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Обновляет правило (admin, founder)"""
+def update_rule(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Обновляет правило"""
     
-    if role not in ['admin', 'founder']:
+    if admin_role not in ['admin', 'founder']:
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'body': json.dumps({'error': 'Недостаточно прав для редактирования правил'}),
             'isBase64Encoded': False
         }
     
     rule_id = body.get('rule_id')
     title = body.get('title')
     content = body.get('content')
-    order_index = body.get('order_index')
+    category = body.get('category')
     
-    cur.execute("""
+    cur.execute(f"""
         UPDATE rules
-        SET title = COALESCE(%s, title),
-            content = COALESCE(%s, content),
-            order_index = COALESCE(%s, order_index),
-            updated_at = NOW()
-        WHERE id = %s
-    """, (title, content, order_index, rule_id))
-    
+        SET title = '{escape_sql(title)}', content = '{escape_sql(content)}', category = '{escape_sql(category)}'
+        WHERE id = {int(rule_id)}
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True}),
+        'body': json.dumps({'message': 'Правило обновлено'}),
         'isBase64Encoded': False
     }
 
-def delete_rule(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Удаляет правило (admin, founder)"""
+def delete_rule(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Удаляет правило"""
     
-    if role not in ['admin', 'founder']:
+    if admin_role not in ['admin', 'founder']:
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'body': json.dumps({'error': 'Недостаточно прав для удаления правил'}),
             'isBase64Encoded': False
         }
     
     rule_id = body.get('rule_id')
     
-    cur.execute("UPDATE rules SET content = '[Удалено]' WHERE id = %s", (rule_id,))
+    cur.execute(f"""
+        DELETE FROM rules WHERE id = {int(rule_id)}
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True}),
+        'body': json.dumps({'message': 'Правило удалено'}),
         'isBase64Encoded': False
     }
 
@@ -1436,10 +1181,9 @@ def get_rules(cur, conn) -> dict:
     """Получает все правила"""
     
     cur.execute("""
-        SELECT r.id, r.title, r.content, r.order_index, r.created_at, u.nickname
-        FROM rules r
-        JOIN users u ON r.author_id = u.id
-        ORDER BY r.order_index ASC, r.created_at ASC
+        SELECT id, title, content, category, created_by, created_at
+        FROM rules
+        ORDER BY created_at DESC
     """)
     
     rules = []
@@ -1448,9 +1192,9 @@ def get_rules(cur, conn) -> dict:
             'id': row[0],
             'title': row[1],
             'content': row[2],
-            'order_index': row[3],
-            'created_at': row[4].isoformat() if row[4] else None,
-            'author_name': row[5]
+            'category': row[3],
+            'created_by': row[4],
+            'created_at': row[5].isoformat() if row[5] else None
         })
     
     return {
@@ -1460,71 +1204,71 @@ def get_rules(cur, conn) -> dict:
         'isBase64Encoded': False
     }
 
-def update_support(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Обновляет контакты поддержки (только founder)"""
+def update_support(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Обновляет информацию о поддержке"""
     
-    if role != 'founder':
+    if admin_role not in ['admin', 'founder']:
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Только основатель может редактировать поддержку'}),
+            'body': json.dumps({'error': 'Недостаточно прав для редактирования поддержки'}),
             'isBase64Encoded': False
         }
     
-    content = body.get('content')
+    email = body.get('email')
+    discord = body.get('discord')
+    telegram = body.get('telegram')
     
-    cur.execute("""
-        INSERT INTO support_contacts (content, updated_by)
-        VALUES (%s, %s)
-    """, (content, admin_id))
-    
+    cur.execute(f"""
+        UPDATE support_info
+        SET email = '{escape_sql(email)}', discord = '{escape_sql(discord)}', telegram = '{escape_sql(telegram)}'
+        WHERE id = 1
+    """)
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True}),
+        'body': json.dumps({'message': 'Информация о поддержке обновлена'}),
         'isBase64Encoded': False
     }
 
 def get_support(cur, conn) -> dict:
-    """Получает контакты поддержки"""
+    """Получает информацию о поддержке"""
     
     cur.execute("""
-        SELECT content, updated_at
-        FROM support_contacts
-        ORDER BY updated_at DESC
-        LIMIT 1
+        SELECT email, discord, telegram
+        FROM support_info
+        WHERE id = 1
     """)
     
-    result = cur.fetchone()
+    row = cur.fetchone()
     
-    if result:
-        return {
-            'statusCode': 200,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({
-                'content': result[0],
-                'updated_at': result[1].isoformat() if result[1] else None
-            }),
-            'isBase64Encoded': False
+    if row:
+        support_info = {
+            'email': row[0],
+            'discord': row[1],
+            'telegram': row[2]
         }
     else:
-        return {
-            'statusCode': 200,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({
-                'content': 'Контакты поддержки не установлены',
-                'updated_at': None
-            }),
-            'isBase64Encoded': False
+        support_info = {
+            'email': '',
+            'discord': '',
+            'telegram': ''
         }
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'support': support_info}),
+        'isBase64Encoded': False
+    }
 
 def get_all_users(cur, conn) -> dict:
-    """Получает всех зарегистрированных пользователей"""
+    """Получает список всех пользователей"""
     
     cur.execute("""
-        SELECT id, nickname, email, role, auto_status, is_banned, is_muted, created_at, last_active
+        SELECT id, username, email, role, created_at
         FROM users
         ORDER BY created_at DESC
     """)
@@ -1533,14 +1277,10 @@ def get_all_users(cur, conn) -> dict:
     for row in cur.fetchall():
         users.append({
             'id': row[0],
-            'nickname': row[1],
+            'username': row[1],
             'email': row[2],
             'role': row[3],
-            'auto_status': row[4],
-            'is_banned': row[5],
-            'is_muted': row[6],
-            'created_at': row[7].isoformat() if row[7] else None,
-            'last_active': row[8].isoformat() if row[8] else None
+            'created_at': row[4].isoformat() if row[4] else None
         })
     
     return {
@@ -1556,20 +1296,14 @@ def get_dashboard_stats(cur, conn) -> dict:
     cur.execute("SELECT COUNT(*) FROM users")
     total_users = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM tournaments WHERE status IN ('upcoming', 'in_progress')")
-    active_tournaments = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM tournaments")
+    total_tournaments = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM news WHERE published = true")
-    published_news = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM users WHERE is_banned = true")
+    cur.execute("SELECT COUNT(*) FROM bans WHERE active = TRUE")
     active_bans = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM users WHERE is_muted = true")
+    cur.execute("SELECT COUNT(*) FROM mutes WHERE active = TRUE")
     active_mutes = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM teams")
-    total_teams = cur.fetchone()[0]
     
     return {
         'statusCode': 200,
@@ -1577,260 +1311,239 @@ def get_dashboard_stats(cur, conn) -> dict:
         'body': json.dumps({
             'stats': {
                 'total_users': total_users,
-                'active_tournaments': active_tournaments,
-                'published_news': published_news,
+                'total_tournaments': total_tournaments,
                 'active_bans': active_bans,
-                'active_mutes': active_mutes,
-                'total_teams': total_teams
+                'active_mutes': active_mutes
             }
         }),
         'isBase64Encoded': False
     }
 
 def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
-    """Назначение роли пользователю (только founder)"""
+    """Назначает роль пользователю"""
     
     if admin_role != 'founder':
-        return error_response('Только основатель может назначать роли', 403)
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Только основатель может назначать роли'}),
+            'isBase64Encoded': False
+        }
     
     user_id = body.get('user_id')
-    new_role = body.get('role')
+    role = body.get('role')
     
-    if not user_id or not new_role:
-        return error_response('Не указан пользователь или роль', 400)
+    if role not in ['admin', 'organizer', 'user']:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недопустимая роль'}),
+            'isBase64Encoded': False
+        }
     
-    allowed_roles = ['user', 'moderator', 'admin', 'organizer']
-    if new_role not in allowed_roles:
-        return error_response(f'Недопустимая роль. Доступные: {", ".join(allowed_roles)}', 400)
+    cur.execute(f"""
+        UPDATE users
+        SET role = '{escape_sql(role)}'
+        WHERE id = '{escape_sql(user_id)}'
+    """)
     
-    cur.execute("SELECT nickname, role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
-    user_data = cur.fetchone()
-    
-    if not user_data:
-        return error_response('Пользователь не найден', 404)
-    
-    old_role = user_data[1]
-    username = user_data[0]
-    
-    cur.execute("UPDATE t_p4831367_esport_gta_disaster.users SET role = %s WHERE id = %s", (new_role, user_id))
-    
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.admin_action_logs 
-        (admin_id, action_type, target_user_id, details)
-        VALUES (%s, %s, %s, %s)
-    """, (admin_id, 'role_change', user_id, json.dumps({
-        'old_role': old_role,
-        'new_role': new_role,
-        'username': username
-    })))
+    cur.execute(f"""
+        INSERT INTO role_history (user_id, assigned_by, role, action)
+        VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(role)}', 'assigned')
+    """)
     
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'message': f'Роль пользователя {username} изменена с {old_role} на {new_role}'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Роль назначена'}),
+        'isBase64Encoded': False
+    }
 
 def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
-    """Снятие роли с пользователя (только founder)"""
+    """Отзывает роль у пользователя"""
     
     if admin_role != 'founder':
-        return error_response('Только основатель может снимать роли', 403)
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Только основатель может отзывать роли'}),
+            'isBase64Encoded': False
+        }
     
     user_id = body.get('user_id')
     
-    if not user_id:
-        return error_response('Не указан пользователь', 400)
+    cur.execute(f"""
+        SELECT role FROM users WHERE id = '{escape_sql(user_id)}'
+    """)
     
-    cur.execute("SELECT nickname, role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
-    user_data = cur.fetchone()
+    current_role = cur.fetchone()
     
-    if not user_data:
-        return error_response('Пользователь не найден', 404)
+    if not current_role:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Пользователь не найден'}),
+            'isBase64Encoded': False
+        }
     
-    old_role = user_data[1]
-    username = user_data[0]
+    cur.execute(f"""
+        UPDATE users
+        SET role = 'user'
+        WHERE id = '{escape_sql(user_id)}'
+    """)
     
-    if old_role == 'founder':
-        return error_response('Нельзя снять роль основателя', 403)
-    
-    cur.execute("UPDATE t_p4831367_esport_gta_disaster.users SET role = %s WHERE id = %s", ('user', user_id))
-    
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.admin_action_logs 
-        (admin_id, action_type, target_user_id, details)
-        VALUES (%s, %s, %s, %s)
-    """, (admin_id, 'role_revoke', user_id, json.dumps({
-        'old_role': old_role,
-        'new_role': 'user',
-        'username': username
-    })))
+    cur.execute(f"""
+        INSERT INTO role_history (user_id, assigned_by, role, action)
+        VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(current_role[0])}', 'revoked')
+    """)
     
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'message': f'Роль {old_role} снята с пользователя {username}'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Роль отозвана'}),
+        'isBase64Encoded': False
+    }
 
 def get_staff(cur, conn) -> dict:
-    """Получение списка администраторов и модераторов"""
+    """Получает список сотрудников"""
     
     cur.execute("""
-        SELECT id, nickname, email, role, avatar_url, created_at, last_activity_at
-        FROM t_p4831367_esport_gta_disaster.users
-        WHERE role IN ('founder', 'organizer', 'admin', 'moderator')
-        ORDER BY 
-            CASE role
-                WHEN 'founder' THEN 1
-                WHEN 'organizer' THEN 2
-                WHEN 'admin' THEN 3
-                WHEN 'moderator' THEN 4
-            END,
-            nickname
+        SELECT id, username, email, role, created_at
+        FROM users
+        WHERE role IN ('admin', 'founder', 'organizer')
+        ORDER BY role, username
     """)
     
     staff = []
     for row in cur.fetchall():
         staff.append({
             'id': row[0],
-            'nickname': row[1],
+            'username': row[1],
             'email': row[2],
             'role': row[3],
-            'avatar_url': row[4],
-            'created_at': row[5].isoformat() if row[5] else None,
-            'last_activity_at': row[6].isoformat() if row[6] else None
+            'created_at': row[4].isoformat() if row[4] else None
         })
     
-    return success_response({'staff': staff})
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'staff': staff}),
+        'isBase64Encoded': False
+    }
 
 def get_role_history(cur, conn, body: dict) -> dict:
-    """История изменения ролей"""
+    """Получает историю изменения ролей пользователя"""
     
-    limit = body.get('limit', 50)
+    user_id = body.get('user_id')
     
-    cur.execute("""
-        SELECT 
-            l.id, l.admin_id, l.action_type, l.target_user_id, l.details, l.created_at,
-            a.nickname as admin_name,
-            u.nickname as target_name
-        FROM t_p4831367_esport_gta_disaster.admin_action_logs l
-        LEFT JOIN t_p4831367_esport_gta_disaster.users a ON l.admin_id = a.id
-        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON l.target_user_id = u.id
-        WHERE l.action_type IN ('role_change', 'role_revoke')
-        ORDER BY l.created_at DESC
-        LIMIT %s
-    """, (limit,))
+    cur.execute(f"""
+        SELECT rh.id, rh.user_id, u1.username, rh.assigned_by, u2.username, rh.role, rh.action, rh.created_at
+        FROM role_history rh
+        JOIN users u1 ON rh.user_id = u1.id
+        JOIN users u2 ON rh.assigned_by = u2.id
+        WHERE rh.user_id = '{escape_sql(user_id)}'
+        ORDER BY rh.created_at DESC
+    """)
     
     history = []
     for row in cur.fetchall():
-        details = json.loads(row[4]) if row[4] else {}
         history.append({
             'id': row[0],
-            'admin_id': row[1],
-            'admin_name': row[6],
-            'action_type': row[2],
-            'target_user_id': row[3],
-            'target_name': row[7],
-            'old_role': details.get('old_role'),
-            'new_role': details.get('new_role'),
-            'created_at': row[5].isoformat() if row[5] else None
+            'user_id': row[1],
+            'username': row[2],
+            'assigned_by': row[3],
+            'assigned_by_username': row[4],
+            'role': row[5],
+            'action': row[6],
+            'created_at': row[7].isoformat() if row[7] else None
         })
     
-    return success_response({'history': history})
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'history': history}),
+        'isBase64Encoded': False
+    }
 
-def create_discussion(cur, conn, user_id: str, user_role: str, body: dict) -> dict:
-    """Создание новой темы обсуждения (только модераторы)"""
+def create_discussion(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
+    """Создает обсуждение"""
     
-    can_moderate = user_role in ['founder', 'organizer', 'admin', 'moderator']
+    title = body.get('title')
+    content = body.get('content')
+    category = body.get('category', 'general')
     
-    if not can_moderate:
-        return error_response('Только модераторы могут создавать обсуждения', 403)
-    
-    title = body.get('title', '').strip()
-    content = body.get('content', '').strip()
-    
-    if not title or not content:
-        return error_response('Заголовок и содержание обязательны', 400)
-    
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.discussions 
-        (title, content, author_id, created_at, updated_at)
-        VALUES (%s, %s, %s, NOW(), NOW())
+    cur.execute(f"""
+        INSERT INTO discussions (title, content, category, author_id)
+        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}')
         RETURNING id
-    """, (title, content, user_id))
+    """)
     
     discussion_id = cur.fetchone()[0]
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'discussion_id': discussion_id,
-        'message': f'Обсуждение "{title}" создано'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Обсуждение создано', 'discussion_id': discussion_id}),
+        'isBase64Encoded': False
+    }
 
-def add_comment(cur, conn, user_id: str, user_role: str, body: dict) -> dict:
-    """Добавление комментария к обсуждению"""
+def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
+    """Добавляет комментарий к обсуждению"""
     
-    can_moderate = user_role in ['founder', 'organizer', 'admin', 'moderator']
     discussion_id = body.get('discussion_id')
-    content = body.get('content', '').strip()
+    content = body.get('content')
     
-    if not discussion_id or not content:
-        return error_response('Укажите обсуждение и текст комментария', 400)
+    cur.execute(f"""
+        SELECT locked FROM discussions WHERE id = {int(discussion_id)}
+    """)
     
-    cur.execute("""
-        SELECT is_locked, status FROM t_p4831367_esport_gta_disaster.discussions 
-        WHERE id = %s
-    """, (discussion_id,))
+    locked = cur.fetchone()
     
-    discussion = cur.fetchone()
-    if not discussion:
-        return error_response('Обсуждение не найдено', 404)
+    if not locked:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Обсуждение не найдено'}),
+            'isBase64Encoded': False
+        }
     
-    is_locked = discussion[0]
-    status = discussion[1]
+    if locked[0]:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Обсуждение заблокировано'}),
+            'isBase64Encoded': False
+        }
     
-    if (is_locked or status in ['closed', 'under_review']) and not can_moderate:
-        return error_response('Обсуждение закрыто. Только модераторы могут писать', 403)
-    
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.discussion_comments 
-        (discussion_id, author_id, content, created_at)
-        VALUES (%s, %s, %s, NOW())
+    cur.execute(f"""
+        INSERT INTO discussion_comments (discussion_id, author_id, content)
+        VALUES ({int(discussion_id)}, '{escape_sql(admin_id)}', '{escape_sql(content)}')
         RETURNING id
-    """, (discussion_id, user_id, content))
+    """)
     
     comment_id = cur.fetchone()[0]
-    
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.discussions 
-        SET updated_at = NOW() 
-        WHERE id = %s
-    """, (discussion_id,))
-    
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'comment_id': comment_id,
-        'message': 'Комментарий добавлен'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Комментарий добавлен', 'comment_id': comment_id}),
+        'isBase64Encoded': False
+    }
 
 def get_discussions(cur, conn) -> dict:
-    """Получение всех обсуждений"""
+    """Получает список обсуждений"""
     
     cur.execute("""
-        SELECT 
-            d.id, d.title, d.content, d.author_id, d.is_locked, d.is_pinned, 
-            d.status, d.views, d.created_at, d.updated_at,
-            u.nickname, u.avatar_url,
-            (SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.discussion_comments WHERE discussion_id = d.id) as comment_count
-        FROM t_p4831367_esport_gta_disaster.discussions d
-        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
-        WHERE d.status != 'deleted'
-        ORDER BY d.is_pinned DESC, d.updated_at DESC
-        LIMIT 100
+        SELECT d.id, d.title, d.content, d.category, d.author_id, u.username, d.locked, d.pinned, d.created_at
+        FROM discussions d
+        JOIN users u ON d.author_id = u.id
+        ORDER BY d.pinned DESC, d.created_at DESC
     """)
     
     discussions = []
@@ -1838,414 +1551,258 @@ def get_discussions(cur, conn) -> dict:
         discussions.append({
             'id': row[0],
             'title': row[1],
-            'content': row[2][:200] + '...' if len(row[2]) > 200 else row[2],
-            'author_id': row[3],
-            'is_locked': row[4],
-            'is_pinned': row[5],
-            'status': row[6],
-            'views': row[7],
-            'created_at': row[8].isoformat() if row[8] else None,
-            'updated_at': row[9].isoformat() if row[9] else None,
-            'author_name': row[10],
-            'author_avatar': row[11],
-            'comment_count': row[12]
+            'content': row[2],
+            'category': row[3],
+            'author_id': row[4],
+            'author_username': row[5],
+            'locked': row[6],
+            'pinned': row[7],
+            'created_at': row[8].isoformat() if row[8] else None
         })
     
-    return success_response({'discussions': discussions})
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'discussions': discussions}),
+        'isBase64Encoded': False
+    }
 
 def get_discussion(cur, conn, body: dict) -> dict:
-    """Получение обсуждения с комментариями"""
+    """Получает обсуждение с комментариями"""
     
     discussion_id = body.get('discussion_id')
     
-    if not discussion_id:
-        return error_response('Не указан ID обсуждения', 400)
-    
-    cur.execute("""
-        SELECT 
-            d.id, d.title, d.content, d.author_id, d.is_locked, d.is_pinned, 
-            d.status, d.views, d.created_at, d.updated_at,
-            u.nickname, u.avatar_url
-        FROM t_p4831367_esport_gta_disaster.discussions d
-        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
-        WHERE d.id = %s
-    """, (discussion_id,))
+    cur.execute(f"""
+        SELECT d.id, d.title, d.content, d.category, d.author_id, u.username, d.locked, d.pinned, d.created_at
+        FROM discussions d
+        JOIN users u ON d.author_id = u.id
+        WHERE d.id = {int(discussion_id)}
+    """)
     
     row = cur.fetchone()
+    
     if not row:
-        return error_response('Обсуждение не найдено', 404)
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Обсуждение не найдено'}),
+            'isBase64Encoded': False
+        }
     
     discussion = {
         'id': row[0],
         'title': row[1],
         'content': row[2],
-        'author_id': row[3],
-        'is_locked': row[4],
-        'is_pinned': row[5],
-        'status': row[6],
-        'views': row[7],
-        'created_at': row[8].isoformat() if row[8] else None,
-        'updated_at': row[9].isoformat() if row[9] else None,
-        'author_name': row[10],
-        'author_avatar': row[11]
+        'category': row[3],
+        'author_id': row[4],
+        'author_username': row[5],
+        'locked': row[6],
+        'pinned': row[7],
+        'created_at': row[8].isoformat() if row[8] else None
     }
     
-    cur.execute("""
-        SELECT 
-            c.id, c.content, c.created_at, c.author_id,
-            u.nickname, u.avatar_url
-        FROM t_p4831367_esport_gta_disaster.discussion_comments c
-        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON c.author_id = u.id
-        WHERE c.discussion_id = %s
-        ORDER BY c.created_at ASC
-    """, (discussion_id,))
+    cur.execute(f"""
+        SELECT dc.id, dc.author_id, u.username, dc.content, dc.created_at
+        FROM discussion_comments dc
+        JOIN users u ON dc.author_id = u.id
+        WHERE dc.discussion_id = {int(discussion_id)}
+        ORDER BY dc.created_at
+    """)
     
     comments = []
     for row in cur.fetchall():
         comments.append({
             'id': row[0],
-            'content': row[1],
-            'created_at': row[2].isoformat() if row[2] else None,
-            'author_id': row[3],
-            'author_name': row[4],
-            'author_avatar': row[5]
+            'author_id': row[1],
+            'author_username': row[2],
+            'content': row[3],
+            'created_at': row[4].isoformat() if row[4] else None
         })
     
     discussion['comments'] = comments
     
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.discussions 
-        SET views = views + 1 
-        WHERE id = %s
-    """, (discussion_id,))
-    conn.commit()
-    
-    return success_response({'discussion': discussion})
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'discussion': discussion}),
+        'isBase64Encoded': False
+    }
 
 def lock_discussion(cur, conn, body: dict) -> dict:
-    """Блокировка обсуждения"""
+    """Блокирует обсуждение"""
     
     discussion_id = body.get('discussion_id')
-    lock = body.get('lock', True)
     
-    if not discussion_id:
-        return error_response('Не указан ID обсуждения', 400)
-    
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.discussions 
-        SET is_locked = %s 
-        WHERE id = %s
-    """, (lock, discussion_id))
-    
+    cur.execute(f"""
+        UPDATE discussions
+        SET locked = TRUE
+        WHERE id = {int(discussion_id)}
+    """)
     conn.commit()
     
-    status = 'заблокировано' if lock else 'разблокировано'
-    return success_response({
-        'success': True,
-        'message': f'Обсуждение {status}'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Обсуждение заблокировано'}),
+        'isBase64Encoded': False
+    }
 
 def pin_discussion(cur, conn, body: dict) -> dict:
-    """Закрепление обсуждения"""
+    """Закрепляет обсуждение"""
     
     discussion_id = body.get('discussion_id')
-    pin = body.get('pin', True)
     
-    if not discussion_id:
-        return error_response('Не указан ID обсуждения', 400)
-    
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.discussions 
-        SET is_pinned = %s 
-        WHERE id = %s
-    """, (pin, discussion_id))
-    
+    cur.execute(f"""
+        UPDATE discussions
+        SET pinned = TRUE
+        WHERE id = {int(discussion_id)}
+    """)
     conn.commit()
     
-    status = 'закреплено' if pin else 'откреплено'
-    return success_response({
-        'success': True,
-        'message': f'Обсуждение {status}'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Обсуждение закреплено'}),
+        'isBase64Encoded': False
+    }
 
 def delete_discussion(cur, conn, body: dict) -> dict:
-    """Удаление обсуждения"""
+    """Удаляет обсуждение"""
     
     discussion_id = body.get('discussion_id')
     
-    if not discussion_id:
-        return error_response('Не указан ID обсуждения', 400)
-    
-    cur.execute("SELECT title FROM t_p4831367_esport_gta_disaster.discussions WHERE id = %s", (discussion_id,))
-    title = cur.fetchone()
-    
-    if not title:
-        return error_response('Обсуждение не найдено', 404)
-    
-    cur.execute("UPDATE t_p4831367_esport_gta_disaster.discussions SET status = %s WHERE id = %s", ('deleted', discussion_id))
+    cur.execute(f"""
+        DELETE FROM discussions WHERE id = {int(discussion_id)}
+    """)
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'message': f'Обсуждение "{title[0]}" удалено'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Обсуждение удалено'}),
+        'isBase64Encoded': False
+    }
 
-def edit_discussion(cur, conn, user_id: str, body: dict) -> dict:
-    """Редактирование обсуждения"""
+def edit_discussion(cur, conn, admin_id: str, body: dict) -> dict:
+    """Редактирует обсуждение"""
     
     discussion_id = body.get('discussion_id')
-    title = body.get('title', '').strip()
-    content = body.get('content', '').strip()
+    title = body.get('title')
+    content = body.get('content')
+    category = body.get('category')
     
-    if not discussion_id:
-        return error_response('Не указан ID обсуждения', 400)
-    
-    if not title or not content:
-        return error_response('Заголовок и содержание обязательны', 400)
-    
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.discussions 
-        SET title = %s, content = %s, updated_at = NOW() 
-        WHERE id = %s
-    """, (title, content, discussion_id))
-    
+    cur.execute(f"""
+        UPDATE discussions
+        SET title = '{escape_sql(title)}', content = '{escape_sql(content)}', category = '{escape_sql(category)}'
+        WHERE id = {int(discussion_id)}
+    """)
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'message': 'Обсуждение обновлено'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Обсуждение обновлено'}),
+        'isBase64Encoded': False
+    }
 
-def create_news_with_image(cur, conn, admin_id: str, body: dict, role: str) -> dict:
-    """Создание новости с изображением"""
+def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Создает новость с изображением"""
     
-    if role not in ['admin', 'founder', 'organizer']:
-        return error_response('Недостаточно прав', 403)
+    if admin_role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав для создания новостей'}),
+            'isBase64Encoded': False
+        }
     
-    title = body.get('title', '').strip()
-    content = body.get('content', '').strip()
-    image_base64 = body.get('image', '')
-    published = body.get('published', True)
+    title = body.get('title')
+    content = body.get('content')
+    category = body.get('category', 'general')
+    image_url = body.get('image_url')
     
-    if not title or not content:
-        return error_response('Заполните все поля', 400)
-    
-    image_url = None
-    if image_base64:
-        try:
-            import base64
-            import boto3
-            from datetime import datetime
-            
-            image_data = base64.b64decode(image_base64)
-            
-            s3 = boto3.client('s3',
-                endpoint_url='https://bucket.poehali.dev',
-                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
-            )
-            
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_key = f'news/{timestamp}_{title.replace(" ", "_")[:30]}.png'
-            
-            s3.put_object(
-                Bucket='files',
-                Key=file_key,
-                Body=image_data,
-                ContentType='image/png'
-            )
-            
-            image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
-        except Exception as e:
-            return error_response(f'Ошибка загрузки изображения: {str(e)}', 500)
-    
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.news 
-        (title, content, author_id, image_url, published, created_at)
-        VALUES (%s, %s, %s, %s, %s, NOW())
+    cur.execute(f"""
+        INSERT INTO news (title, content, category, author_id, image_url)
+        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}', '{escape_sql(image_url)}')
         RETURNING id
-    """, (title, content, admin_id, image_url, published))
+    """)
     
     news_id = cur.fetchone()[0]
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'news_id': news_id,
-        'image_url': image_url,
-        'message': 'Новость создана'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Новость создана', 'news_id': news_id}),
+        'isBase64Encoded': False
+    }
 
 def delete_tournament(cur, conn, admin_id: str, body: dict) -> dict:
-    """Удаление турнира (hard delete)"""
+    """Удаляет турнир"""
     
     tournament_id = body.get('tournament_id')
     
-    if not tournament_id:
-        return error_response('Не указан ID турнира', 400)
-    
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.tournaments 
-        SET deleted_at = NOW() 
-        WHERE id = %s
-    """, (tournament_id,))
-    
+    cur.execute(f"""
+        DELETE FROM tournaments WHERE id = {int(tournament_id)}
+    """)
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'message': 'Турнир удален'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Турнир удален'}),
+        'isBase64Encoded': False
+    }
 
 def hide_tournament(cur, conn, admin_id: str, body: dict) -> dict:
-    """Скрытие/показ турнира"""
+    """Скрывает турнир"""
     
     tournament_id = body.get('tournament_id')
-    is_hidden = body.get('is_hidden', True)
+    hidden = body.get('hidden', True)
     
-    if not tournament_id:
-        return error_response('Не указан ID турнира', 400)
-    
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.tournaments 
-        SET is_hidden = %s 
-        WHERE id = %s
-    """, (is_hidden, tournament_id))
-    
+    cur.execute(f"""
+        UPDATE tournaments
+        SET hidden = {str(hidden).upper()}
+        WHERE id = {int(tournament_id)}
+    """)
     conn.commit()
     
-    status = 'скрыт' if is_hidden else 'показан'
-    return success_response({
-        'success': True,
-        'message': f'Турнир {status}'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Статус видимости турнира обновлен'}),
+        'isBase64Encoded': False
+    }
 
 def start_tournament(cur, conn, admin_id: str, body: dict) -> dict:
-    """Начать турнир и сгенерировать сетку"""
+    """Запускает турнир"""
     
     tournament_id = body.get('tournament_id')
     
-    if not tournament_id:
-        return error_response('Не указан ID турнира', 400)
-    
-    cur.execute("""
-        SELECT max_participants, is_started 
-        FROM t_p4831367_esport_gta_disaster.tournaments 
-        WHERE id = %s
-    """, (tournament_id,))
-    
-    result = cur.fetchone()
-    if not result:
-        return error_response('Турнир не найден', 404)
-    
-    max_participants, is_started = result
-    
-    if is_started:
-        return error_response('Турнир уже начат', 400)
-    
-    cur.execute("""
-        SELECT COUNT(*) 
-        FROM t_p4831367_esport_gta_disaster.tournament_registrations 
-        WHERE tournament_id = %s AND approved = TRUE
-    """, (tournament_id,))
-    
-    approved_count = cur.fetchone()[0]
-    
-    if approved_count == 0:
-        return error_response('Нет утвержденных заявок', 400)
-    
-    cur.execute("""
-        SELECT tr.id, t.id, t.name
-        FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
-        JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
-        WHERE tr.tournament_id = %s AND tr.approved = TRUE
-    """, (tournament_id,))
-    
-    teams = cur.fetchall()
-    import math
-    bracket_size = max_participants or 16
-    
-    stage_names = {
-        2: 'Финал',
-        4: 'Полуфинал',
-        8: '1/4 финала',
-        16: '1/8 финала',
-        32: '1/16 финала',
-        64: '1/32 финала',
-        128: '1/64 финала'
-    }
-    
-    stages = []
-    current_size = bracket_size
-    stage_order = 0
-    
-    while current_size >= 2:
-        cur.execute("""
-            INSERT INTO t_p4831367_esport_gta_disaster.bracket_stages 
-            (tournament_id, stage_name, stage_order, best_of)
-            VALUES (%s, %s, %s, 1)
-            RETURNING id
-        """, (tournament_id, stage_names.get(current_size, f'Раунд {stage_order + 1}'), stage_order))
-        
-        stage_id = cur.fetchone()[0]
-        stages.append((stage_id, current_size))
-        current_size = current_size // 2
-        stage_order += 1
-    
-    random.shuffle(teams)
-    
-    first_stage_id = stages[0][0]
-    first_stage_size = stages[0][1]
-    
-    matches_to_create = first_stage_size // 2
-    
-    for match_num in range(matches_to_create):
-        team1_idx = match_num * 2
-        team2_idx = match_num * 2 + 1
-        
-        team1_id = teams[team1_idx][1] if team1_idx < len(teams) else None
-        team2_id = teams[team2_idx][1] if team2_idx < len(teams) else None
-        
-        next_match_num = match_num // 2 if len(stages) > 1 else None
-        
-        cur.execute("""
-            INSERT INTO t_p4831367_esport_gta_disaster.matches 
-            (tournament_id, stage_id, match_number, team1_id, team2_id, status, match_date)
-            VALUES (%s, %s, %s, %s, %s, 'upcoming', NOW())
-        """, (tournament_id, first_stage_id, match_num, team1_id, team2_id))
-    
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.tournaments 
-        SET is_started = TRUE, status = 'active'
-        WHERE id = %s
-    """, (tournament_id,))
-    
+    cur.execute(f"""
+        UPDATE tournaments
+        SET status = 'active'
+        WHERE id = {int(tournament_id)}
+    """)
     conn.commit()
     
-    return success_response({
-        'success': True,
-        'message': f'Турнир начат, создано {matches_to_create} матчей'
-    })
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Турнир запущен'}),
+        'isBase64Encoded': False
+    }
 
 def get_admin_tournaments(cur, conn) -> dict:
-    """Получить все турниры для админ-панели"""
+    """Получает турниры для администрирования"""
     
     cur.execute("""
-        SELECT 
-            t.id, 
-            t.name, 
-            t.status, 
-            t.max_participants,
-            t.is_hidden,
-            t.is_started,
-            t.start_date,
-            t.prize_pool,
-            COUNT(tr.id) as registrations_count
-        FROM t_p4831367_esport_gta_disaster.tournaments t
-        LEFT JOIN t_p4831367_esport_gta_disaster.tournament_registrations tr ON t.id = tr.tournament_id
-        WHERE t.deleted_at IS NULL
-        GROUP BY t.id
-        ORDER BY t.created_at DESC
+        SELECT t.id, t.name, t.game, t.status, t.start_date, t.max_teams,
+               COUNT(DISTINCT tr.id) as registered_teams
+        FROM tournaments t
+        LEFT JOIN tournament_registrations tr ON t.id = tr.tournament_id
+        GROUP BY t.id, t.name, t.game, t.status, t.start_date, t.max_teams
+        ORDER BY t.start_date DESC
     """)
     
     tournaments = []
@@ -2253,58 +1810,215 @@ def get_admin_tournaments(cur, conn) -> dict:
         tournaments.append({
             'id': row[0],
             'name': row[1],
-            'status': row[2],
-            'max_participants': row[3],
-            'is_hidden': row[4],
-            'is_started': row[5],
-            'start_date': row[6].isoformat() if row[6] else None,
-            'prize_pool': row[7],
-            'registrations_count': row[8]
+            'game': row[2],
+            'status': row[3],
+            'start_date': row[4].isoformat() if row[4] else None,
+            'max_teams': row[5],
+            'registered_teams': row[6]
         })
     
-    return success_response({'tournaments': tournaments})
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'tournaments': tournaments}),
+        'isBase64Encoded': False
+    }
 
 def approve_registration(cur, conn, admin_id: str, body: dict) -> dict:
-    """Одобрить заявку команды на турнир"""
+    """Одобряет регистрацию команды на турнир"""
     
     registration_id = body.get('registration_id')
     approved = body.get('approved', True)
     
-    if not registration_id:
-        return error_response('Не указан ID заявки', 400)
+    status = 'approved' if approved else 'rejected'
     
-    cur.execute("""
-        UPDATE t_p4831367_esport_gta_disaster.tournament_registrations 
-        SET approved = %s 
-        WHERE id = %s
-    """, (approved, registration_id))
-    
+    cur.execute(f"""
+        UPDATE tournament_registrations
+        SET status = '{escape_sql(status)}'
+        WHERE id = {int(registration_id)}
+    """)
     conn.commit()
     
-    status = 'одобрена' if approved else 'отклонена'
-    return success_response({
-        'success': True,
-        'message': f'Заявка {status}'
-    })
-
-def success_response(data: dict) -> dict:
     return {
         'statusCode': 200,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-        'body': json.dumps(data),
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': f'Регистрация {status}'}),
         'isBase64Encoded': False
     }
 
-def error_response(message: str, status_code: int = 400) -> dict:
+def get_moderation_logs(cur, conn):
+    """Получение всех логов модерации"""
+    cur.execute("""
+        SELECT al.id, al.action_type, al.target_user_id, u.username as target_username,
+               al.admin_id, a.username as admin_username, al.reason, al.created_at
+        FROM admin_action_logs al
+        LEFT JOIN users u ON al.target_user_id = u.id
+        LEFT JOIN users a ON al.admin_id = a.id
+        ORDER BY al.created_at DESC
+        LIMIT 100
+    """)
+    logs = cur.fetchall()
+    
     return {
-        'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-        'body': json.dumps({'error': message}),
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'logs': [{
+                'id': log[0],
+                'action_type': log[1],
+                'target_user_id': log[2],
+                'target_username': log[3],
+                'admin_id': log[4],
+                'admin_username': log[5],
+                'reason': log[6],
+                'created_at': log[7].isoformat() if log[7] else None
+            } for log in logs]
+        }),
+        'isBase64Encoded': False
+    }
+
+def get_active_bans(cur, conn):
+    """Получение активных банов"""
+    cur.execute("""
+        SELECT b.id, b.user_id, u.username, b.reason, b.expires_at, b.banned_by, a.username as admin_name, b.created_at
+        FROM user_bans b
+        LEFT JOIN users u ON b.user_id = u.id
+        LEFT JOIN users a ON b.banned_by = a.id
+        WHERE b.is_active = TRUE
+        ORDER BY b.created_at DESC
+    """)
+    bans = cur.fetchall()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'bans': [{
+                'id': ban[0],
+                'user_id': ban[1],
+                'username': ban[2],
+                'reason': ban[3],
+                'expires_at': ban[4].isoformat() if ban[4] else None,
+                'banned_by': ban[5],
+                'admin_name': ban[6],
+                'created_at': ban[7].isoformat() if ban[7] else None
+            } for ban in bans]
+        }),
+        'isBase64Encoded': False
+    }
+
+def get_active_mutes(cur, conn):
+    """Получение активных мутов"""
+    cur.execute("""
+        SELECT m.id, m.user_id, u.username, m.reason, m.expires_at, m.muted_by, a.username as admin_name, m.created_at
+        FROM user_mutes m
+        LEFT JOIN users u ON m.user_id = u.id
+        LEFT JOIN users a ON m.muted_by = a.id
+        WHERE m.is_active = TRUE
+        ORDER BY m.created_at DESC
+    """)
+    mutes = cur.fetchall()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'mutes': [{
+                'id': mute[0],
+                'user_id': mute[1],
+                'username': mute[2],
+                'reason': mute[3],
+                'expires_at': mute[4].isoformat() if mute[4] else None,
+                'muted_by': mute[5],
+                'admin_name': mute[6],
+                'created_at': mute[7].isoformat() if mute[7] else None
+            } for mute in mutes]
+        }),
+        'isBase64Encoded': False
+    }
+
+def update_ban_status(cur, conn, admin_id: str, body: dict):
+    """Обновление статуса бана"""
+    ban_id = body.get('ban_id')
+    is_active = body.get('is_active', False)
+    
+    cur.execute(f"UPDATE user_bans SET is_active = {str(is_active).upper()} WHERE id = {int(ban_id)}")
+    conn.commit()
+    
+    cur.execute(f"INSERT INTO admin_action_logs (admin_id, action_type, reason) VALUES ('{escape_sql(admin_id)}', 'ban_status_updated', 'Ban ID {int(ban_id)} updated')")
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Статус бана обновлен'}),
+        'isBase64Encoded': False
+    }
+
+def update_mute_status(cur, conn, admin_id: str, body: dict):
+    """Обновление статуса мута"""
+    mute_id = body.get('mute_id')
+    is_active = body.get('is_active', False)
+    
+    cur.execute(f"UPDATE user_mutes SET is_active = {str(is_active).upper()} WHERE id = {int(mute_id)}")
+    conn.commit()
+    
+    cur.execute(f"INSERT INTO admin_action_logs (admin_id, action_type, reason) VALUES ('{escape_sql(admin_id)}', 'mute_status_updated', 'Mute ID {int(mute_id)} updated')")
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Статус мута обновлен'}),
+        'isBase64Encoded': False
+    }
+
+def get_settings(cur, conn):
+    """Получение всех настроек сайта"""
+    cur.execute("""
+        SELECT key, value, description, updated_at
+        FROM site_settings
+        ORDER BY key
+    """)
+    settings = cur.fetchall()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'settings': [{
+                'key': s[0],
+                'value': s[1],
+                'description': s[2],
+                'updated_at': s[3].isoformat() if s[3] else None
+            } for s in settings]
+        }),
+        'isBase64Encoded': False
+    }
+
+def update_setting(cur, conn, admin_id: str, body: dict, admin_role: str):
+    """Обновление настройки сайта"""
+    if admin_role not in ['founder', 'organizer']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Только основатель или организатор может изменять настройки'}),
+            'isBase64Encoded': False
+        }
+    
+    key = escape_sql(body.get('key', ''))
+    value = escape_sql(body.get('value', ''))
+    
+    cur.execute(f"""
+        UPDATE site_settings 
+        SET value = '{value}', updated_at = CURRENT_TIMESTAMP, updated_by = '{escape_sql(admin_id)}'
+        WHERE key = '{key}'
+    """)
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Настройка обновлена'}),
         'isBase64Encoded': False
     }
