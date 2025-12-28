@@ -916,7 +916,6 @@ def get_team_ratings(cur, conn) -> dict:
 
 def verify_admin_password(cur, conn, body: dict) -> dict:
     """Проверяет пароль админ панели"""
-    import bcrypt
     
     password = body.get('password')
     
@@ -939,9 +938,9 @@ def verify_admin_password(cur, conn, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    password_hash = result[0].encode('utf-8')
+    stored_password = result[0]
     
-    if bcrypt.checkpw(password.encode('utf-8'), password_hash):
+    if password == stored_password:
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -19,26 +19,75 @@ import {
   SettingsSection,
 } from '@/components/admin/AdminSections';
 
-const ADMIN_PASSWORD = 'disaster2025admin';
-
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [user, setUser] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      toast({
-        title: 'Успешный вход',
-        description: 'Добро пожаловать в админ-панель',
-      });
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      setUser(userData);
+      
+      if (!['admin', 'founder', 'moderator'].includes(userData.role)) {
+        toast({
+          title: 'Доступ запрещен',
+          description: 'У вас нет прав администратора',
+          variant: 'destructive',
+        });
+        navigate('/');
+        return;
+      }
+      
+      const savedAuth = sessionStorage.getItem('adminAuth');
+      if (savedAuth === 'true') {
+        setIsAuthenticated(true);
+      }
     } else {
+      navigate('/login');
+    }
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user?.id?.toString() || '1'
+        },
+        body: JSON.stringify({
+          action: 'verify_admin_password',
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('adminAuth', 'true');
+        toast({
+          title: 'Успешный вход',
+          description: 'Добро пожаловать в админ-панель',
+        });
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Неверный пароль',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
       toast({
         title: 'Ошибка',
-        description: 'Неверный пароль',
+        description: error.message,
         variant: 'destructive',
       });
     }
@@ -47,6 +96,7 @@ export default function Admin() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setPassword('');
+    sessionStorage.removeItem('adminAuth');
     toast({
       title: 'Выход выполнен',
       description: 'Вы вышли из админ-панели',

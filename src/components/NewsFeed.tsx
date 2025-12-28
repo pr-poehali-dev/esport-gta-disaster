@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import NewsCard from './NewsCard';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+import { showNotification } from './NotificationSystem';
 
 interface NewsItem {
   id: string;
@@ -12,75 +13,79 @@ interface NewsItem {
   date: string;
   category: string;
   slug: string;
+  content?: string;
 }
 
 export default function NewsFeed() {
   const headerAnimation = useScrollAnimation();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const categories = ['Все', 'Турниры', 'Объявления', 'Результаты', 'Новости команд'];
+  useEffect(() => {
+    loadNews();
+  }, []);
 
-  const mockNews: NewsItem[] = [
-    {
-      id: '1',
-      title: 'Анонс турнира DISASTER CUP 2025',
-      description: 'Приглашаем все команды принять участие в крупнейшем турнире сезона с призовым фондом $100,000. Регистрация открыта до 15 января.',
-      image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
-      date: '27 декабря 2024',
-      category: 'Турниры',
-      slug: 'disaster-cup-2025-announcement',
-    },
-    {
-      id: '2',
-      title: 'Итоги квалификации Winter Season',
-      description: 'Подведены итоги квалификационного этапа. 16 команд прошли в плей-офф и сразятся за главный приз.',
-      image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&q=80',
-      date: '26 декабря 2024',
-      category: 'Результаты',
-      slug: 'winter-season-qualification-results',
-    },
-    {
-      id: '3',
-      title: 'Новый состав команды PHANTOM',
-      description: 'Команда PHANTOM объявляет об изменениях в составе. Два новых игрока присоединяются к команде перед стартом нового сезона.',
-      image: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=800&q=80',
-      date: '25 декабря 2024',
-      category: 'Новости команд',
-      slug: 'phantom-roster-update',
-    },
-    {
-      id: '4',
-      title: 'Обновление правил турниров',
-      description: 'Вступают в силу новые правила проведения турниров. Ознакомьтесь с изменениями перед следующими матчами.',
-      image: 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?w=800&q=80',
-      date: '24 декабря 2024',
-      category: 'Объявления',
-      slug: 'tournament-rules-update',
-    },
-    {
-      id: '5',
-      title: 'VORTEX выигрывает IEM Katowice',
-      description: 'Команда VORTEX одерживает победу на IEM Katowice, обыграв в финале NAVI со счетом 3:1.',
-      image: 'https://images.unsplash.com/photo-1560253023-3ec5d502959f?w=800&q=80',
-      date: '23 декабря 2024',
-      category: 'Результаты',
-      slug: 'vortex-wins-iem-katowice',
-    },
-    {
-      id: '6',
-      title: 'Открытие нового тренировочного центра',
-      description: 'DISASTER ESPORTS открывает собственный тренировочный центр с современным оборудованием для команд.',
-      image: 'https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=800&q=80',
-      date: '22 декабря 2024',
-      category: 'Объявления',
-      slug: 'new-training-facility',
-    },
-  ];
+  const loadNews = async () => {
+    try {
+      const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': '1'
+        },
+        body: JSON.stringify({ 
+          action: 'get_news',
+          include_unpublished: false
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.news) {
+        const formattedNews = data.news.map((item: any) => ({
+          id: item.id.toString(),
+          title: item.title,
+          description: item.content.substring(0, 150) + '...',
+          image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
+          date: new Date(item.created_at).toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          }),
+          category: 'Новости',
+          slug: `news-${item.id}`,
+          content: item.content
+        }));
+        setNews(formattedNews);
+      }
+    } catch (error: any) {
+      console.error('Ошибка загрузки новостей:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = ['Все', 'Новости'];
 
   const filteredNews =
     selectedCategory === 'all'
-      ? mockNews
-      : mockNews.filter((news) => news.category === selectedCategory);
+      ? news
+      : news.filter((item) => item.category === selectedCategory);
+
+  if (loading) {
+    return (
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Icon name="Loader2" className="h-12 w-12 animate-spin text-primary" />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-20">
@@ -123,22 +128,35 @@ export default function NewsFeed() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {filteredNews.map((news, index) => (
-            <NewsCard key={news.id} {...news} index={index} />
-          ))}
-        </div>
+        {filteredNews.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {filteredNews.map((newsItem, index) => (
+                <NewsCard key={newsItem.id} {...newsItem} index={index} />
+              ))}
+            </div>
 
-        <div className="text-center">
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-primary text-primary hover:bg-primary/10 font-bold font-mono"
-          >
-            ЗАГРУЗИТЬ ЕЩЁ
-            <Icon name="ChevronDown" className="ml-2 h-5 w-5" />
-          </Button>
-        </div>
+            {filteredNews.length >= 6 && (
+              <div className="text-center">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-primary text-primary hover:bg-primary/10 font-bold font-mono"
+                  onClick={loadNews}
+                >
+                  ОБНОВИТЬ
+                  <Icon name="RefreshCw" className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-20">
+            <Icon name="Newspaper" className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-bold mb-2">Новостей пока нет</h3>
+            <p className="text-muted-foreground">Скоро здесь появятся свежие новости</p>
+          </div>
+        )}
       </div>
     </section>
   );
