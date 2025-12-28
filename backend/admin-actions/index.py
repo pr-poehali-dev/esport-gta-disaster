@@ -114,6 +114,10 @@ def handler(event: dict, context) -> dict:
                 return update_support(cur, conn, admin_id, body, admin_role[0])
             elif action == 'get_support':
                 return get_support(cur, conn)
+            elif action == 'get_all_users':
+                return get_all_users(cur, conn)
+            elif action == 'get_dashboard_stats':
+                return get_dashboard_stats(cur, conn)
             else:
                 return {
                     'statusCode': 400,
@@ -230,6 +234,38 @@ def send_email(to_email: str, code: str, action_type: str):
     server.send_message(msg)
     server.quit()
 
+def send_user_notification(to_email: str, subject: str, html_body: str):
+    """Отправляет email уведомление пользователю"""
+    
+    smtp_email = os.environ.get('SMTP_EMAIL')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    
+    if not smtp_email or not smtp_password:
+        raise Exception('SMTP настройки не заданы')
+    
+    msg = MIMEMultipart()
+    msg['From'] = smtp_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    
+    msg.attach(MIMEText(html_body, 'html'))
+    
+    if '@gmail.com' in smtp_email:
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+    elif '@yandex.ru' in smtp_email or '@yandex.com' in smtp_email:
+        smtp_server = 'smtp.yandex.ru'
+        smtp_port = 587
+    else:
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+    
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    server.starttls()
+    server.login(smtp_email, smtp_password)
+    server.send_message(msg)
+    server.quit()
+
 def verify_and_execute(cur, conn, admin_id: str, body: dict) -> dict:
     """Проверяет код и выполняет административное действие"""
     
@@ -321,10 +357,47 @@ def execute_ban(cur, conn, admin_id: str, data: dict) -> dict:
         VALUES (%s, 'ban', %s, %s)
     """, (admin_id, user_id, json.dumps(data)))
     
+    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
+    user_data = cur.fetchone()
+    
+    if user_data:
+        user_email, user_nickname = user_data
+        duration_text = 'навсегда' if is_permanent else f'{duration_days} дней'
+        
+        try:
+            send_user_notification(
+                user_email,
+                f'{user_nickname}, вы получили бан',
+                f'''
+                <html>
+                <body style="font-family: Arial, sans-serif; color: #333;">
+                    <h2 style="color: #DC2626;">Вы получили бан на сайте Disaster Esports</h2>
+                    <p><strong>Причина:</strong> {reason}</p>
+                    <p><strong>Длительность:</strong> {duration_text}</p>
+                    <p>Если вы считаете это ошибкой, обратитесь в поддержку.</p>
+                    <hr style="border: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
+                </body>
+                </html>
+                '''
+            )
+            
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
+                VALUES (%s, 'ban', %s, %s, TRUE)
+            """, (user_id, 'Бан аккаунта', f'Причина: {reason}, Длительность: {duration_text}'))
+        except Exception as e:
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
+                VALUES (%s, 'ban', %s, %s, FALSE, %s)
+            """, (user_id, 'Бан аккаунта', f'Причина: {reason}', str(e)))
+    
+    conn.commit()
+    
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Пользователь забанен'}),
+        'body': json.dumps({'success': True, 'message': 'Пользователь забанен, уведомление отправлено'}),
         'isBase64Encoded': False
     }
 
@@ -356,10 +429,47 @@ def execute_mute(cur, conn, admin_id: str, data: dict) -> dict:
         VALUES (%s, 'mute', %s, %s)
     """, (admin_id, user_id, json.dumps(data)))
     
+    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
+    user_data = cur.fetchone()
+    
+    if user_data:
+        user_email, user_nickname = user_data
+        duration_text = 'навсегда' if is_permanent else f'{duration_days} дней'
+        
+        try:
+            send_user_notification(
+                user_email,
+                f'{user_nickname}, вы получили мут',
+                f'''
+                <html>
+                <body style="font-family: Arial, sans-serif; color: #333;">
+                    <h2 style="color: #F97316;">Вы получили мут на сайте Disaster Esports</h2>
+                    <p><strong>Причина:</strong> {reason}</p>
+                    <p><strong>Длительность:</strong> {duration_text}</p>
+                    <p>Вы не сможете отправлять сообщения в чате до окончания срока мута.</p>
+                    <hr style="border: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
+                </body>
+                </html>
+                '''
+            )
+            
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
+                VALUES (%s, 'mute', %s, %s, TRUE)
+            """, (user_id, 'Мут аккаунта', f'Причина: {reason}, Длительность: {duration_text}'))
+        except Exception as e:
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
+                VALUES (%s, 'mute', %s, %s, FALSE, %s)
+            """, (user_id, 'Мут аккаунта', f'Причина: {reason}', str(e)))
+    
+    conn.commit()
+    
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Мут выдан'}),
+        'body': json.dumps({'success': True, 'message': 'Мут выдан, уведомление отправлено'}),
         'isBase64Encoded': False
     }
 
@@ -517,12 +627,45 @@ def remove_ban(cur, conn, admin_id: str, body: dict) -> dict:
         VALUES (%s, 'unban', %s, %s)
     """, (admin_id, user_id, json.dumps({'action': 'unban'})))
     
+    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
+    user_data = cur.fetchone()
+    
+    if user_data:
+        user_email, user_nickname = user_data
+        
+        try:
+            send_user_notification(
+                user_email,
+                f'{user_nickname}, бан снят',
+                f'''
+                <html>
+                <body style="font-family: Arial, sans-serif; color: #333;">
+                    <h2 style="color: #10B981;">Бан снят на сайте Disaster Esports</h2>
+                    <p>Ваш аккаунт был разблокирован администратором.</p>
+                    <p>Вы снова можете пользоваться всеми функциями сайта.</p>
+                    <hr style="border: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
+                </body>
+                </html>
+                '''
+            )
+            
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
+                VALUES (%s, 'unban', %s, %s, TRUE)
+            """, (user_id, 'Бан снят', 'Ваш аккаунт разблокирован'))
+        except Exception as e:
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
+                VALUES (%s, 'unban', %s, %s, FALSE, %s)
+            """, (user_id, 'Бан снят', 'Ваш аккаунт разблокирован', str(e)))
+    
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Бан снят'}),
+        'body': json.dumps({'success': True, 'message': 'Бан снят, уведомление отправлено'}),
         'isBase64Encoded': False
     }
 
@@ -538,12 +681,44 @@ def remove_mute(cur, conn, admin_id: str, body: dict) -> dict:
         VALUES (%s, 'unmute', %s, %s)
     """, (admin_id, user_id, json.dumps({'action': 'unmute'})))
     
+    cur.execute("SELECT email, nickname FROM users WHERE id = %s", (user_id,))
+    user_data = cur.fetchone()
+    
+    if user_data:
+        user_email, user_nickname = user_data
+        
+        try:
+            send_user_notification(
+                user_email,
+                f'{user_nickname}, мут снят',
+                f'''
+                <html>
+                <body style="font-family: Arial, sans-serif; color: #333;">
+                    <h2 style="color: #10B981;">Мут снят на сайте Disaster Esports</h2>
+                    <p>Вы снова можете отправлять сообщения в чате.</p>
+                    <hr style="border: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #999;">Disaster Esports</p>
+                </body>
+                </html>
+                '''
+            )
+            
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent)
+                VALUES (%s, 'unmute', %s, %s, TRUE)
+            """, (user_id, 'Мут снят', 'Вы можете снова писать в чате'))
+        except Exception as e:
+            cur.execute("""
+                INSERT INTO user_notifications (user_id, notification_type, subject, message, is_sent, error_message)
+                VALUES (%s, 'unmute', %s, %s, FALSE, %s)
+            """, (user_id, 'Мут снят', 'Вы можете снова писать в чате', str(e)))
+    
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Мут снят'}),
+        'body': json.dumps({'success': True, 'message': 'Мут снят, уведомление отправлено'}),
         'isBase64Encoded': False
     }
 
@@ -1258,3 +1433,70 @@ def get_support(cur, conn) -> dict:
             }),
             'isBase64Encoded': False
         }
+
+def get_all_users(cur, conn) -> dict:
+    """Получает всех зарегистрированных пользователей"""
+    
+    cur.execute("""
+        SELECT id, nickname, email, role, auto_status, is_banned, is_muted, created_at, last_active
+        FROM users
+        ORDER BY created_at DESC
+    """)
+    
+    users = []
+    for row in cur.fetchall():
+        users.append({
+            'id': row[0],
+            'nickname': row[1],
+            'email': row[2],
+            'role': row[3],
+            'auto_status': row[4],
+            'is_banned': row[5],
+            'is_muted': row[6],
+            'created_at': row[7].isoformat() if row[7] else None,
+            'last_active': row[8].isoformat() if row[8] else None
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'users': users}),
+        'isBase64Encoded': False
+    }
+
+def get_dashboard_stats(cur, conn) -> dict:
+    """Получает статистику для дашборда"""
+    
+    cur.execute("SELECT COUNT(*) FROM users")
+    total_users = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM tournaments WHERE status IN ('upcoming', 'in_progress')")
+    active_tournaments = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM news WHERE published = true")
+    published_news = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM users WHERE is_banned = true")
+    active_bans = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM users WHERE is_muted = true")
+    active_mutes = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM teams")
+    total_teams = cur.fetchone()[0]
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'stats': {
+                'total_users': total_users,
+                'active_tournaments': active_tournaments,
+                'published_news': published_news,
+                'active_bans': active_bans,
+                'active_mutes': active_mutes,
+                'total_teams': total_teams
+            }
+        }),
+        'isBase64Encoded': False
+    }
