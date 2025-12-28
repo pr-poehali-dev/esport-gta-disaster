@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Teams from "./pages/Teams";
 import Tournaments from "./pages/Tournaments";
 import Rating from "./pages/Rating";
+import Ratings from "./pages/Ratings";
 import Admin from "./pages/Admin";
 import AdminUsers from "./pages/AdminUsers";
 import AdminTournaments from "./pages/AdminTournaments";
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/teams" element={<Teams />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/rating" element={<Rating />} />
+          <Route path="/ratings" element={<Ratings />} />
           <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
           <Route path="/admin/tournaments" element={<ProtectedRoute requireAdmin><AdminTournaments /></ProtectedRoute>} />

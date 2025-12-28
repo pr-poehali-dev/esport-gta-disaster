@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Icon from '@/components/ui/icon';
 import { showNotification } from '@/components/NotificationSystem';
+import MatchChat from '@/components/MatchChat';
+import BanPick from '@/components/BanPick';
+import { useMatchTimer } from '@/hooks/useMatchTimer';
 
 interface TeamMember {
   id: number;
@@ -35,6 +38,7 @@ interface Match {
   team2_captain_confirmed: boolean;
   moderator_verified: boolean;
   completed_at: string | null;
+  started_at: string | null;
   referee_id: number | null;
   team1: Team;
   team2: Team;
@@ -66,6 +70,8 @@ export default function MatchDetails() {
   const [team2Score, setTeam2Score] = useState(0);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
 
+  const matchTimer = useMatchTimer(match?.started_at || null, 3);
+
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
@@ -96,6 +102,11 @@ export default function MatchDetails() {
   };
 
   const handleUploadScreenshot = async (teamId: number) => {
+    if (match?.status === 'in_progress' && !matchTimer.canUpload) {
+      showNotification('error', 'Ошибка', `Загрузка доступна через ${matchTimer.remainingTime}`);
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -360,6 +371,34 @@ export default function MatchDetails() {
               {team1Score} : {team2Score}
             </h1>
             <p className="text-muted-foreground">Раунд {match.round}</p>
+            
+            {match.status === 'in_progress' && match.started_at && (
+              <div className="mt-4 p-4 rounded-lg bg-background">
+                <div className="text-sm text-muted-foreground mb-2">Время матча</div>
+                <div className="text-3xl font-black">{matchTimer.formattedTime}</div>
+                
+                {!matchTimer.canUpload && (
+                  <div className="mt-2">
+                    <div className="text-xs text-muted-foreground mb-1">
+                      До загрузки результатов: {matchTimer.remainingTime}
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${matchTimer.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {matchTimer.canUpload && (
+                  <div className="text-sm text-green-500 mt-2">
+                    <Icon name="CheckCircle" className="h-4 w-4 inline mr-1" />
+                    Можно загружать результаты
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {(isCaptain || isModerator || isReferee) && match.status !== 'completed' && match.status !== 'nullified' && (
@@ -505,6 +544,15 @@ export default function MatchDetails() {
             </Button>
           )}
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <BanPick 
+          matchId={matchId || ''} 
+          teamId={isCaptain1 ? match.team1_id : isCaptain2 ? match.team2_id : null}
+          isCaptain={isCaptain}
+        />
+        <MatchChat matchId={matchId || ''} />
       </div>
     </div>
   );
