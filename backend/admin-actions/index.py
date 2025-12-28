@@ -92,6 +92,28 @@ def handler(event: dict, context) -> dict:
                 return calculate_match_rating(cur, conn, admin_id, body)
             elif action == 'get_team_ratings':
                 return get_team_ratings(cur, conn)
+            elif action == 'verify_admin_password':
+                return verify_admin_password(cur, conn, body)
+            elif action == 'create_news':
+                return create_news(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'update_news':
+                return update_news(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'delete_news':
+                return delete_news(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'get_news':
+                return get_news(cur, conn, body)
+            elif action == 'create_rule':
+                return create_rule(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'update_rule':
+                return update_rule(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'delete_rule':
+                return delete_rule(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'get_rules':
+                return get_rules(cur, conn)
+            elif action == 'update_support':
+                return update_support(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'get_support':
+                return get_support(cur, conn)
             else:
                 return {
                     'statusCode': 400,
@@ -891,3 +913,349 @@ def get_team_ratings(cur, conn) -> dict:
         'body': json.dumps({'ratings': ratings}),
         'isBase64Encoded': False
     }
+
+def verify_admin_password(cur, conn, body: dict) -> dict:
+    """Проверяет пароль админ панели"""
+    import bcrypt
+    
+    password = body.get('password')
+    
+    if not password:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Укажите пароль'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute("SELECT password_hash FROM admin_passwords ORDER BY id DESC LIMIT 1")
+    result = cur.fetchone()
+    
+    if not result:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Пароль админ панели не установлен'}),
+            'isBase64Encoded': False
+        }
+    
+    password_hash = result[0].encode('utf-8')
+    
+    if bcrypt.checkpw(password.encode('utf-8'), password_hash):
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True}),
+            'isBase64Encoded': False
+        }
+    else:
+        return {
+            'statusCode': 401,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Неверный пароль'}),
+            'isBase64Encoded': False
+        }
+
+def create_news(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Создает новость (admin, founder)"""
+    
+    if role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'isBase64Encoded': False
+        }
+    
+    title = body.get('title')
+    content = body.get('content')
+    published = body.get('published', False)
+    
+    cur.execute("""
+        INSERT INTO news (title, content, author_id, published)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id
+    """, (title, content, admin_id, published))
+    
+    news_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'news_id': news_id}),
+        'isBase64Encoded': False
+    }
+
+def update_news(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Обновляет новость (admin, founder)"""
+    
+    if role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'isBase64Encoded': False
+        }
+    
+    news_id = body.get('news_id')
+    title = body.get('title')
+    content = body.get('content')
+    published = body.get('published')
+    
+    cur.execute("""
+        UPDATE news 
+        SET title = COALESCE(%s, title),
+            content = COALESCE(%s, content),
+            published = COALESCE(%s, published),
+            updated_at = NOW()
+        WHERE id = %s
+    """, (title, content, published, news_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
+
+def delete_news(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Удаляет новость (admin, founder)"""
+    
+    if role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'isBase64Encoded': False
+        }
+    
+    news_id = body.get('news_id')
+    
+    cur.execute("UPDATE news SET published = false WHERE id = %s", (news_id,))
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
+
+def get_news(cur, conn, body: dict) -> dict:
+    """Получает новости (published или все для админов)"""
+    
+    include_unpublished = body.get('include_unpublished', False)
+    
+    if include_unpublished:
+        cur.execute("""
+            SELECT n.id, n.title, n.content, n.published, n.created_at, n.updated_at, u.nickname
+            FROM news n
+            JOIN users u ON n.author_id = u.id
+            ORDER BY n.created_at DESC
+        """)
+    else:
+        cur.execute("""
+            SELECT n.id, n.title, n.content, n.published, n.created_at, n.updated_at, u.nickname
+            FROM news n
+            JOIN users u ON n.author_id = u.id
+            WHERE n.published = true
+            ORDER BY n.created_at DESC
+        """)
+    
+    news = []
+    for row in cur.fetchall():
+        news.append({
+            'id': row[0],
+            'title': row[1],
+            'content': row[2],
+            'published': row[3],
+            'created_at': row[4].isoformat() if row[4] else None,
+            'updated_at': row[5].isoformat() if row[5] else None,
+            'author_name': row[6]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'news': news}),
+        'isBase64Encoded': False
+    }
+
+def create_rule(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Создает правило (admin, founder)"""
+    
+    if role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'isBase64Encoded': False
+        }
+    
+    title = body.get('title')
+    content = body.get('content')
+    order_index = body.get('order_index', 0)
+    
+    cur.execute("""
+        INSERT INTO rules (title, content, order_index, author_id)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id
+    """, (title, content, order_index, admin_id))
+    
+    rule_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'rule_id': rule_id}),
+        'isBase64Encoded': False
+    }
+
+def update_rule(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Обновляет правило (admin, founder)"""
+    
+    if role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'isBase64Encoded': False
+        }
+    
+    rule_id = body.get('rule_id')
+    title = body.get('title')
+    content = body.get('content')
+    order_index = body.get('order_index')
+    
+    cur.execute("""
+        UPDATE rules
+        SET title = COALESCE(%s, title),
+            content = COALESCE(%s, content),
+            order_index = COALESCE(%s, order_index),
+            updated_at = NOW()
+        WHERE id = %s
+    """, (title, content, order_index, rule_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
+
+def delete_rule(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Удаляет правило (admin, founder)"""
+    
+    if role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав'}),
+            'isBase64Encoded': False
+        }
+    
+    rule_id = body.get('rule_id')
+    
+    cur.execute("UPDATE rules SET content = '[Удалено]' WHERE id = %s", (rule_id,))
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
+
+def get_rules(cur, conn) -> dict:
+    """Получает все правила"""
+    
+    cur.execute("""
+        SELECT r.id, r.title, r.content, r.order_index, r.created_at, u.nickname
+        FROM rules r
+        JOIN users u ON r.author_id = u.id
+        ORDER BY r.order_index ASC, r.created_at ASC
+    """)
+    
+    rules = []
+    for row in cur.fetchall():
+        rules.append({
+            'id': row[0],
+            'title': row[1],
+            'content': row[2],
+            'order_index': row[3],
+            'created_at': row[4].isoformat() if row[4] else None,
+            'author_name': row[5]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'rules': rules}),
+        'isBase64Encoded': False
+    }
+
+def update_support(cur, conn, admin_id: str, body: dict, role: str) -> dict:
+    """Обновляет контакты поддержки (только founder)"""
+    
+    if role != 'founder':
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Только основатель может редактировать поддержку'}),
+            'isBase64Encoded': False
+        }
+    
+    content = body.get('content')
+    
+    cur.execute("""
+        INSERT INTO support_contacts (content, updated_by)
+        VALUES (%s, %s)
+    """, (content, admin_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True}),
+        'isBase64Encoded': False
+    }
+
+def get_support(cur, conn) -> dict:
+    """Получает контакты поддержки"""
+    
+    cur.execute("""
+        SELECT content, updated_at
+        FROM support_contacts
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """)
+    
+    result = cur.fetchone()
+    
+    if result:
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'content': result[0],
+                'updated_at': result[1].isoformat() if result[1] else None
+            }),
+            'isBase64Encoded': False
+        }
+    else:
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'content': 'Контакты поддержки не установлены',
+                'updated_at': None
+            }),
+            'isBase64Encoded': False
+        }

@@ -16,6 +16,7 @@ import Ratings from "./pages/Ratings";
 import Admin from "./pages/Admin";
 import AdminUsers from "./pages/AdminUsers";
 import AdminTournaments from "./pages/AdminTournaments";
+import AdminNews from "./pages/AdminNews";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -33,6 +34,8 @@ import CreateTeam from "./pages/CreateTeam";
 import TeamProfile from "./pages/TeamProfile";
 import UserProfile from "./pages/UserProfile";
 import MatchDetails from "./pages/MatchDetails";
+import Rules from "./pages/Rules";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +58,7 @@ const App = () => (
           <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
           <Route path="/admin/tournaments" element={<ProtectedRoute requireAdmin><AdminTournaments /></ProtectedRoute>} />
+          <Route path="/admin/news" element={<ProtectedRoute requireAdmin><AdminNews /></ProtectedRoute>} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/verify" element={<VerifyEmail />} />
@@ -72,6 +76,8 @@ const App = () => (
           <Route path="/teams/:id" element={<TeamProfile />} />
           <Route path="/user/:id" element={<UserProfile />} />
           <Route path="/matches/:matchId" element={<MatchDetails />} />
+          <Route path="/rules" element={<Rules />} />
+          <Route path="/support" element={<Support />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

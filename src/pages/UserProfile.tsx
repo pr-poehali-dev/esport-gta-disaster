@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
 import UserRoleBadge from '@/components/UserRoleBadge';
+import FounderUsername from '@/components/FounderUsername';
 
 interface Match {
   id: number;
@@ -79,8 +80,12 @@ export default function UserProfile() {
 
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <h1 className="text-5xl font-black">{user.nickname}</h1>
-                  <UserRoleBadge role={user.role} autoStatus={user.auto_status} />
+                  {user.role === 'founder' ? (
+                    <FounderUsername nickname={user.nickname} role={user.role} className="text-5xl" />
+                  ) : (
+                    <h1 className="text-5xl font-black">{user.nickname}</h1>
+                  )}
+                  {user.role !== 'founder' && <UserRoleBadge role={user.role} autoStatus={user.auto_status} />}
                 </div>
 
                 {user.custom_status && (
