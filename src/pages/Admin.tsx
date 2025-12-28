@@ -17,6 +17,8 @@ import {
   ModerationSection,
   SupportSection,
   SettingsSection,
+  RolesSection,
+  DiscussionsSection,
 } from '@/components/admin/AdminSections';
 
 export default function Admin() {
@@ -154,6 +156,8 @@ export default function Admin() {
             </div>
           )}
           {activeSection === 'news' && <NewsSection />}
+          {activeSection === 'roles' && <RolesSection />}
+          {activeSection === 'discussions' && <DiscussionsSection />}
           {activeSection === 'moderation' && <ModerationSection />}
           {activeSection === 'support' && <SupportSection />}
           {activeSection === 'settings' && <SettingsSection />}

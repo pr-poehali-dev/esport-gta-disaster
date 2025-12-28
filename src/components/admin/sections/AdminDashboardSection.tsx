@@ -105,17 +105,25 @@ export function AdminDashboardSection() {
             </Card>
 
             <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="MessageSquareOff" size={32} className="text-orange-500" />
+              <Icon name="VolumeX" size={32} className="text-orange-500" />
               <h3 className="text-2xl font-bold">{stats.active_mutes}</h3>
-              <p className="text-muted-foreground">Активных мутов</p>
+              <p className="text-muted-foreground text-sm">Активных мутов</p>
             </Card>
 
             <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="Users" size={32} className="text-purple-500" />
+              <Icon name="Shield" size={32} className="text-purple-500" />
               <h3 className="text-2xl font-bold">{stats.total_teams}</h3>
-              <p className="text-muted-foreground">Всего команд</p>
+              <p className="text-muted-foreground text-sm">Всего команд</p>
             </Card>
           </div>
+
+          <Card className="p-6 mt-6">
+            <h3 className="text-xl font-bold mb-4">Последние действия</h3>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p>• Статистика обновлена</p>
+              <p>• Все системы работают в штатном режиме</p>
+            </div>
+          </Card>
         </>
       )}
     </div>

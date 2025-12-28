@@ -118,6 +118,30 @@ def handler(event: dict, context) -> dict:
                 return get_all_users(cur, conn)
             elif action == 'get_dashboard_stats':
                 return get_dashboard_stats(cur, conn)
+            elif action == 'assign_role':
+                return assign_role(cur, conn, admin_id, admin_role[0], body)
+            elif action == 'revoke_role':
+                return revoke_role(cur, conn, admin_id, admin_role[0], body)
+            elif action == 'get_staff':
+                return get_staff(cur, conn)
+            elif action == 'get_role_history':
+                return get_role_history(cur, conn, body)
+            elif action == 'create_discussion':
+                return create_discussion(cur, conn, admin_id, admin_role[0], body)
+            elif action == 'add_comment':
+                return add_comment(cur, conn, admin_id, admin_role[0], body)
+            elif action == 'get_discussions':
+                return get_discussions(cur, conn)
+            elif action == 'get_discussion':
+                return get_discussion(cur, conn, body)
+            elif action == 'lock_discussion':
+                return lock_discussion(cur, conn, body)
+            elif action == 'pin_discussion':
+                return pin_discussion(cur, conn, body)
+            elif action == 'delete_discussion':
+                return delete_discussion(cur, conn, body)
+            elif action == 'edit_discussion':
+                return edit_discussion(cur, conn, admin_id, body)
             else:
                 return {
                     'statusCode': 400,
@@ -735,20 +759,69 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     team_size = body.get('team_size')
     best_of = body.get('best_of')
     start_date = body.get('start_date')
+    image_base64 = body.get('image')
+    
+    image_url = None
+    if image_base64:
+        try:
+            import base64
+            import boto3
+            from datetime import datetime
+            
+            image_data = base64.b64decode(image_base64.split(',')[1] if ',' in image_base64 else image_base64)
+            
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+            )
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            file_key = f'tournaments/{timestamp}_{name.replace(" ", "_")}.png'
+            
+            s3.put_object(
+                Bucket='files',
+                Key=file_key,
+                Body=image_data,
+                ContentType='image/png'
+            )
+            
+            image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
+        except Exception as e:
+            pass
     
     cur.execute("""
-        INSERT INTO tournaments (name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_by)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming', %s)
+        INSERT INTO t_p4831367_esport_gta_disaster.tournaments 
+        (name, description, prize_pool, location, game_project, map_pool, format, team_size, best_of, start_date, status, created_by, image_url)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming', %s, %s)
         RETURNING id
-    """, (name, description, prize_pool, location, game_project, json.dumps(map_pool), format_type, team_size, best_of, start_date, admin_id))
+    """, (name, description, prize_pool, location, game_project, json.dumps(map_pool), format_type, team_size, best_of, start_date, admin_id, image_url))
     
     tournament_id = cur.fetchone()[0]
+    
+    if image_url:
+        news_content = f"""
+        🏆 Объявлен новый турнир: {name}!
+        
+        📅 Дата начала: {start_date}
+        💰 Призовой фонд: {prize_pool}
+        📍 Локация: {location}
+        
+        {description}
+        """
+        
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.news 
+            (title, content, image_url, author_id, tournament_id, published)
+            VALUES (%s, %s, %s, %s, %s, TRUE)
+        """, (f'Турнир {name}', news_content, image_url, admin_id, tournament_id))
+    
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'tournament_id': tournament_id}),
+        'body': json.dumps({'success': True, 'tournament_id': tournament_id, 'image_url': image_url}),
         'isBase64Encoded': False
     }
 
@@ -1498,5 +1571,456 @@ def get_dashboard_stats(cur, conn) -> dict:
                 'total_teams': total_teams
             }
         }),
+        'isBase64Encoded': False
+    }
+
+def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
+    """Назначение роли пользователю (только founder)"""
+    
+    if admin_role != 'founder':
+        return error_response('Только основатель может назначать роли', 403)
+    
+    user_id = body.get('user_id')
+    new_role = body.get('role')
+    
+    if not user_id or not new_role:
+        return error_response('Не указан пользователь или роль', 400)
+    
+    allowed_roles = ['user', 'moderator', 'admin', 'organizer']
+    if new_role not in allowed_roles:
+        return error_response(f'Недопустимая роль. Доступные: {", ".join(allowed_roles)}', 400)
+    
+    cur.execute("SELECT nickname, role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
+    user_data = cur.fetchone()
+    
+    if not user_data:
+        return error_response('Пользователь не найден', 404)
+    
+    old_role = user_data[1]
+    username = user_data[0]
+    
+    cur.execute("UPDATE t_p4831367_esport_gta_disaster.users SET role = %s WHERE id = %s", (new_role, user_id))
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.admin_action_logs 
+        (admin_id, action_type, target_user_id, details)
+        VALUES (%s, %s, %s, %s)
+    """, (admin_id, 'role_change', user_id, json.dumps({
+        'old_role': old_role,
+        'new_role': new_role,
+        'username': username
+    })))
+    
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'message': f'Роль пользователя {username} изменена с {old_role} на {new_role}'
+    })
+
+def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
+    """Снятие роли с пользователя (только founder)"""
+    
+    if admin_role != 'founder':
+        return error_response('Только основатель может снимать роли', 403)
+    
+    user_id = body.get('user_id')
+    
+    if not user_id:
+        return error_response('Не указан пользователь', 400)
+    
+    cur.execute("SELECT nickname, role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
+    user_data = cur.fetchone()
+    
+    if not user_data:
+        return error_response('Пользователь не найден', 404)
+    
+    old_role = user_data[1]
+    username = user_data[0]
+    
+    if old_role == 'founder':
+        return error_response('Нельзя снять роль основателя', 403)
+    
+    cur.execute("UPDATE t_p4831367_esport_gta_disaster.users SET role = %s WHERE id = %s", ('user', user_id))
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.admin_action_logs 
+        (admin_id, action_type, target_user_id, details)
+        VALUES (%s, %s, %s, %s)
+    """, (admin_id, 'role_revoke', user_id, json.dumps({
+        'old_role': old_role,
+        'new_role': 'user',
+        'username': username
+    })))
+    
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'message': f'Роль {old_role} снята с пользователя {username}'
+    })
+
+def get_staff(cur, conn) -> dict:
+    """Получение списка администраторов и модераторов"""
+    
+    cur.execute("""
+        SELECT id, nickname, email, role, avatar_url, created_at, last_activity_at
+        FROM t_p4831367_esport_gta_disaster.users
+        WHERE role IN ('founder', 'organizer', 'admin', 'moderator')
+        ORDER BY 
+            CASE role
+                WHEN 'founder' THEN 1
+                WHEN 'organizer' THEN 2
+                WHEN 'admin' THEN 3
+                WHEN 'moderator' THEN 4
+            END,
+            nickname
+    """)
+    
+    staff = []
+    for row in cur.fetchall():
+        staff.append({
+            'id': row[0],
+            'nickname': row[1],
+            'email': row[2],
+            'role': row[3],
+            'avatar_url': row[4],
+            'created_at': row[5].isoformat() if row[5] else None,
+            'last_activity_at': row[6].isoformat() if row[6] else None
+        })
+    
+    return success_response({'staff': staff})
+
+def get_role_history(cur, conn, body: dict) -> dict:
+    """История изменения ролей"""
+    
+    limit = body.get('limit', 50)
+    
+    cur.execute("""
+        SELECT 
+            l.id, l.admin_id, l.action_type, l.target_user_id, l.details, l.created_at,
+            a.nickname as admin_name,
+            u.nickname as target_name
+        FROM t_p4831367_esport_gta_disaster.admin_action_logs l
+        LEFT JOIN t_p4831367_esport_gta_disaster.users a ON l.admin_id = a.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON l.target_user_id = u.id
+        WHERE l.action_type IN ('role_change', 'role_revoke')
+        ORDER BY l.created_at DESC
+        LIMIT %s
+    """, (limit,))
+    
+    history = []
+    for row in cur.fetchall():
+        details = json.loads(row[4]) if row[4] else {}
+        history.append({
+            'id': row[0],
+            'admin_id': row[1],
+            'admin_name': row[6],
+            'action_type': row[2],
+            'target_user_id': row[3],
+            'target_name': row[7],
+            'old_role': details.get('old_role'),
+            'new_role': details.get('new_role'),
+            'created_at': row[5].isoformat() if row[5] else None
+        })
+    
+    return success_response({'history': history})
+
+def create_discussion(cur, conn, user_id: str, user_role: str, body: dict) -> dict:
+    """Создание новой темы обсуждения (только модераторы)"""
+    
+    can_moderate = user_role in ['founder', 'organizer', 'admin', 'moderator']
+    
+    if not can_moderate:
+        return error_response('Только модераторы могут создавать обсуждения', 403)
+    
+    title = body.get('title', '').strip()
+    content = body.get('content', '').strip()
+    
+    if not title or not content:
+        return error_response('Заголовок и содержание обязательны', 400)
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.discussions 
+        (title, content, author_id, created_at, updated_at)
+        VALUES (%s, %s, %s, NOW(), NOW())
+        RETURNING id
+    """, (title, content, user_id))
+    
+    discussion_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'discussion_id': discussion_id,
+        'message': f'Обсуждение "{title}" создано'
+    })
+
+def add_comment(cur, conn, user_id: str, user_role: str, body: dict) -> dict:
+    """Добавление комментария к обсуждению"""
+    
+    can_moderate = user_role in ['founder', 'organizer', 'admin', 'moderator']
+    discussion_id = body.get('discussion_id')
+    content = body.get('content', '').strip()
+    
+    if not discussion_id or not content:
+        return error_response('Укажите обсуждение и текст комментария', 400)
+    
+    cur.execute("""
+        SELECT is_locked, status FROM t_p4831367_esport_gta_disaster.discussions 
+        WHERE id = %s
+    """, (discussion_id,))
+    
+    discussion = cur.fetchone()
+    if not discussion:
+        return error_response('Обсуждение не найдено', 404)
+    
+    is_locked = discussion[0]
+    status = discussion[1]
+    
+    if (is_locked or status in ['closed', 'under_review']) and not can_moderate:
+        return error_response('Обсуждение закрыто. Только модераторы могут писать', 403)
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.discussion_comments 
+        (discussion_id, author_id, content, created_at)
+        VALUES (%s, %s, %s, NOW())
+        RETURNING id
+    """, (discussion_id, user_id, content))
+    
+    comment_id = cur.fetchone()[0]
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.discussions 
+        SET updated_at = NOW() 
+        WHERE id = %s
+    """, (discussion_id,))
+    
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'comment_id': comment_id,
+        'message': 'Комментарий добавлен'
+    })
+
+def get_discussions(cur, conn) -> dict:
+    """Получение всех обсуждений"""
+    
+    cur.execute("""
+        SELECT 
+            d.id, d.title, d.content, d.author_id, d.is_locked, d.is_pinned, 
+            d.status, d.views, d.created_at, d.updated_at,
+            u.nickname, u.avatar_url,
+            (SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.discussion_comments WHERE discussion_id = d.id) as comment_count
+        FROM t_p4831367_esport_gta_disaster.discussions d
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
+        WHERE d.status != 'deleted'
+        ORDER BY d.is_pinned DESC, d.updated_at DESC
+        LIMIT 100
+    """)
+    
+    discussions = []
+    for row in cur.fetchall():
+        discussions.append({
+            'id': row[0],
+            'title': row[1],
+            'content': row[2][:200] + '...' if len(row[2]) > 200 else row[2],
+            'author_id': row[3],
+            'is_locked': row[4],
+            'is_pinned': row[5],
+            'status': row[6],
+            'views': row[7],
+            'created_at': row[8].isoformat() if row[8] else None,
+            'updated_at': row[9].isoformat() if row[9] else None,
+            'author_name': row[10],
+            'author_avatar': row[11],
+            'comment_count': row[12]
+        })
+    
+    return success_response({'discussions': discussions})
+
+def get_discussion(cur, conn, body: dict) -> dict:
+    """Получение обсуждения с комментариями"""
+    
+    discussion_id = body.get('discussion_id')
+    
+    if not discussion_id:
+        return error_response('Не указан ID обсуждения', 400)
+    
+    cur.execute("""
+        SELECT 
+            d.id, d.title, d.content, d.author_id, d.is_locked, d.is_pinned, 
+            d.status, d.views, d.created_at, d.updated_at,
+            u.nickname, u.avatar_url
+        FROM t_p4831367_esport_gta_disaster.discussions d
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
+        WHERE d.id = %s
+    """, (discussion_id,))
+    
+    row = cur.fetchone()
+    if not row:
+        return error_response('Обсуждение не найдено', 404)
+    
+    discussion = {
+        'id': row[0],
+        'title': row[1],
+        'content': row[2],
+        'author_id': row[3],
+        'is_locked': row[4],
+        'is_pinned': row[5],
+        'status': row[6],
+        'views': row[7],
+        'created_at': row[8].isoformat() if row[8] else None,
+        'updated_at': row[9].isoformat() if row[9] else None,
+        'author_name': row[10],
+        'author_avatar': row[11]
+    }
+    
+    cur.execute("""
+        SELECT 
+            c.id, c.content, c.created_at, c.author_id,
+            u.nickname, u.avatar_url
+        FROM t_p4831367_esport_gta_disaster.discussion_comments c
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON c.author_id = u.id
+        WHERE c.discussion_id = %s
+        ORDER BY c.created_at ASC
+    """, (discussion_id,))
+    
+    comments = []
+    for row in cur.fetchall():
+        comments.append({
+            'id': row[0],
+            'content': row[1],
+            'created_at': row[2].isoformat() if row[2] else None,
+            'author_id': row[3],
+            'author_name': row[4],
+            'author_avatar': row[5]
+        })
+    
+    discussion['comments'] = comments
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.discussions 
+        SET views = views + 1 
+        WHERE id = %s
+    """, (discussion_id,))
+    conn.commit()
+    
+    return success_response({'discussion': discussion})
+
+def lock_discussion(cur, conn, body: dict) -> dict:
+    """Блокировка обсуждения"""
+    
+    discussion_id = body.get('discussion_id')
+    lock = body.get('lock', True)
+    
+    if not discussion_id:
+        return error_response('Не указан ID обсуждения', 400)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.discussions 
+        SET is_locked = %s 
+        WHERE id = %s
+    """, (lock, discussion_id))
+    
+    conn.commit()
+    
+    status = 'заблокировано' if lock else 'разблокировано'
+    return success_response({
+        'success': True,
+        'message': f'Обсуждение {status}'
+    })
+
+def pin_discussion(cur, conn, body: dict) -> dict:
+    """Закрепление обсуждения"""
+    
+    discussion_id = body.get('discussion_id')
+    pin = body.get('pin', True)
+    
+    if not discussion_id:
+        return error_response('Не указан ID обсуждения', 400)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.discussions 
+        SET is_pinned = %s 
+        WHERE id = %s
+    """, (pin, discussion_id))
+    
+    conn.commit()
+    
+    status = 'закреплено' if pin else 'откреплено'
+    return success_response({
+        'success': True,
+        'message': f'Обсуждение {status}'
+    })
+
+def delete_discussion(cur, conn, body: dict) -> dict:
+    """Удаление обсуждения"""
+    
+    discussion_id = body.get('discussion_id')
+    
+    if not discussion_id:
+        return error_response('Не указан ID обсуждения', 400)
+    
+    cur.execute("SELECT title FROM t_p4831367_esport_gta_disaster.discussions WHERE id = %s", (discussion_id,))
+    title = cur.fetchone()
+    
+    if not title:
+        return error_response('Обсуждение не найдено', 404)
+    
+    cur.execute("UPDATE t_p4831367_esport_gta_disaster.discussions SET status = %s WHERE id = %s", ('deleted', discussion_id))
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'message': f'Обсуждение "{title[0]}" удалено'
+    })
+
+def edit_discussion(cur, conn, user_id: str, body: dict) -> dict:
+    """Редактирование обсуждения"""
+    
+    discussion_id = body.get('discussion_id')
+    title = body.get('title', '').strip()
+    content = body.get('content', '').strip()
+    
+    if not discussion_id:
+        return error_response('Не указан ID обсуждения', 400)
+    
+    if not title or not content:
+        return error_response('Заголовок и содержание обязательны', 400)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.discussions 
+        SET title = %s, content = %s, updated_at = NOW() 
+        WHERE id = %s
+    """, (title, content, discussion_id))
+    
+    conn.commit()
+    
+    return success_response({
+        'success': True,
+        'message': 'Обсуждение обновлено'
+    })
+
+def success_response(data: dict) -> dict:
+    return {
+        'statusCode': 200,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+        },
+        'body': json.dumps(data),
+        'isBase64Encoded': False
+    }
+
+def error_response(message: str, status_code: int = 400) -> dict:
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+        },
+        'body': json.dumps({'error': message}),
         'isBase64Encoded': False
     }

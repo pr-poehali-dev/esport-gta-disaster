@@ -88,6 +88,22 @@ export default function AdminSidebar({ activeSection, setActiveSection, onLogout
       <div className="pt-4">
         <p className="text-xs text-muted-foreground px-4 mb-2">ПРОЧЕЕ</p>
         <Button
+          variant={activeSection === 'roles' ? 'default' : 'ghost'}
+          className="w-full justify-start"
+          onClick={() => setActiveSection('roles')}
+        >
+          <Icon name="Crown" size={20} className="mr-2" />
+          Роли
+        </Button>
+        <Button
+          variant={activeSection === 'discussions' ? 'default' : 'ghost'}
+          className="w-full justify-start"
+          onClick={() => setActiveSection('discussions')}
+        >
+          <Icon name="MessageCircle" size={20} className="mr-2" />
+          Обсуждения
+        </Button>
+        <Button
           variant={activeSection === 'moderation' ? 'default' : 'ghost'}
           className="w-full justify-start"
           onClick={() => setActiveSection('moderation')}

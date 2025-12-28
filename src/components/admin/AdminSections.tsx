@@ -9,3 +9,5 @@ export { AdminNewsSection as NewsSection } from './sections/AdminNewsSection';
 export { AdminModerationSection as ModerationSection } from './sections/AdminModerationSection';
 export { AdminSupportSection as SupportSection } from './sections/AdminSupportSection';
 export { AdminSettingsSection as SettingsSection } from './sections/AdminSettingsSection';
+export { default as RolesSection } from './sections/AdminRolesSection';
+export { default as DiscussionsSection } from './sections/AdminDiscussionsSection';
