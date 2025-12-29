@@ -64,7 +64,7 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        cur.execute(f"SELECT role FROM users WHERE id = '{escape_sql(admin_id)}'")
+        cur.execute(f"SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(admin_id)}'")
         admin_role = cur.fetchone()
         
         if not admin_role or admin_role[0] not in ['admin', 'founder', 'organizer']:
@@ -227,12 +227,12 @@ def send_verification_code(cur, conn, admin_id: str, body: dict) -> dict:
     expires_at = datetime.now() + timedelta(minutes=10)
     
     cur.execute(f"""
-        INSERT INTO admin_verification_codes (admin_id, code, action_type, action_data, expires_at)
+        INSERT INTO t_p4831367_esport_gta_disaster.admin_verification_codes (admin_id, code, action_type, action_data, expires_at)
         VALUES ('{escape_sql(admin_id)}', '{escape_sql(code)}', '{escape_sql(action_type)}', '{escape_sql(action_data)}', '{expires_at}')
     """)
     conn.commit()
     
-    cur.execute(f"SELECT email FROM users WHERE id = '{escape_sql(admin_id)}'")
+    cur.execute(f"SELECT email FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(admin_id)}'")
     admin_email = cur.fetchone()[0]
     
     smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
@@ -281,7 +281,7 @@ def verify_and_execute(cur, conn, admin_id: str, body: dict) -> dict:
     code = body.get('code')
     
     cur.execute(f"""
-        SELECT action_type, action_data FROM admin_verification_codes
+        SELECT action_type, action_data FROM t_p4831367_esport_gta_disaster.admin_verification_codes
         WHERE admin_id = '{escape_sql(admin_id)}' AND code = '{escape_sql(code)}'
         AND expires_at > NOW() AND used = FALSE
         ORDER BY created_at DESC LIMIT 1
@@ -301,7 +301,7 @@ def verify_and_execute(cur, conn, admin_id: str, body: dict) -> dict:
     action_data = json.loads(action_data)
     
     cur.execute(f"""
-        UPDATE admin_verification_codes
+        UPDATE t_p4831367_esport_gta_disaster.admin_verification_codes
         SET used = TRUE
         WHERE admin_id = '{escape_sql(admin_id)}' AND code = '{escape_sql(code)}'
     """)
@@ -331,12 +331,12 @@ def execute_ban(cur, conn, admin_id: str, data: dict) -> dict:
     if duration_days:
         expires_at = datetime.now() + timedelta(days=duration_days)
         cur.execute(f"""
-            INSERT INTO bans (user_id, admin_id, reason, expires_at)
+            INSERT INTO t_p4831367_esport_gta_disaster.bans (user_id, admin_id, reason, expires_at)
             VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}', '{expires_at}')
         """)
     else:
         cur.execute(f"""
-            INSERT INTO bans (user_id, admin_id, reason)
+            INSERT INTO t_p4831367_esport_gta_disaster.bans (user_id, admin_id, reason)
             VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}')
         """)
     
@@ -359,12 +359,12 @@ def execute_mute(cur, conn, admin_id: str, data: dict) -> dict:
     if duration_days:
         expires_at = datetime.now() + timedelta(days=duration_days)
         cur.execute(f"""
-            INSERT INTO mutes (user_id, admin_id, reason, expires_at)
+            INSERT INTO t_p4831367_esport_gta_disaster.mutes (user_id, admin_id, reason, expires_at)
             VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}', '{expires_at}')
         """)
     else:
         cur.execute(f"""
-            INSERT INTO mutes (user_id, admin_id, reason)
+            INSERT INTO t_p4831367_esport_gta_disaster.mutes (user_id, admin_id, reason)
             VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}')
         """)
     
@@ -387,12 +387,12 @@ def execute_tournament_exclusion(cur, conn, admin_id: str, data: dict) -> dict:
     if duration_days:
         expires_at = datetime.now() + timedelta(days=duration_days)
         cur.execute(f"""
-            INSERT INTO tournament_exclusions (user_id, admin_id, reason, expires_at)
+            INSERT INTO t_p4831367_esport_gta_disaster.tournament_exclusions (user_id, admin_id, reason, expires_at)
             VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}', '{expires_at}')
         """)
     else:
         cur.execute(f"""
-            INSERT INTO tournament_exclusions (user_id, admin_id, reason)
+            INSERT INTO t_p4831367_esport_gta_disaster.tournament_exclusions (user_id, admin_id, reason)
             VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(reason)}')
         """)
     
@@ -411,9 +411,9 @@ def get_bans(cur, conn) -> dict:
     cur.execute("""
         SELECT b.id, b.user_id, u.username, b.admin_id, a.username as admin_username,
                b.reason, b.created_at, b.expires_at, b.active
-        FROM bans b
-        JOIN users u ON b.user_id = u.id
-        JOIN users a ON b.admin_id = a.id
+        FROM t_p4831367_esport_gta_disaster.bans b
+        JOIN t_p4831367_esport_gta_disaster.users u ON b.user_id = u.id
+        JOIN t_p4831367_esport_gta_disaster.users a ON b.admin_id = a.id
         WHERE b.active = TRUE
         ORDER BY b.created_at DESC
     """)
@@ -445,9 +445,9 @@ def get_mutes(cur, conn) -> dict:
     cur.execute("""
         SELECT m.id, m.user_id, u.username, m.admin_id, a.username as admin_username,
                m.reason, m.created_at, m.expires_at, m.active
-        FROM mutes m
-        JOIN users u ON m.user_id = u.id
-        JOIN users a ON m.admin_id = a.id
+        FROM t_p4831367_esport_gta_disaster.mutes m
+        JOIN t_p4831367_esport_gta_disaster.users u ON m.user_id = u.id
+        JOIN t_p4831367_esport_gta_disaster.users a ON m.admin_id = a.id
         WHERE m.active = TRUE
         ORDER BY m.created_at DESC
     """)
@@ -479,9 +479,9 @@ def get_exclusions(cur, conn) -> dict:
     cur.execute("""
         SELECT e.id, e.user_id, u.username, e.admin_id, a.username as admin_username,
                e.reason, e.created_at, e.expires_at, e.active
-        FROM tournament_exclusions e
-        JOIN users u ON e.user_id = u.id
-        JOIN users a ON e.admin_id = a.id
+        FROM t_p4831367_esport_gta_disaster.tournament_exclusions e
+        JOIN t_p4831367_esport_gta_disaster.users u ON e.user_id = u.id
+        JOIN t_p4831367_esport_gta_disaster.users a ON e.admin_id = a.id
         WHERE e.active = TRUE
         ORDER BY e.created_at DESC
     """)
@@ -513,7 +513,7 @@ def remove_ban(cur, conn, admin_id: str, body: dict) -> dict:
     ban_id = body.get('ban_id')
     
     cur.execute(f"""
-        UPDATE bans SET active = FALSE
+        UPDATE t_p4831367_esport_gta_disaster.bans SET active = FALSE
         WHERE id = {int(ban_id)}
     """)
     conn.commit()
@@ -531,7 +531,7 @@ def remove_mute(cur, conn, admin_id: str, body: dict) -> dict:
     mute_id = body.get('mute_id')
     
     cur.execute(f"""
-        UPDATE mutes SET active = FALSE
+        UPDATE t_p4831367_esport_gta_disaster.mutes SET active = FALSE
         WHERE id = {int(mute_id)}
     """)
     conn.commit()
@@ -557,7 +557,7 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     format_type = body.get('format_type', 'single_elimination')
     
     cur.execute(f"""
-        INSERT INTO tournaments (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_type, created_by)
+        INSERT INTO t_p4831367_esport_gta_disaster.tournaments (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_type, created_by)
         VALUES ('{escape_sql(name)}', '{escape_sql(description)}', '{escape_sql(game)}', '{escape_sql(start_date)}', '{escape_sql(end_date)}', {int(max_teams)}, '{escape_sql(prize_pool)}', '{escape_sql(rules)}', '{escape_sql(format_type)}', '{escape_sql(admin_id)}')
         RETURNING id
     """)
@@ -647,8 +647,8 @@ def get_tournament(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         SELECT tr.id, tr.team_id, t.name, tr.status, tr.registered_at
-        FROM tournament_registrations tr
-        JOIN teams t ON tr.team_id = t.id
+        FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+        JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
         WHERE tr.tournament_id = {int(tournament_id)}
         ORDER BY tr.registered_at
     """)
@@ -679,7 +679,7 @@ def register_team(cur, conn, body: dict) -> dict:
     team_id = body.get('team_id')
     
     cur.execute(f"""
-        SELECT status FROM tournaments WHERE id = {int(tournament_id)}
+        SELECT status FROM t_p4831367_esport_gta_disaster.tournaments WHERE id = {int(tournament_id)}
     """)
     
     tournament_status = cur.fetchone()
@@ -740,8 +740,8 @@ def get_match_chat(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         SELECT mc.id, mc.user_id, u.username, mc.message, mc.created_at, mc.message_type
-        FROM match_chat mc
-        JOIN users u ON mc.user_id = u.id
+        FROM t_p4831367_esport_gta_disaster.match_chat mc
+        JOIN t_p4831367_esport_gta_disaster.users u ON mc.user_id = u.id
         WHERE mc.match_id = {int(match_id)}
         ORDER BY mc.created_at
     """)
@@ -772,7 +772,7 @@ def send_chat_message(cur, conn, admin_id: str, body: dict) -> dict:
     message_type = body.get('message_type', 'text')
     
     cur.execute(f"""
-        INSERT INTO match_chat (match_id, user_id, message, message_type)
+        INSERT INTO t_p4831367_esport_gta_disaster.match_chat (match_id, user_id, message, message_type)
         VALUES ({int(match_id)}, '{escape_sql(admin_id)}', '{escape_sql(message)}', '{escape_sql(message_type)}')
         RETURNING id
     """)
@@ -794,8 +794,8 @@ def get_ban_pick(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         SELECT bp.id, bp.team_id, t.name, bp.hero_name, bp.action_type, bp.action_order, bp.created_at
-        FROM ban_pick bp
-        JOIN teams t ON bp.team_id = t.id
+        FROM t_p4831367_esport_gta_disaster.ban_pick bp
+        JOIN t_p4831367_esport_gta_disaster.teams t ON bp.team_id = t.id
         WHERE bp.match_id = {int(match_id)}
         ORDER BY bp.action_order
     """)
@@ -836,7 +836,7 @@ def make_ban_pick(cur, conn, body: dict) -> dict:
     action_order = cur.fetchone()[0]
     
     cur.execute(f"""
-        INSERT INTO ban_pick (match_id, team_id, hero_name, action_type, action_order)
+        INSERT INTO t_p4831367_esport_gta_disaster.ban_pick (match_id, team_id, hero_name, action_type, action_order)
         VALUES ({int(match_id)}, {int(team_id)}, '{escape_sql(hero_name)}', '{escape_sql(action_type)}', {int(action_order)})
         RETURNING id
     """)
@@ -921,7 +921,7 @@ def get_team_ratings(cur, conn) -> dict:
     cur.execute("""
         SELECT tr.team_id, t.name, tr.rating, tr.matches_played, tr.wins, tr.losses
         FROM team_ratings tr
-        JOIN teams t ON tr.team_id = t.id
+        JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
         ORDER BY tr.rating DESC
     """)
     
@@ -950,7 +950,7 @@ def verify_admin_password(cur, conn, body: dict) -> dict:
     password = body.get('password')
     
     cur.execute(f"""
-        SELECT password_hash FROM users WHERE id = '{escape_sql(admin_id)}'
+        SELECT password_hash FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(admin_id)}'
     """)
     
     password_hash = cur.fetchone()
@@ -996,7 +996,7 @@ def create_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     category = body.get('category', 'general')
     
     cur.execute(f"""
-        INSERT INTO news (title, content, category, author_id)
+        INSERT INTO t_p4831367_esport_gta_disaster.news (title, content, category, author_id)
         VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}')
         RETURNING id
     """)
@@ -1055,7 +1055,7 @@ def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     news_id = body.get('news_id')
     
     cur.execute(f"""
-        DELETE FROM news WHERE id = {int(news_id)}
+        DELETE FROM t_p4831367_esport_gta_disaster.news WHERE id = {int(news_id)}
     """)
     conn.commit()
     
@@ -1076,8 +1076,8 @@ def get_news(cur, conn, body: dict) -> dict:
     if category:
         cur.execute(f"""
             SELECT n.id, n.title, n.content, n.category, n.author_id, u.username, n.created_at
-            FROM news n
-            JOIN users u ON n.author_id = u.id
+            FROM t_p4831367_esport_gta_disaster.news n
+            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
             WHERE n.category = '{escape_sql(category)}'
             ORDER BY n.created_at DESC
             LIMIT {int(limit)} OFFSET {int(offset)}
@@ -1085,8 +1085,8 @@ def get_news(cur, conn, body: dict) -> dict:
     else:
         cur.execute(f"""
             SELECT n.id, n.title, n.content, n.category, n.author_id, u.username, n.created_at
-            FROM news n
-            JOIN users u ON n.author_id = u.id
+            FROM t_p4831367_esport_gta_disaster.news n
+            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
             ORDER BY n.created_at DESC
             LIMIT {int(limit)} OFFSET {int(offset)}
         """)
@@ -1126,7 +1126,7 @@ def create_rule(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     category = body.get('category', 'general')
     
     cur.execute(f"""
-        INSERT INTO rules (title, content, category, created_by)
+        INSERT INTO t_p4831367_esport_gta_disaster.rules (title, content, category, created_by)
         VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}')
         RETURNING id
     """)
@@ -1185,7 +1185,7 @@ def delete_rule(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     rule_id = body.get('rule_id')
     
     cur.execute(f"""
-        DELETE FROM rules WHERE id = {int(rule_id)}
+        DELETE FROM t_p4831367_esport_gta_disaster.rules WHERE id = {int(rule_id)}
     """)
     conn.commit()
     
@@ -1318,10 +1318,10 @@ def get_dashboard_stats(cur, conn) -> dict:
     cur.execute("SELECT COUNT(*) FROM tournaments")
     total_tournaments = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM bans WHERE active = TRUE")
+    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.bans WHERE active = TRUE")
     active_bans = cur.fetchone()[0]
     
-    cur.execute("SELECT COUNT(*) FROM mutes WHERE active = TRUE")
+    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.mutes WHERE active = TRUE")
     active_mutes = cur.fetchone()[0]
     
     return {
@@ -1367,7 +1367,7 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     """)
     
     cur.execute(f"""
-        INSERT INTO role_history (user_id, assigned_by, role, action)
+        INSERT INTO t_p4831367_esport_gta_disaster.role_history (user_id, assigned_by, role, action)
         VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(role)}', 'assigned')
     """)
     
@@ -1394,7 +1394,7 @@ def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     user_id = body.get('user_id')
     
     cur.execute(f"""
-        SELECT role FROM users WHERE id = '{escape_sql(user_id)}'
+        SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(user_id)}'
     """)
     
     current_role = cur.fetchone()
@@ -1414,7 +1414,7 @@ def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     """)
     
     cur.execute(f"""
-        INSERT INTO role_history (user_id, assigned_by, role, action)
+        INSERT INTO t_p4831367_esport_gta_disaster.role_history (user_id, assigned_by, role, action)
         VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(current_role[0])}', 'revoked')
     """)
     
@@ -1461,9 +1461,9 @@ def get_role_history(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         SELECT rh.id, rh.user_id, u1.username, rh.assigned_by, u2.username, rh.role, rh.action, rh.created_at
-        FROM role_history rh
-        JOIN users u1 ON rh.user_id = u1.id
-        JOIN users u2 ON rh.assigned_by = u2.id
+        FROM t_p4831367_esport_gta_disaster.role_history rh
+        JOIN t_p4831367_esport_gta_disaster.users u1 ON rh.user_id = u1.id
+        JOIN t_p4831367_esport_gta_disaster.users u2 ON rh.assigned_by = u2.id
         WHERE rh.user_id = '{escape_sql(user_id)}'
         ORDER BY rh.created_at DESC
     """)
@@ -1496,7 +1496,7 @@ def create_discussion(cur, conn, admin_id: str, admin_role: str, body: dict) -> 
     category = body.get('category', 'general')
     
     cur.execute(f"""
-        INSERT INTO discussions (title, content, category, author_id)
+        INSERT INTO t_p4831367_esport_gta_disaster.discussions (title, content, category, author_id)
         VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}')
         RETURNING id
     """)
@@ -1518,7 +1518,7 @@ def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     content = body.get('content')
     
     cur.execute(f"""
-        SELECT locked FROM discussions WHERE id = {int(discussion_id)}
+        SELECT locked FROM t_p4831367_esport_gta_disaster.discussions WHERE id = {int(discussion_id)}
     """)
     
     locked = cur.fetchone()
@@ -1540,7 +1540,7 @@ def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
         }
     
     cur.execute(f"""
-        INSERT INTO discussion_comments (discussion_id, author_id, content)
+        INSERT INTO t_p4831367_esport_gta_disaster.discussion_comments (discussion_id, author_id, content)
         VALUES ({int(discussion_id)}, '{escape_sql(admin_id)}', '{escape_sql(content)}')
         RETURNING id
     """)
@@ -1560,8 +1560,8 @@ def get_discussions(cur, conn) -> dict:
     
     cur.execute("""
         SELECT d.id, d.title, d.content, d.category, d.author_id, u.username, d.locked, d.pinned, d.created_at
-        FROM discussions d
-        JOIN users u ON d.author_id = u.id
+        FROM t_p4831367_esport_gta_disaster.discussions d
+        JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
         ORDER BY d.pinned DESC, d.created_at DESC
     """)
     
@@ -1593,8 +1593,8 @@ def get_discussion(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         SELECT d.id, d.title, d.content, d.category, d.author_id, u.username, d.locked, d.pinned, d.created_at
-        FROM discussions d
-        JOIN users u ON d.author_id = u.id
+        FROM t_p4831367_esport_gta_disaster.discussions d
+        JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
         WHERE d.id = {int(discussion_id)}
     """)
     
@@ -1622,8 +1622,8 @@ def get_discussion(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         SELECT dc.id, dc.author_id, u.username, dc.content, dc.created_at
-        FROM discussion_comments dc
-        JOIN users u ON dc.author_id = u.id
+        FROM t_p4831367_esport_gta_disaster.discussion_comments dc
+        JOIN t_p4831367_esport_gta_disaster.users u ON dc.author_id = u.id
         WHERE dc.discussion_id = {int(discussion_id)}
         ORDER BY dc.created_at
     """)
@@ -1691,7 +1691,7 @@ def delete_discussion(cur, conn, body: dict) -> dict:
     discussion_id = body.get('discussion_id')
     
     cur.execute(f"""
-        DELETE FROM discussions WHERE id = {int(discussion_id)}
+        DELETE FROM t_p4831367_esport_gta_disaster.discussions WHERE id = {int(discussion_id)}
     """)
     conn.commit()
     
@@ -1741,7 +1741,7 @@ def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str
     image_url = body.get('image_url')
     
     cur.execute(f"""
-        INSERT INTO news (title, content, category, author_id, image_url)
+        INSERT INTO t_p4831367_esport_gta_disaster.news (title, content, category, author_id, image_url)
         VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}', '{escape_sql(image_url)}')
         RETURNING id
     """)
@@ -1762,7 +1762,7 @@ def delete_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     tournament_id = body.get('tournament_id')
     
     cur.execute(f"""
-        DELETE FROM tournaments WHERE id = {int(tournament_id)}
+        DELETE FROM t_p4831367_esport_gta_disaster.tournaments WHERE id = {int(tournament_id)}
     """)
     conn.commit()
     
@@ -1818,7 +1818,7 @@ def get_admin_tournaments(cur, conn) -> dict:
     cur.execute("""
         SELECT t.id, t.name, t.game, t.status, t.start_date, t.max_teams,
                COUNT(DISTINCT tr.id) as registered_teams
-        FROM tournaments t
+        FROM t_p4831367_esport_gta_disaster.tournaments t
         LEFT JOIN tournament_registrations tr ON t.id = tr.tournament_id
         GROUP BY t.id, t.name, t.game, t.status, t.start_date, t.max_teams
         ORDER BY t.start_date DESC
@@ -1871,8 +1871,8 @@ def get_moderation_logs(cur, conn):
         SELECT al.id, al.action_type, al.target_user_id, u.username as target_username,
                al.admin_id, a.username as admin_username, al.reason, al.created_at
         FROM admin_action_logs al
-        LEFT JOIN users u ON al.target_user_id = u.id
-        LEFT JOIN users a ON al.admin_id = a.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON al.target_user_id = u.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users a ON al.admin_id = a.id
         ORDER BY al.created_at DESC
         LIMIT 100
     """)
@@ -1901,8 +1901,8 @@ def get_active_bans(cur, conn):
     cur.execute("""
         SELECT b.id, b.user_id, u.username, b.reason, b.expires_at, b.banned_by, a.username as admin_name, b.created_at
         FROM user_bans b
-        LEFT JOIN users u ON b.user_id = u.id
-        LEFT JOIN users a ON b.banned_by = a.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON b.user_id = u.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users a ON b.banned_by = a.id
         WHERE b.is_active = TRUE
         ORDER BY b.created_at DESC
     """)
@@ -1931,8 +1931,8 @@ def get_active_mutes(cur, conn):
     cur.execute("""
         SELECT m.id, m.user_id, u.username, m.reason, m.expires_at, m.muted_by, a.username as admin_name, m.created_at
         FROM user_mutes m
-        LEFT JOIN users u ON m.user_id = u.id
-        LEFT JOIN users a ON m.muted_by = a.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON m.user_id = u.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users a ON m.muted_by = a.id
         WHERE m.is_active = TRUE
         ORDER BY m.created_at DESC
     """)

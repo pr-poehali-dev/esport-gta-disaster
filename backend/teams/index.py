@@ -110,7 +110,7 @@ def get_verified_teams(conn) -> dict:
                     WHEN (t.wins + t.losses) > 0 THEN ROUND((t.wins::decimal / (t.wins + t.losses)) * 100)
                     ELSE 0 
                 END as win_rate
-            FROM teams t
+            FROM t_p4831367_esport_gta_disaster.teams t
             ORDER BY t.rating DESC, t.level DESC
         """)
         team_rows = cursor.fetchall()
@@ -143,8 +143,8 @@ def get_verified_teams(conn) -> dict:
                     tm.joined_at,
                     u.nickname,
                     u.avatar_url
-                FROM team_members tm
-                JOIN users u ON tm.user_id = u.id
+                FROM t_p4831367_esport_gta_disaster.team_members tm
+                JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
                 WHERE tm.team_id = %s
                 ORDER BY tm.joined_at ASC
             """, (team['id'],))
@@ -196,10 +196,10 @@ def get_match_details(cur, conn, event: dict) -> dict:
             t1.name as team1_name, t1.logo_url as team1_logo, t1.captain_id as team1_captain, t1.team_color as team1_color,
             t2.name as team2_name, t2.logo_url as team2_logo, t2.captain_id as team2_captain, t2.team_color as team2_color,
             u.nickname as referee_name
-        FROM bracket_matches bm
-        LEFT JOIN teams t1 ON bm.team1_id = t1.id
-        LEFT JOIN teams t2 ON bm.team2_id = t2.id
-        LEFT JOIN users u ON bm.referee_id = u.id
+        FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.users u ON bm.referee_id = u.id
         WHERE bm.id = %s
     """, (match_id,))
     
@@ -213,9 +213,9 @@ def get_match_details(cur, conn, event: dict) -> dict:
             ms.id, ms.team_id, ms.screenshot_url, ms.description, 
             ms.uploaded_at, u.nickname as uploaded_by_name,
             t.name as team_name
-        FROM match_screenshots ms
-        JOIN users u ON ms.uploaded_by = u.id
-        JOIN teams t ON ms.team_id = t.id
+        FROM t_p4831367_esport_gta_disaster.match_screenshots ms
+        JOIN t_p4831367_esport_gta_disaster.users u ON ms.uploaded_by = u.id
+        JOIN t_p4831367_esport_gta_disaster.teams t ON ms.team_id = t.id
         WHERE ms.match_id = %s
         ORDER BY ms.uploaded_at DESC
     """, (match_id,))
@@ -224,16 +224,16 @@ def get_match_details(cur, conn, event: dict) -> dict:
     
     cur.execute("""
         SELECT tm.user_id, u.nickname, u.avatar_url, tm.role
-        FROM team_members tm
-        JOIN users u ON tm.user_id = u.id
+        FROM t_p4831367_esport_gta_disaster.team_members tm
+        JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
         WHERE tm.team_id = %s
     """, (match[1],))
     team1_members = cur.fetchall()
     
     cur.execute("""
         SELECT tm.user_id, u.nickname, u.avatar_url, tm.role
-        FROM team_members tm
-        JOIN users u ON tm.user_id = u.id
+        FROM t_p4831367_esport_gta_disaster.team_members tm
+        JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
         WHERE tm.team_id = %s
     """, (match[2],))
     team2_members = cur.fetchall()
@@ -307,7 +307,7 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Требуется авторизация', 401)
     
     cur.execute("""
-        SELECT u.id, u.role FROM users u
+        SELECT u.id, u.role FROM t_p4831367_esport_gta_disaster.users u
         JOIN sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
@@ -327,7 +327,7 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Укажите match_id, team_id и image', 400)
     
     cur.execute("""
-        SELECT captain_id FROM teams WHERE id = %s
+        SELECT captain_id FROM t_p4831367_esport_gta_disaster.teams WHERE id = %s
     """, (team_id,))
     
     team = cur.fetchone()
@@ -371,7 +371,7 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
         cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
         
         cur.execute("""
-            INSERT INTO match_screenshots 
+            INSERT INTO t_p4831367_esport_gta_disaster.match_screenshots 
             (match_id, team_id, uploaded_by, screenshot_url, description)
             VALUES (%s, %s, %s, %s, %s)
             RETURNING id
@@ -402,7 +402,7 @@ def confirm_result(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Требуется авторизация', 401)
     
     cur.execute("""
-        SELECT u.id FROM users u
+        SELECT u.id FROM t_p4831367_esport_gta_disaster.users u
         JOIN sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
@@ -422,7 +422,7 @@ def confirm_result(cur, conn, body: dict, event: dict) -> dict:
         SELECT bm.team1_id, bm.team2_id, t1.captain_id, t2.captain_id,
                bm.team1_captain_confirmed, bm.team2_captain_confirmed,
                bm.team1_score, bm.team2_score
-        FROM bracket_matches bm
+        FROM t_p4831367_esport_gta_disaster.bracket_matches bm
         JOIN teams t1 ON bm.team1_id = t1.id
         JOIN teams t2 ON bm.team2_id = t2.id
         WHERE bm.id = %s
@@ -494,7 +494,7 @@ def update_score(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Требуется авторизация', 401)
     
     cur.execute("""
-        SELECT u.id, u.role FROM users u
+        SELECT u.id, u.role FROM t_p4831367_esport_gta_disaster.users u
         JOIN sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
@@ -514,7 +514,7 @@ def update_score(cur, conn, body: dict, event: dict) -> dict:
     
     cur.execute("""
         SELECT t1.captain_id, t2.captain_id
-        FROM bracket_matches bm
+        FROM t_p4831367_esport_gta_disaster.bracket_matches bm
         JOIN teams t1 ON bm.team1_id = t1.id
         JOIN teams t2 ON bm.team2_id = t2.id
         WHERE bm.id = %s
@@ -556,7 +556,7 @@ def moderate_match(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Требуется авторизация', 401)
     
     cur.execute("""
-        SELECT u.role FROM users u
+        SELECT u.role FROM t_p4831367_esport_gta_disaster.users u
         JOIN sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
@@ -619,7 +619,7 @@ def assign_referee(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Требуется авторизация', 401)
     
     cur.execute("""
-        SELECT u.role FROM users u
+        SELECT u.role FROM t_p4831367_esport_gta_disaster.users u
         JOIN sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
@@ -648,7 +648,7 @@ def assign_referee(cur, conn, body: dict, event: dict) -> dict:
         """, (referee_id, match_id))
     else:
         cur.execute("""
-            SELECT id FROM users 
+            SELECT id FROM t_p4831367_esport_gta_disaster.users 
             WHERE role = 'referee'
             ORDER BY RANDOM()
             LIMIT 1
@@ -679,7 +679,7 @@ def nullify_match(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Требуется авторизация', 401)
     
     cur.execute("""
-        SELECT u.id, u.role FROM users u
+        SELECT u.id, u.role FROM t_p4831367_esport_gta_disaster.users u
         JOIN sessions s ON u.id = s.user_id
         WHERE s.session_token = %s AND s.expires_at > NOW()
     """, (session_token,))
@@ -749,7 +749,7 @@ def get_tournaments(cur, conn, params: dict) -> dict:
                    t.max_teams, t.registration_open, t.game_type, t.prize_pool,
                    t.rules, t.created_at,
                    COUNT(tr.id) as registered_teams
-            FROM tournaments t
+            FROM t_p4831367_esport_gta_disaster.tournaments t
             LEFT JOIN tournament_registrations tr ON t.id = tr.tournament_id AND tr.status = 'approved'
             WHERE t.id = %s
             GROUP BY t.id
@@ -776,7 +776,7 @@ def get_tournaments(cur, conn, params: dict) -> dict:
         
         cur.execute("""
             SELECT t.id, t.name, t.logo_url, t.tag
-            FROM tournament_registrations tr
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
             JOIN teams t ON tr.team_id = t.id
             WHERE tr.tournament_id = %s AND tr.status = 'approved'
         """, (tournament_id,))
@@ -798,7 +798,7 @@ def get_tournaments(cur, conn, params: dict) -> dict:
             SELECT t.id, t.name, t.description, t.start_date, t.game_type, 
                    t.prize_pool, t.max_teams, t.registration_open,
                    COUNT(tr.id) as registered_teams
-            FROM tournaments t
+            FROM t_p4831367_esport_gta_disaster.tournaments t
             LEFT JOIN tournament_registrations tr ON t.id = tr.tournament_id AND tr.status = 'approved'
             GROUP BY t.id
             ORDER BY t.start_date DESC
@@ -833,7 +833,7 @@ def get_news(cur, conn, params: dict) -> dict:
         cur.execute("""
             SELECT n.id, n.title, n.content, n.created_at, n.updated_at,
                    u.nickname as author_name
-            FROM news n
+            FROM t_p4831367_esport_gta_disaster.news n
             LEFT JOIN users u ON n.author_id = u.id
             WHERE n.id = %s AND n.published = true
         """, (news_id,))
@@ -864,7 +864,7 @@ def get_news(cur, conn, params: dict) -> dict:
         
         cur.execute("""
             SELECT n.id, n.title, n.content, n.created_at, u.nickname as author_name
-            FROM news n
+            FROM t_p4831367_esport_gta_disaster.news n
             LEFT JOIN users u ON n.author_id = u.id
             WHERE n.published = true
             ORDER BY n.created_at DESC
@@ -881,7 +881,7 @@ def get_news(cur, conn, params: dict) -> dict:
                 'author': row[4] or 'Администрация'
             })
         
-        cur.execute("SELECT COUNT(*) FROM news WHERE published = true")
+        cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.news WHERE published = true")
         total = cur.fetchone()[0]
         
         return {
@@ -906,7 +906,7 @@ def get_tournament_matches(cur, conn, params: dict) -> dict:
                m.match_number, m.round_name,
                t1.name as team1_name, t1.logo_url as team1_logo, t1.tag as team1_tag,
                t2.name as team2_name, t2.logo_url as team2_logo, t2.tag as team2_tag
-        FROM bracket_matches m
+        FROM t_p4831367_esport_gta_disaster.bracket_matches m
         LEFT JOIN teams t1 ON m.team1_id = t1.id
         LEFT JOIN teams t2 ON m.team2_id = t2.id
         WHERE m.tournament_id = %s

@@ -84,7 +84,7 @@ def register_team(event: dict) -> dict:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
             # Проверяем, не является ли пользователь уже капитаном команды
             cursor.execute("""
-                SELECT id FROM teams WHERE captain_id = %s
+                SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s
             """, (user_id,))
             
             if cursor.fetchone():
@@ -99,7 +99,7 @@ def register_team(event: dict) -> dict:
             
             # Проверяем уникальность тега
             cursor.execute("""
-                SELECT id FROM teams WHERE tag = %s
+                SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE tag = %s
             """, (team_tag,))
             
             if cursor.fetchone():
@@ -114,7 +114,7 @@ def register_team(event: dict) -> dict:
             
             # Создаем команду (verified по умолчанию FALSE)
             cursor.execute("""
-                INSERT INTO teams (name, tag, logo_url, captain_id, description, verified, wins, losses, created_at, updated_at)
+                INSERT INTO t_p4831367_esport_gta_disaster.teams (name, tag, logo_url, captain_id, description, verified, wins, losses, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, FALSE, 0, 0, NOW(), NOW())
                 RETURNING id, name, tag, logo_url, verified, created_at
             """, (team_name, team_tag, logo_url if logo_url else None, user_id, description if description else None))
@@ -123,7 +123,7 @@ def register_team(event: dict) -> dict:
             
             # Добавляем капитана в состав команды
             cursor.execute("""
-                INSERT INTO team_members (team_id, user_id, joined_at, player_role)
+                INSERT INTO t_p4831367_esport_gta_disaster.team_members (team_id, user_id, joined_at, player_role)
                 VALUES (%s, %s, NOW(), %s)
             """, (new_team['id'], user_id, 'Капитан'))
             
