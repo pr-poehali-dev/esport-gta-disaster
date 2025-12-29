@@ -36,6 +36,31 @@ export default function Header() {
     }
   };
 
+  const handleLogout = async () => {
+    const sessionToken = localStorage.getItem('session_token');
+    
+    if (sessionToken) {
+      try {
+        await fetch('https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Token': sessionToken
+          },
+          body: JSON.stringify({ action: 'logout' })
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+    
+    localStorage.removeItem('session_token');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setUserRole(null);
+    navigate('/');
+  };
+
   const navLinks = [
     { label: 'Новости', href: '/news', external: false },
     { label: 'Обсуждения', href: '/forum', external: false },
@@ -124,6 +149,14 @@ export default function Header() {
                     Админ-Панель
                   </a>
                 )}
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  className="font-semibold flex items-center gap-2 text-muted-foreground hover:text-destructive"
+                >
+                  <Icon name="LogOut" className="h-4 w-4" />
+                  ВЫХОД
+                </Button>
               </>
             )}
             {socialLinks.map((social) => (
@@ -205,6 +238,17 @@ export default function Header() {
                     АДМИН-ПАНЕЛЬ
                   </Button>
                 )}
+                <Button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  variant="outline"
+                  className="w-full justify-center font-semibold text-muted-foreground hover:text-destructive border-destructive/30 hover:border-destructive"
+                >
+                  <Icon name="LogOut" className="h-4 w-4 mr-2" />
+                  ВЫХОД
+                </Button>
               </div>
             )}
 
