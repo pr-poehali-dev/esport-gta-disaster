@@ -40,12 +40,16 @@ const VerifyEmail = () => {
       });
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setStatus('success');
         setMessage('Email успешно подтвержден!');
         
-        localStorage.setItem('session_token', data.session_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.session_token) {
+          localStorage.setItem('session_token', data.session_token);
+        }
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
         
         playSuccessSound();
         toast({
@@ -66,10 +70,10 @@ const VerifyEmail = () => {
         }, 2000);
       } else {
         setStatus('error');
-        setMessage(data.error || 'Не удалось подтвердить email');
+        setMessage(data.error || data.message || 'Не удалось подтвердить email');
         toast({
           title: 'Ошибка',
-          description: data.error || 'Не удалось подтвердить email',
+          description: data.error || data.message || 'Не удалось подтвердить email',
           variant: 'destructive'
         });
       }

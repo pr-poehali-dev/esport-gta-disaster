@@ -108,12 +108,12 @@ export default function Login() {
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm text-gray-400 font-semibold">ПОЧТА</label>
+              <label className="text-sm text-gray-400 font-semibold">ПОЧТА ИЛИ НИКНЕЙМ</label>
               <div className="relative">
-                <Icon name="Mail" className="absolute left-3 top-3 text-gray-500" size={20} />
+                <Icon name="User" className="absolute left-3 top-3 text-gray-500" size={20} />
                 <Input
-                  type="email"
-                  placeholder="example@gmail.com"
+                  type="text"
+                  placeholder="example@gmail.com или nickname"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}

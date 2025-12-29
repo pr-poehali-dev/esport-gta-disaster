@@ -39,7 +39,11 @@ export default function ForgotPassword() {
         throw new Error(data.error || 'Ошибка запроса');
       }
 
-      setSuccess('Код восстановления отправлен на вашу почту. Введите его ниже вместе с новым паролем');
+      if (data.email_sent) {
+        setSuccess('Код восстановления отправлен на вашу почту. Введите его ниже вместе с новым паролем');
+      } else {
+        setSuccess(`Код создан, но письмо не отправлено: ${data.error || 'SMTP не настроен'}. Введите код ниже, если он у вас есть.`);
+      }
       setStep('reset');
     } catch (err: any) {
       setError(err.message);

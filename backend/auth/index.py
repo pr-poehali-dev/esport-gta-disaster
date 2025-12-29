@@ -274,19 +274,19 @@ def resend_verification(cur, conn, body: dict) -> dict:
         return error_response(f'Ошибка отправки письма: {str(e)}', 500)
 
 def login(cur, conn, body: dict) -> dict:
-    """Вход в аккаунт"""
-    email = body.get('email', '').strip().lower()
+    """Вход в аккаунт (по email или никнейму)"""
+    login_identifier = body.get('email', '').strip()
     password = body.get('password', '')
     
-    if not email or not password:
+    if not login_identifier or not password:
         return error_response('Заполните все поля', 400)
     
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     
     cur.execute("""
         SELECT id, email_verified, is_banned FROM t_p4831367_esport_gta_disaster.users 
-        WHERE LOWER(email) = LOWER(%s) AND password_hash = %s
-    """, (email, password_hash))
+        WHERE (LOWER(email) = LOWER(%s) OR LOWER(nickname) = LOWER(%s)) AND password_hash = %s
+    """, (login_identifier, login_identifier, password_hash))
     
     user = cur.fetchone()
     
