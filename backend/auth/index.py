@@ -613,28 +613,34 @@ def admin_get_users(cur, conn, event: dict) -> dict:
     if not admin_token:
         return error_response('Требуется авторизация', 401)
     
-    cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE session_token = %s", (admin_token,))
+    cur.execute("""
+        SELECT u.role FROM t_p4831367_esport_gta_disaster.users u
+        JOIN t_p4831367_esport_gta_disaster.sessions s ON u.id = s.user_id
+        WHERE s.session_token = %s AND s.expires_at > NOW()
+    """, (admin_token,))
     admin = cur.fetchone()
     
-    if not admin or admin[0] not in ['admin', 'founder']:
+    if not admin or admin['role'] not in ['admin', 'founder']:
         return error_response('Доступ запрещен', 403)
     
     cur.execute("""
-        SELECT id, nickname, email, role, status, avatar_url, signature, created_at
+        SELECT id, nickname, email, role, 
+               COALESCE(user_status, 'active') as status,
+               avatar_url, signature_url as signature, created_at
         FROM t_p4831367_esport_gta_disaster.users
         ORDER BY created_at DESC
     """)
     users = cur.fetchall()
     
     users_list = [{
-        'id': u[0],
-        'nickname': u[1],
-        'email': u[2],
-        'role': u[3],
-        'status': u[4],
-        'avatar_url': u[5],
-        'signature': u[6],
-        'created_at': u[7].isoformat() if u[7] else None
+        'id': u['id'],
+        'nickname': u['nickname'],
+        'email': u['email'],
+        'role': u['role'],
+        'status': u['status'] or 'active',
+        'avatar_url': u['avatar_url'],
+        'signature': u['signature'],
+        'created_at': u['created_at'].isoformat() if u['created_at'] else None
     } for u in users]
     
     return {
@@ -651,10 +657,14 @@ def admin_update_user(cur, conn, body: dict, event: dict) -> dict:
     if not admin_token:
         return error_response('Требуется авторизация', 401)
     
-    cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE session_token = %s", (admin_token,))
+    cur.execute("""
+        SELECT u.role FROM t_p4831367_esport_gta_disaster.users u
+        JOIN t_p4831367_esport_gta_disaster.sessions s ON u.id = s.user_id
+        WHERE s.session_token = %s AND s.expires_at > NOW()
+    """, (admin_token,))
     admin = cur.fetchone()
     
-    if not admin or admin[0] not in ['admin', 'founder']:
+    if not admin or admin['role'] not in ['admin', 'founder']:
         return error_response('Доступ запрещен', 403)
     
     user_id = body.get('user_id')
@@ -669,7 +679,7 @@ def admin_update_user(cur, conn, body: dict, event: dict) -> dict:
         values.append(body['role'])
     
     if 'status' in body:
-        updates.append('status = %s')
+        updates.append('user_status = %s')
         values.append(body['status'])
     
     if 'avatar_url' in body:
@@ -677,7 +687,7 @@ def admin_update_user(cur, conn, body: dict, event: dict) -> dict:
         values.append(body['avatar_url'])
     
     if 'signature' in body:
-        updates.append('signature = %s')
+        updates.append('signature_url = %s')
         values.append(body['signature'])
     
     if not updates:
@@ -698,22 +708,34 @@ def admin_update_user(cur, conn, body: dict, event: dict) -> dict:
 def send_reset_email(to_email: str, nickname: str, token: str, smtp_email: str, smtp_password: str):
     '''Отправка email с кодом восстановления'''
     subject = "Восстановление пароля DISASTER ESPORTS"
+    reset_url = f"https://disaster-esports.ru/forgot-password?token={token}"
     
     html_content = f"""
     <html>
         <body style="font-family: Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #1a1a1a; border: 1px solid #333; padding: 30px; border-radius: 10px;">
-                <h1 style="color: #0d94e7; margin-bottom: 20px;">DISASTER ESPORTS</h1>
+                <h1 style="color: #0d94e7; margin-bottom: 20px;">🎮 DISASTER ESPORTS</h1>
                 <h2 style="color: #ffffff;">Восстановление пароля</h2>
                 <p>Здравствуйте, {nickname}!</p>
-                <p>Вы запросили восстановление пароля. Ваш код восстановления:</p>
-                <div style="background-color: #0d94e7; color: #ffffff; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; border-radius: 5px; margin: 20px 0;">
-                    {token}
+                <p>Вы запросили восстановление пароля. Нажмите кнопку ниже, чтобы установить новый пароль:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_url}" 
+                       style="display: inline-block; background: linear-gradient(135deg, #0D94E7 0%, #A855F7 100%); 
+                              color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; 
+                              font-size: 18px; font-weight: bold;">
+                        ВОССТАНОВИТЬ ПАРОЛЬ
+                    </a>
                 </div>
-                <p style="color: #999;">Код действителен в течение 1 часа.</p>
-                <p style="color: #999;">Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.</p>
+                <p style="font-size: 14px; color: #888; text-align: center; margin-top: 30px;">
+                    Или скопируйте этот код восстановления:<br>
+                    <span style="background-color: #0d94e7; color: #ffffff; padding: 10px 20px; font-size: 18px; font-weight: bold; border-radius: 5px; display: inline-block; margin-top: 10px;">
+                        {token}
+                    </span>
+                </p>
+                <p style="color: #999; text-align: center; margin-top: 20px;">Код действителен в течение 1 часа.</p>
+                <p style="color: #999; text-align: center;">Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.</p>
                 <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
-                <p style="color: #666; font-size: 12px;">DISASTER ESPORTS - Киберспортивная организация</p>
+                <p style="color: #666; font-size: 12px; text-align: center;">DISASTER ESPORTS © 2025<br>Киберспортивная организация</p>
             </div>
         </body>
     </html>

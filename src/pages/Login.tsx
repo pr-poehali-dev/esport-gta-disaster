@@ -171,11 +171,23 @@ export default function Login() {
                 <div className="w-full border-t border-gray-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-transparent text-gray-500">Или</span>
+                <span className="px-4 bg-transparent text-gray-500">Или войдите через</span>
               </div>
             </div>
 
-            <div className="text-center space-y-3">
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => toast({ title: 'Скоро', description: 'Вход через Telegram будет доступен после настройки бота' })}
+                className="flex items-center gap-2 px-6 py-3 bg-[#0088cc] hover:bg-[#006ba3] text-white rounded-lg transition-colors font-medium"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.548.223l.188-2.85 5.18-4.68c.223-.198-.054-.308-.346-.11l-6.4 4.03-2.76-.918c-.6-.187-.612-.6.125-.89l10.782-4.156c.5-.18.943.112.78.89z"/>
+                </svg>
+                Telegram
+              </button>
+            </div>
+
+            <div className="text-center space-y-3 mt-6">
               <button
                 onClick={() => navigate('/forgot-password')}
                 className="text-sm text-primary hover:text-secondary transition-colors"
