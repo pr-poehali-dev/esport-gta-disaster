@@ -83,8 +83,9 @@ export default function UserRoleBadge({ role, autoStatus, showIcon = true }: Use
     const configs: Record<string, { 
       label: string; 
       variant: "default" | "secondary" | "destructive" | "outline";
+      className?: string;
     }> = {
-      'Разработчик': { label: 'Разработчик', variant: 'default' },
+      'Разработчик': { label: 'Разработчик', variant: 'default', className: 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-0' },
       'Освоившийся': { label: 'Освоившийся', variant: 'default' },
       'Пользователь': { label: 'Пользователь', variant: 'secondary' },
       'Новичок': { label: 'Новичок', variant: 'outline' }
@@ -102,7 +103,7 @@ export default function UserRoleBadge({ role, autoStatus, showIcon = true }: Use
         {roleConfig.label}
       </Badge>
       {statusConfig && (
-        <Badge variant={statusConfig.variant} className="text-xs">
+        <Badge variant={statusConfig.variant} className={`text-xs ${statusConfig.className || ''}`}>
           {statusConfig.label}
         </Badge>
       )}
