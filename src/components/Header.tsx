@@ -37,6 +37,12 @@ export default function Header() {
   };
 
   const handleLogout = async () => {
+    const confirmed = window.confirm('Вы уверены, что хотите выйти из аккаунта?');
+    
+    if (!confirmed) {
+      return;
+    }
+
     const sessionToken = localStorage.getItem('session_token');
     
     if (sessionToken) {
