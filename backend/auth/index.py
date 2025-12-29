@@ -2,6 +2,7 @@
 import json
 import os
 import psycopg2
+from psycopg2.extras import RealDictCursor
 import hashlib
 import secrets
 import smtplib
@@ -14,21 +15,21 @@ def format_user(user_data):
     if not user_data:
         return None
     
-    # Порядок полей в БД: id, email, password_hash, nickname, discord, team, avatar_url, role, created_at...
+    # Now accepts dict cursor results
     return {
-        'id': user_data[0],
-        'email': user_data[1] if len(user_data) > 1 else None,
-        'nickname': user_data[3] if len(user_data) > 3 else None,
-        'discord': user_data[4] if len(user_data) > 4 else None,
-        'team': user_data[5] if len(user_data) > 5 else None,
-        'avatar_url': user_data[6] if len(user_data) > 6 else None,
-        'role': user_data[7] if len(user_data) > 7 else 'user',
-        'created_at': user_data[8].isoformat() if len(user_data) > 8 and user_data[8] and hasattr(user_data[8], 'isoformat') else str(user_data[8]) if len(user_data) > 8 else None,
-        'email_verified': user_data[13] if len(user_data) > 13 else False,
-        'auto_status': user_data[20] if len(user_data) > 20 else None,
-        'rating': user_data[26] if len(user_data) > 26 else 1000,
-        'wins': user_data[27] if len(user_data) > 27 else 0,
-        'losses': user_data[28] if len(user_data) > 28 else 0
+        'id': user_data.get('id'),
+        'email': user_data.get('email'),
+        'nickname': user_data.get('nickname'),
+        'discord': user_data.get('discord'),
+        'team': user_data.get('team'),
+        'avatar_url': user_data.get('avatar_url'),
+        'role': user_data.get('role', 'user'),
+        'created_at': user_data['created_at'].isoformat() if user_data.get('created_at') and hasattr(user_data['created_at'], 'isoformat') else str(user_data.get('created_at')) if user_data.get('created_at') else None,
+        'email_verified': user_data.get('email_verified', False),
+        'custom_title': user_data.get('custom_title') if user_data.get('custom_title') else user_data.get('auto_status'),
+        'rating': user_data.get('rating', 1000),
+        'wins': user_data.get('wins', 0),
+        'losses': user_data.get('losses', 0)
     }
 
 def handler(event: dict, context) -> dict:
@@ -50,7 +51,7 @@ def handler(event: dict, context) -> dict:
     
     try:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         
         if method == 'POST':
             body = json.loads(event.get('body', '{}'))

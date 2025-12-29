@@ -17,9 +17,9 @@ export default function UserRoleBadge({ role, autoStatus, showIcon = true }: Use
     }> = {
       founder: { 
         label: 'Основатель', 
-        variant: 'default', 
+        variant: 'destructive', 
         icon: 'Crown',
-        color: 'text-yellow-500'
+        color: 'text-white'
       },
       director: { 
         label: 'Руководитель', 
@@ -84,6 +84,7 @@ export default function UserRoleBadge({ role, autoStatus, showIcon = true }: Use
       label: string; 
       variant: "default" | "secondary" | "destructive" | "outline";
     }> = {
+      'Разработчик': { label: 'Разработчик', variant: 'default' },
       'Освоившийся': { label: 'Освоившийся', variant: 'default' },
       'Пользователь': { label: 'Пользователь', variant: 'secondary' },
       'Новичок': { label: 'Новичок', variant: 'outline' }

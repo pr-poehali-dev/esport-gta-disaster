@@ -14,6 +14,7 @@ const ROLE_NAMES: Record<string, string> = {
 };
 
 const STATUS_NAMES: Record<string, string> = {
+  'Разработчик': 'Разработчик',
   'Киберспортсмен': 'Киберспортсмен',
   'Освоившийся': 'Освоившийся',
   'Пользователь': 'Пользователь',
@@ -37,7 +38,7 @@ export default function ProfileBannerSection({
 }: ProfileBannerSectionProps) {
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
-      'founder': 'bg-gradient-to-r from-yellow-500 to-orange-500',
+      'founder': 'bg-gradient-to-r from-red-600 to-red-800',
       'director': 'bg-gradient-to-r from-purple-500 to-pink-500',
       'admin': 'bg-gradient-to-r from-red-500 to-pink-600',
       'moderator': 'bg-gradient-to-r from-blue-500 to-cyan-500',
@@ -51,6 +52,7 @@ export default function ProfileBannerSection({
 
   const getStatusBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
+      'Разработчик': 'bg-gradient-to-r from-green-600 to-emerald-600',
       'Киберспортсмен': 'bg-gradient-to-r from-purple-600 to-pink-600',
       'Освоившийся': 'bg-gradient-to-r from-blue-600 to-cyan-600',
       'Пользователь': 'bg-gradient-to-r from-green-600 to-emerald-600',

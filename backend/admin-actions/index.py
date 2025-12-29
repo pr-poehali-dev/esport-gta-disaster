@@ -201,6 +201,8 @@ def handler(event: dict, context) -> dict:
                 return update_match_score(cur, conn, admin_id, body)
             elif action == 'complete_match':
                 return complete_match(cur, conn, admin_id, body)
+            elif action == 'notify_match_start':
+                return notify_match_start(cur, conn, admin_id, body)
             else:
                 return {
                     'statusCode': 400,
@@ -2313,5 +2315,79 @@ def update_setting(cur, conn, admin_id: str, body: dict, admin_role: str):
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'success': True, 'message': 'Настройка обновлена'}),
+        'isBase64Encoded': False
+    }
+
+def notify_match_start(cur, conn, admin_id: str, body: dict) -> dict:
+    """Отправляет уведомления капитанам команд о начале матча"""
+    match_id = body.get('match_id')
+    
+    if not match_id:
+        return error_response('match_id обязателен', 400)
+    
+    # Получаем информацию о матче
+    cur.execute(f"""
+        SELECT bm.id, bm.team1_id, bm.team2_id, bm.scheduled_at,
+               t1.name as team1_name, t1.captain_id as team1_captain,
+               t2.name as team2_name, t2.captain_id as team2_captain,
+               tr.name as tournament_name
+        FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.tournament_brackets tb ON bm.bracket_id = tb.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.tournaments tr ON tb.tournament_id = tr.id
+        WHERE bm.id = {match_id}
+    """)
+    
+    match_data = cur.fetchone()
+    
+    if not match_data:
+        return error_response('Матч не найден', 404)
+    
+    match_id, team1_id, team2_id, scheduled_at, team1_name, team1_captain, team2_name, team2_captain, tournament_name = match_data
+    
+    # Создаем уведомления для капитанов
+    notifications = []
+    
+    if team1_captain:
+        cur.execute(f"""
+            INSERT INTO t_p4831367_esport_gta_disaster.notifications 
+            (user_id, type, title, message, data, created_at)
+            VALUES (
+                {team1_captain},
+                'match_start',
+                'Начало матча!',
+                'Ваша команда {team1_name} играет против {team2_name} в турнире {tournament_name}',
+                '{{"match_id": {match_id}, "opponent": "{escape_sql(team2_name)}", "tournament": "{escape_sql(tournament_name)}"}}',
+                NOW()
+            )
+        """)
+        notifications.append(team1_captain)
+    
+    if team2_captain:
+        cur.execute(f"""
+            INSERT INTO t_p4831367_esport_gta_disaster.notifications 
+            (user_id, type, title, message, data, created_at)
+            VALUES (
+                {team2_captain},
+                'match_start',
+                'Начало матча!',
+                'Ваша команда {team2_name} играет против {team1_name} в турнире {tournament_name}',
+                '{{"match_id": {match_id}, "opponent": "{escape_sql(team1_name)}", "tournament": "{escape_sql(tournament_name)}"}}',
+                NOW()
+            )
+        """)
+        notifications.append(team2_captain)
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'success': True,
+            'message': f'Уведомления отправлены {len(notifications)} капитанам',
+            'notified_users': notifications
+        }),
         'isBase64Encoded': False
     }
