@@ -193,6 +193,14 @@ def handler(event: dict, context) -> dict:
                 return get_settings(cur, conn)
             elif action == 'update_setting':
                 return update_setting(cur, conn, admin_id, body, admin_role[0])
+            elif action == 'generate_bracket':
+                return generate_bracket(cur, conn, admin_id, body)
+            elif action == 'get_bracket':
+                return get_bracket(cur, conn, body)
+            elif action == 'update_match_score':
+                return update_match_score(cur, conn, admin_id, body)
+            elif action == 'complete_match':
+                return complete_match(cur, conn, admin_id, body)
             else:
                 return {
                     'statusCode': 400,
@@ -1288,7 +1296,7 @@ def get_all_users(cur, conn) -> dict:
     
     cur.execute("""
         SELECT id, username, email, role, created_at
-        FROM users
+        FROM t_p4831367_esport_gta_disaster.users
         ORDER BY created_at DESC
     """)
     
@@ -1306,6 +1314,272 @@ def get_all_users(cur, conn) -> dict:
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'users': users}),
+        'isBase64Encoded': False
+    }
+
+def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
+    """Генерирует турнирную сетку для турнира"""
+    tournament_id = body.get('tournament_id')
+    bracket_format = body.get('format', 'single_elimination')
+    
+    if not tournament_id:
+        return error_response('tournament_id обязателен', 400)
+    
+    # Получаем все подтвержденные регистрации
+    cur.execute(f"""
+        SELECT tr.team_id, t.name
+        FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+        JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
+        WHERE tr.tournament_id = {tournament_id} AND tr.approved = TRUE
+        ORDER BY tr.registered_at
+    """)
+    teams = cur.fetchall()
+    
+    if len(teams) < 2:
+        return error_response('Недостаточно команд для создания сетки (минимум 2)', 400)
+    
+    # Проверяем, есть ли уже сетка
+    cur.execute(f"""
+        SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets
+        WHERE tournament_id = {tournament_id}
+    """)
+    existing_bracket = cur.fetchone()
+    
+    if existing_bracket:
+        bracket_id = existing_bracket[0]
+        # Удаляем старые матчи
+        cur.execute(f"""
+            DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches
+            WHERE bracket_id = {bracket_id}
+        """)
+    else:
+        # Создаем новый bracket
+        cur.execute(f"""
+            INSERT INTO t_p4831367_esport_gta_disaster.tournament_brackets 
+            (tournament_id, format, created_by, created_at, updated_at)
+            VALUES ({tournament_id}, '{escape_sql(bracket_format)}', {admin_id}, NOW(), NOW())
+            RETURNING id
+        """)
+        bracket_id = cur.fetchone()[0]
+    
+    # Генерируем матчи по схеме single elimination
+    import math
+    team_count = len(teams)
+    rounds = math.ceil(math.log2(team_count))
+    
+    # Первый раунд
+    match_number = 1
+    team_index = 0
+    
+    while team_index < len(teams):
+        team1_id = teams[team_index][0] if team_index < len(teams) else None
+        team2_id = teams[team_index + 1][0] if team_index + 1 < len(teams) else None
+        
+        cur.execute(f"""
+            INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+            (bracket_id, round, match_number, team1_id, team2_id, status, created_at, updated_at)
+            VALUES ({bracket_id}, 1, {match_number}, {team1_id if team1_id else 'NULL'}, {team2_id if team2_id else 'NULL'}, 'pending', NOW(), NOW())
+        """)
+        
+        match_number += 1
+        team_index += 2
+    
+    # Создаем пустые матчи для следующих раундов
+    for round_num in range(2, rounds + 1):
+        matches_in_round = 2 ** (rounds - round_num)
+        for match_num in range(1, matches_in_round + 1):
+            cur.execute(f"""
+                INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+                (bracket_id, round, match_number, status, created_at, updated_at)
+                VALUES ({bracket_id}, {round_num}, {match_num}, 'pending', NOW(), NOW())
+            """)
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'success': True,
+            'bracket_id': bracket_id,
+            'total_teams': team_count,
+            'rounds': rounds,
+            'message': f'Турнирная сетка создана для {team_count} команд'
+        }),
+        'isBase64Encoded': False
+    }
+
+def get_bracket(cur, conn, body: dict) -> dict:
+    """Получает турнирную сетку"""
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return error_response('tournament_id обязателен', 400)
+    
+    # Получаем bracket_id
+    cur.execute(f"""
+        SELECT id, format FROM t_p4831367_esport_gta_disaster.tournament_brackets
+        WHERE tournament_id = {tournament_id}
+    """)
+    bracket_data = cur.fetchone()
+    
+    if not bracket_data:
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'bracket': None, 'message': 'Сетка еще не создана'}),
+            'isBase64Encoded': False
+        }
+    
+    bracket_id, bracket_format = bracket_data
+    
+    # Получаем все матчи
+    cur.execute(f"""
+        SELECT 
+            bm.id, bm.round, bm.match_number,
+            bm.team1_id, t1.name as team1_name,
+            bm.team2_id, t2.name as team2_name,
+            bm.winner_id, tw.name as winner_name,
+            bm.team1_score, bm.team2_score,
+            bm.status, bm.scheduled_at,
+            bm.team1_captain_confirmed, bm.team2_captain_confirmed,
+            bm.moderator_verified
+        FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams tw ON bm.winner_id = tw.id
+        WHERE bm.bracket_id = {bracket_id}
+        ORDER BY bm.round, bm.match_number
+    """)
+    
+    matches = []
+    for row in cur.fetchall():
+        matches.append({
+            'id': row[0],
+            'round': row[1],
+            'match_number': row[2],
+            'team1_id': row[3],
+            'team1_name': row[4],
+            'team2_id': row[5],
+            'team2_name': row[6],
+            'winner_id': row[7],
+            'winner_name': row[8],
+            'team1_score': row[9],
+            'team2_score': row[10],
+            'status': row[11],
+            'scheduled_at': row[12].isoformat() if row[12] else None,
+            'team1_confirmed': row[13],
+            'team2_confirmed': row[14],
+            'moderator_verified': row[15]
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'bracket_id': bracket_id,
+            'format': bracket_format,
+            'matches': matches
+        }),
+        'isBase64Encoded': False
+    }
+
+def update_match_score(cur, conn, admin_id: str, body: dict) -> dict:
+    """Обновляет счет матча"""
+    match_id = body.get('match_id')
+    team1_score = body.get('team1_score')
+    team2_score = body.get('team2_score')
+    
+    if not match_id:
+        return error_response('match_id обязателен', 400)
+    
+    # Определяем победителя
+    winner_id = None
+    if team1_score is not None and team2_score is not None:
+        cur.execute(f"""
+            SELECT team1_id, team2_id FROM t_p4831367_esport_gta_disaster.bracket_matches
+            WHERE id = {match_id}
+        """)
+        teams = cur.fetchone()
+        if teams:
+            winner_id = teams[0] if team1_score > team2_score else teams[1] if team2_score > team1_score else None
+    
+    # Обновляем матч
+    winner_sql = f", winner_id = {winner_id}" if winner_id else ""
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+        SET team1_score = {team1_score if team1_score is not None else 'NULL'},
+            team2_score = {team2_score if team2_score is not None else 'NULL'},
+            moderator_verified = TRUE,
+            updated_at = NOW()
+            {winner_sql}
+        WHERE id = {match_id}
+    """)
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Счет обновлен'}),
+        'isBase64Encoded': False
+    }
+
+def complete_match(cur, conn, admin_id: str, body: dict) -> dict:
+    """Завершает матч и продвигает победителя в следующий раунд"""
+    match_id = body.get('match_id')
+    
+    if not match_id:
+        return error_response('match_id обязателен', 400)
+    
+    # Получаем данные матча
+    cur.execute(f"""
+        SELECT bracket_id, round, match_number, winner_id, team1_score, team2_score
+        FROM t_p4831367_esport_gta_disaster.bracket_matches
+        WHERE id = {match_id}
+    """)
+    match_data = cur.fetchone()
+    
+    if not match_data:
+        return error_response('Матч не найден', 404)
+    
+    bracket_id, current_round, match_number, winner_id, team1_score, team2_score = match_data
+    
+    if not winner_id:
+        return error_response('Не определен победитель матча', 400)
+    
+    # Обновляем статус матча
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+        SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+        WHERE id = {match_id}
+    """)
+    
+    # Продвигаем победителя в следующий раунд
+    next_round = current_round + 1
+    next_match_number = (match_number + 1) // 2
+    
+    # Определяем, какая позиция в следующем матче (team1 или team2)
+    is_team1 = (match_number % 2 == 1)
+    team_column = 'team1_id' if is_team1 else 'team2_id'
+    
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+        SET {team_column} = {winner_id}, updated_at = NOW()
+        WHERE bracket_id = {bracket_id} 
+        AND round = {next_round} 
+        AND match_number = {next_match_number}
+    """)
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'success': True,
+            'message': 'Матч завершен, победитель продвинут в следующий раунд'
+        }),
         'isBase64Encoded': False
     }
 

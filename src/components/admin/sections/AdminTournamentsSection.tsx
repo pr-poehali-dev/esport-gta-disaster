@@ -313,6 +313,25 @@ export function AdminTournamentsSection() {
                       )}
                       <Button
                         size="sm"
+                        variant="secondary"
+                        onClick={() => window.open(`/tournaments/${tournament.id}/bracket`, '_blank')}
+                        title="Турнирная сетка"
+                      >
+                        <Icon name="GitBranch" size={16} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedTournament(tournament);
+                          setRegistrationsDialogOpen(true);
+                        }}
+                        title="Заявки"
+                      >
+                        <Icon name="Users" size={16} />
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="outline"
                         onClick={() => handleHideTournament(tournament.id, tournament.is_hidden)}
                         title={tournament.is_hidden ? 'Показать' : 'Скрыть'}

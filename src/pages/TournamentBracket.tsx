@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
-const BRACKET_API_URL = 'https://functions.poehali.dev/[BRACKET_FUNCTION_ID]';
+const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
 interface Match {
   id: number;
@@ -53,31 +53,172 @@ export default function TournamentBracket() {
   const canEdit = ['founder', 'admin', 'moderator', 'organizer'].includes(userRole);
 
   const loadBracket = async () => {
-    setLoading(false);
-    setMatches([
-      {
-        id: 1,
-        round: 1,
-        match_number: 1,
-        team1: { id: 1, name: 'Team Alpha' },
-        team2: { id: 2, name: 'Team Beta' },
-        winner_id: null,
-        score_team1: 0,
-        score_team2: 0,
-        map_name: 'de_dust2',
-        scheduled_at: '2025-01-05T18:00:00',
-        status: 'pending'
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id || '1'
+        },
+        body: JSON.stringify({
+          action: 'get_bracket',
+          tournament_id: id
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.matches) {
+        const formattedMatches = data.matches.map((m: any) => ({
+          id: m.id,
+          round: m.round,
+          match_number: m.match_number,
+          team1: m.team1_id ? { id: m.team1_id, name: m.team1_name || 'TBD' } : null,
+          team2: m.team2_id ? { id: m.team2_id, name: m.team2_name || 'TBD' } : null,
+          winner_id: m.winner_id,
+          score_team1: m.team1_score || 0,
+          score_team2: m.team2_score || 0,
+          map_name: m.map_name,
+          scheduled_at: m.scheduled_at,
+          status: m.status
+        }));
+        setMatches(formattedMatches);
+        setFormat(data.format || 'single-elimination');
       }
-    ]);
+    } catch (error) {
+      console.error('Ошибка загрузки сетки:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить турнирную сетку',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateMatch = async (matchId: number, data: Partial<Match>) => {
-    toast({
-      title: 'Матч обновлен',
-      description: 'Изменения сохранены'
-    });
-    setEditMatch(null);
-    loadBracket();
+  const updateMatch = async (matchId: number, score1: number, score2: number) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id
+        },
+        body: JSON.stringify({
+          action: 'update_match_score',
+          match_id: matchId,
+          team1_score: score1,
+          team2_score: score2
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'Успешно',
+          description: 'Счет матча обновлен'
+        });
+        setEditMatch(null);
+        loadBracket();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось обновить счет',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обновить счет матча',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const completeMatch = async (matchId: number) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id
+        },
+        body: JSON.stringify({
+          action: 'complete_match',
+          match_id: matchId
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'Успешно',
+          description: 'Матч завершен, победитель продвинут'
+        });
+        loadBracket();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось завершить матч',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось завершить матч',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const generateBracket = async () => {
+    if (!confirm('Сгенерировать турнирную сетку? Это перезапишет существующую сетку.')) return;
+
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id
+        },
+        body: JSON.stringify({
+          action: 'generate_bracket',
+          tournament_id: id,
+          format: 'single_elimination'
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'Успешно',
+          description: data.message || 'Турнирная сетка сгенерирована'
+        });
+        loadBracket();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось сгенерировать сетку',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось сгенерировать турнирную сетку',
+        variant: 'destructive'
+      });
+    }
   };
 
   const renderMatch = (match: Match) => (
@@ -176,9 +317,9 @@ export default function TournamentBracket() {
 
             {canEdit && (
               <div className="flex gap-2">
-                <Button onClick={() => navigate(`/tournaments/${id}/teams/create`)}>
-                  <Icon name="Plus" className="h-4 w-4 mr-2" />
-                  Создать команду
+                <Button onClick={generateBracket} variant="default">
+                  <Icon name="GitBranch" className="h-4 w-4 mr-2" />
+                  Сгенерировать сетку
                 </Button>
               </div>
             )}
@@ -241,10 +382,16 @@ export default function TournamentBracket() {
                 />
               </div>
 
-              <Button className="w-full" onClick={() => updateMatch(editMatch.id, editMatch)}>
-                <Icon name="Save" className="h-4 w-4 mr-2" />
-                Сохранить
-              </Button>
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={() => updateMatch(editMatch.id, editMatch.score_team1, editMatch.score_team2)}>
+                  <Icon name="Save" className="h-4 w-4 mr-2" />
+                  Сохранить счет
+                </Button>
+                <Button variant="secondary" onClick={() => completeMatch(editMatch.id)}>
+                  <Icon name="Check" className="h-4 w-4 mr-2" />
+                  Завершить матч
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
