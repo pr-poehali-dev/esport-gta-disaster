@@ -473,22 +473,47 @@ def reset_password_request(cur, conn, body: dict) -> dict:
     smtp_email = os.environ.get('SMTP_EMAIL')
     smtp_password = os.environ.get('SMTP_PASSWORD')
     
-    if smtp_email and smtp_password:
-        try:
-            send_reset_email(email, nickname, token, smtp_email, smtp_password)
-        except Exception as e:
-            print(f"Failed to send email: {e}")
+    if not smtp_email or not smtp_password:
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': 'Код восстановления создан (SMTP не настроен)',
+                'token': token,
+                'email_sent': False,
+                'error': 'SMTP_EMAIL или SMTP_PASSWORD не заданы в секретах проекта'
+            }),
+            'isBase64Encoded': False
+        }
     
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({
-            'success': True,
-            'message': 'Код восстановления отправлен на ваш email',
-            'token': token
-        }),
-        'isBase64Encoded': False
-    }
+    try:
+        send_reset_email(email, nickname, token, smtp_email, smtp_password)
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': 'Код восстановления отправлен на ваш email',
+                'token': token,
+                'email_sent': True
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        print(f'EMAIL ERROR: {str(e)}')
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': f'Код создан, но не отправлен: {str(e)}',
+                'token': token,
+                'email_sent': False,
+                'error': str(e)
+            }),
+            'isBase64Encoded': False
+        }
 
 
 def reset_password_verify(cur, conn, body: dict) -> dict:
