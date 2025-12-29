@@ -156,7 +156,7 @@ def register(cur, conn, body: dict) -> dict:
         RETURNING id
     """, (nickname, email, password_hash, verification_token))
     
-    user_id = cur.fetchone()[0]
+    user_id = cur.fetchone()['id']
     conn.commit()
     
     try:

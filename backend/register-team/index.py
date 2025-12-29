@@ -112,11 +112,11 @@ def register_team(event: dict) -> dict:
                     'body': json.dumps({'error': 'Команда с таким тегом уже существует'})
                 }
             
-            # Создаем команду (verified по умолчанию FALSE)
+            # Создаем команду (verified по умолчанию FALSE, level=2, points=200)
             cursor.execute("""
-                INSERT INTO t_p4831367_esport_gta_disaster.teams (name, tag, logo_url, captain_id, description, verified, wins, losses, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, FALSE, 0, 0, NOW(), NOW())
-                RETURNING id, name, tag, logo_url, verified, created_at
+                INSERT INTO t_p4831367_esport_gta_disaster.teams (name, tag, logo_url, captain_id, description, verified, wins, losses, level, points, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, FALSE, 0, 0, 2, 200, NOW(), NOW())
+                RETURNING id, name, tag, logo_url, verified, level, points, created_at
             """, (team_name, team_tag, logo_url if logo_url else None, user_id, description if description else None))
             
             new_team = cursor.fetchone()
@@ -143,6 +143,8 @@ def register_team(event: dict) -> dict:
                     'tag': new_team['tag'],
                     'logo_url': new_team['logo_url'],
                     'verified': new_team['verified'],
+                    'level': new_team['level'],
+                    'points': new_team['points'],
                     'created_at': new_team['created_at'].isoformat()
                 }
             })

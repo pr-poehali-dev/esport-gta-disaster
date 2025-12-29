@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
 import { api, Team } from '@/services/api';
+import TeamLevelBadge from '@/components/TeamLevelBadge';
 
 interface Player {
   id: number;
@@ -92,6 +93,7 @@ export default function Teams() {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
+                            <TeamLevelBadge level={team.level || 2} size="md" />
                             <h3 className="text-2xl font-bold">{team.name}</h3>
                             <Badge variant={getRatingBadge(team.rating).variant}>{getRatingBadge(team.rating).label}</Badge>
                           </div>
@@ -105,7 +107,11 @@ export default function Teams() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground mb-1">Очки</div>
+                          <div className="text-2xl font-bold text-primary">{team.points || 200}</div>
+                        </div>
                         <div className="text-right">
                           <div className="text-sm text-muted-foreground mb-1">Рейтинг</div>
                           <div className={`text-3xl font-black ${getRatingColor(team.rating)}`}>{team.rating}</div>

@@ -6,6 +6,7 @@ import random
 import math
 from datetime import datetime
 from psycopg2.extras import RealDictCursor
+from rating_system import update_team_rating_after_match
 
 def handler(event: dict, context) -> dict:
     '''API для работы с командами, турнирами, новостями и матчами'''
@@ -104,7 +105,7 @@ def get_verified_teams(conn) -> dict:
                 t.description,
                 t.created_at,
                 COALESCE(t.level, 2) as level,
-                COALESCE(t.xp, 100) as xp,
+                COALESCE(t.points, 200) as points,
                 COALESCE(t.team_color, '#FFFFFF') as team_color,
                 CASE 
                     WHEN (t.wins + t.losses) > 0 THEN ROUND((t.wins::decimal / (t.wins + t.losses)) * 100)
@@ -130,7 +131,7 @@ def get_verified_teams(conn) -> dict:
                 'description': row[9],
                 'created_at': row[10].isoformat() if row[10] else None,
                 'level': row[11],
-                'xp': row[12],
+                'points': row[12],
                 'team_color': row[13],
                 'win_rate': row[14]
             }
@@ -454,25 +455,20 @@ def confirm_result(cur, conn, body: dict, event: dict) -> dict:
     
     if team1_confirmed and team2_confirmed:
         winner_id = team1_id if team1_score > team2_score else team2_id
+        loser_id = team2_id if winner_id == team1_id else team1_id
         
         cur.execute("""
-            UPDATE bracket_matches
+            UPDATE t_p4831367_esport_gta_disaster.bracket_matches
             SET winner_id = %s, status = 'completed', completed_at = NOW()
             WHERE id = %s
         """, (winner_id, match_id))
         
-        cur.execute("""
-            UPDATE teams
-            SET wins = wins + 1, rating = rating + 25
-            WHERE id = %s
-        """, (winner_id,))
-        
-        loser_id = team2_id if winner_id == team1_id else team1_id
-        cur.execute("""
-            UPDATE teams
-            SET losses = losses + 1, rating = rating - 15
-            WHERE id = %s
-        """, (loser_id,))
+        # Обновляем рейтинг команд по новой системе
+        try:
+            rating_update = update_team_rating_after_match(cur, conn, winner_id, loser_id)
+        except Exception as e:
+            conn.rollback()
+            return error_response(f'Ошибка обновления рейтинга: {str(e)}', 500)
     
     conn.commit()
     
@@ -594,11 +590,32 @@ def moderate_match(cur, conn, body: dict, event: dict) -> dict:
         if not winner_id:
             return error_response('Укажите winner_id', 400)
         
+        # Получаем информацию о матче
         cur.execute("""
-            UPDATE bracket_matches
+            SELECT team1_id, team2_id FROM t_p4831367_esport_gta_disaster.bracket_matches
+            WHERE id = %s
+        """, (match_id,))
+        match_info = cur.fetchone()
+        
+        if not match_info:
+            return error_response('Матч не найден', 404)
+        
+        team1_id, team2_id = match_info
+        loser_id = team2_id if winner_id == team1_id else team1_id
+        
+        # Обновляем результат матча
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.bracket_matches
             SET winner_id = %s, status = 'completed', moderator_verified = TRUE, completed_at = NOW()
             WHERE id = %s
         """, (winner_id, match_id))
+        
+        # Обновляем рейтинг команд
+        try:
+            rating_update = update_team_rating_after_match(cur, conn, winner_id, loser_id)
+        except Exception as e:
+            conn.rollback()
+            return error_response(f'Ошибка обновления рейтинга: {str(e)}', 500)
     else:
         return error_response('Неизвестное действие модератора', 400)
     

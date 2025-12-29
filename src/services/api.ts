@@ -40,7 +40,7 @@ export interface Team {
   description?: string;
   created_at?: string;
   level?: number;
-  xp?: number;
+  points?: number;
   team_color?: string;
   win_rate?: number;
   members?: any[];

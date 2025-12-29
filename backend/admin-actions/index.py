@@ -2,6 +2,7 @@
 import json
 import os
 import psycopg2
+from psycopg2.extras import RealDictCursor
 import random
 import string
 from datetime import datetime, timedelta
@@ -34,7 +35,7 @@ def handler(event: dict, context) -> dict:
     
     try:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         
         if method == 'POST':
             body = json.loads(event.get('body', '{}'))
@@ -64,10 +65,10 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        cur.execute(f"SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(admin_id)}'")
+        cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (admin_id,))
         admin_role = cur.fetchone()
         
-        if not admin_role or admin_role[0] not in ['admin', 'founder', 'organizer']:
+        if not admin_role or admin_role['role'] not in ['admin', 'founder', 'organizer']:
             cur.close()
             conn.close()
             return {
@@ -120,23 +121,23 @@ def handler(event: dict, context) -> dict:
             elif action == 'verify_admin_password':
                 return verify_admin_password(cur, conn, body)
             elif action == 'create_news':
-                return create_news(cur, conn, admin_id, body, admin_role[0])
+                return create_news(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'update_news':
-                return update_news(cur, conn, admin_id, body, admin_role[0])
+                return update_news(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'delete_news':
-                return delete_news(cur, conn, admin_id, body, admin_role[0])
+                return delete_news(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'get_news':
                 return get_news(cur, conn, body)
             elif action == 'create_rule':
-                return create_rule(cur, conn, admin_id, body, admin_role[0])
+                return create_rule(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'update_rule':
-                return update_rule(cur, conn, admin_id, body, admin_role[0])
+                return update_rule(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'delete_rule':
-                return delete_rule(cur, conn, admin_id, body, admin_role[0])
+                return delete_rule(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'get_rules':
                 return get_rules(cur, conn)
             elif action == 'update_support':
-                return update_support(cur, conn, admin_id, body, admin_role[0])
+                return update_support(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'get_support':
                 return get_support(cur, conn)
             elif action == 'get_all_users':
@@ -144,17 +145,17 @@ def handler(event: dict, context) -> dict:
             elif action == 'get_dashboard_stats':
                 return get_dashboard_stats(cur, conn)
             elif action == 'assign_role':
-                return assign_role(cur, conn, admin_id, admin_role[0], body)
+                return assign_role(cur, conn, admin_id, admin_role['role'], body)
             elif action == 'revoke_role':
-                return revoke_role(cur, conn, admin_id, admin_role[0], body)
+                return revoke_role(cur, conn, admin_id, admin_role['role'], body)
             elif action == 'get_staff':
                 return get_staff(cur, conn)
             elif action == 'get_role_history':
                 return get_role_history(cur, conn, body)
             elif action == 'create_discussion':
-                return create_discussion(cur, conn, admin_id, admin_role[0], body)
+                return create_discussion(cur, conn, admin_id, admin_role['role'], body)
             elif action == 'add_comment':
-                return add_comment(cur, conn, admin_id, admin_role[0], body)
+                return add_comment(cur, conn, admin_id, admin_role['role'], body)
             elif action == 'get_discussions':
                 return get_discussions(cur, conn)
             elif action == 'get_discussion':
@@ -168,7 +169,7 @@ def handler(event: dict, context) -> dict:
             elif action == 'edit_discussion':
                 return edit_discussion(cur, conn, admin_id, body)
             elif action == 'create_news_with_image':
-                return create_news_with_image(cur, conn, admin_id, body, admin_role[0])
+                return create_news_with_image(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'delete_tournament':
                 return delete_tournament(cur, conn, admin_id, body)
             elif action == 'hide_tournament':
