@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { getAdminId } from '@/lib/auth';
 
 const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
@@ -26,18 +27,6 @@ export function AdminDashboardSection() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const getAdminId = () => {
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        return JSON.parse(user).id;
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  };
-
   useEffect(() => {
     loadStats();
   }, []);
@@ -45,6 +34,16 @@ export function AdminDashboardSection() {
   const loadStats = async () => {
     setLoading(true);
     const adminId = getAdminId();
+
+    if (!adminId) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось получить ID администратора',
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(ADMIN_API_URL, {

@@ -128,3 +128,32 @@ export const authService = {
     return !!localStorage.getItem('session_token');
   }
 };
+
+export function getAdminId(): string | null {
+  const user = localStorage.getItem('user');
+  if (!user) return null;
+  
+  try {
+    const userData = JSON.parse(user);
+    const id = userData?.id;
+    
+    if (id === null || id === undefined) return null;
+    
+    return String(id);
+  } catch (e) {
+    console.error('Error parsing user from localStorage:', e);
+    return null;
+  }
+}
+
+export function getUserData() {
+  const user = localStorage.getItem('user');
+  if (!user) return null;
+  
+  try {
+    return JSON.parse(user);
+  } catch (e) {
+    console.error('Error parsing user from localStorage:', e);
+    return null;
+  }
+}

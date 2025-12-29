@@ -57,7 +57,7 @@ def handler(event: dict, context) -> dict:
         
         admin_id = event.get('headers', {}).get('X-Admin-Id') or event.get('headers', {}).get('x-admin-id')
         
-        if not admin_id:
+        if not admin_id or admin_id == 'null' or admin_id == 'NULL':
             return {
                 'statusCode': 401,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -65,7 +65,17 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (admin_id,))
+        try:
+            admin_id_int = int(admin_id)
+        except (ValueError, TypeError):
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': f'Неверный формат ID администратора: {admin_id}'}),
+                'isBase64Encoded': False
+            }
+        
+        cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (admin_id_int,))
         admin_role = cur.fetchone()
         
         if not admin_role or admin_role['role'] not in ['admin', 'founder', 'organizer']:
