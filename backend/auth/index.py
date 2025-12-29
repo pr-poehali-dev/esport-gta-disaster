@@ -203,7 +203,9 @@ def verify_email(cur, conn, body: dict) -> dict:
     if not user:
         return error_response('Неверная или устаревшая ссылка', 400)
     
-    user_id, nickname, email = user
+    user_id = user['id']
+    nickname = user['nickname']
+    email = user['email']
     
     cur.execute("""
         UPDATE t_p4831367_esport_gta_disaster.users 
@@ -250,7 +252,10 @@ def resend_verification(cur, conn, body: dict) -> dict:
     if not user:
         return error_response('Пользователь не найден', 404)
     
-    user_id, nickname, token, verified = user
+    user_id = user['id']
+    nickname = user['nickname']
+    token = user['email_verification_token']
+    verified = user['email_verified']
     
     if verified:
         return error_response('Email уже подтвержден', 400)
@@ -286,7 +291,9 @@ def login(cur, conn, body: dict) -> dict:
     if not user:
         return error_response('Неверный email или пароль', 401)
     
-    user_id, email_verified, is_banned = user
+    user_id = user['id']
+    email_verified = user['email_verified']
+    is_banned = user['is_banned']
     
     if is_banned:
         return error_response('Ваш аккаунт заблокирован', 403)
@@ -438,7 +445,8 @@ def reset_password_request(cur, conn, body: dict) -> dict:
     if not user:
         return error_response('Пользователь с таким email не найден', 404)
     
-    user_id, nickname = user
+    user_id = user['id']
+    nickname = user['nickname']
     
     token = secrets.token_urlsafe(32)
     expires_at = datetime.now() + timedelta(hours=1)
@@ -489,7 +497,9 @@ def reset_password_verify(cur, conn, body: dict) -> dict:
     if not result:
         return error_response('Неверный токен', 404)
     
-    user_id, expires_at, used = result
+    user_id = result['user_id']
+    expires_at = result['expires_at']
+    used = result['used']
     
     if used:
         return error_response('Токен уже использован', 400)
@@ -527,7 +537,9 @@ def reset_password(cur, conn, body: dict) -> dict:
     if not result:
         return error_response('Неверный токен', 404)
     
-    user_id, expires_at, used = result
+    user_id = result['user_id']
+    expires_at = result['expires_at']
+    used = result['used']
     
     if used:
         return error_response('Токен уже использован', 400)
