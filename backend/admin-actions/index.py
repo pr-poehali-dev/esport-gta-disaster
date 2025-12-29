@@ -32,19 +32,37 @@ def handler(event: dict, context) -> dict:
             'isBase64Encoded': False
         }
     
-    admin_id = event.get('headers', {}).get('X-Admin-Id') or event.get('headers', {}).get('x-admin-id')
-    
-    if not admin_id:
-        return {
-            'statusCode': 401,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Требуется авторизация администратора'}),
-            'isBase64Encoded': False
-        }
-    
     try:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
         cur = conn.cursor()
+        
+        if method == 'POST':
+            body = json.loads(event.get('body', '{}'))
+            action = body.get('action')
+            
+            public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament']
+            
+            if action in public_actions:
+                if action == 'get_news':
+                    return get_news(cur, conn, body)
+                elif action == 'get_rules':
+                    return get_rules(cur, conn)
+                elif action == 'get_support':
+                    return get_support(cur, conn)
+                elif action == 'get_tournaments':
+                    return get_tournaments(cur, conn)
+                elif action == 'get_tournament':
+                    return get_tournament(cur, conn, body)
+        
+        admin_id = event.get('headers', {}).get('X-Admin-Id') or event.get('headers', {}).get('x-admin-id')
+        
+        if not admin_id:
+            return {
+                'statusCode': 401,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Требуется авторизация администратора'}),
+                'isBase64Encoded': False
+            }
         
         cur.execute(f"SELECT role FROM users WHERE id = '{escape_sql(admin_id)}'")
         admin_role = cur.fetchone()

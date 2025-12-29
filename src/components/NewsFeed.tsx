@@ -33,8 +33,7 @@ export default function NewsFeed() {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Id': '1'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
           action: 'get_news',
