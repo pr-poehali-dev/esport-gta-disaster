@@ -162,14 +162,16 @@ def register(cur, conn, body: dict) -> dict:
     try:
         send_verification_email(email, nickname, verification_token)
     except Exception as e:
+        print(f'EMAIL ERROR: {str(e)}')  # Логируем для отладки
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({
                 'success': True,
-                'message': 'Регистрация успешна, но письмо не отправлено',
+                'message': f'Регистрация успешна, но не удалось отправить письмо: {str(e)}',
                 'user_id': user_id,
-                'verification_needed': True
+                'verification_needed': True,
+                'email_error': str(e)
             }),
             'isBase64Encoded': False
         }
@@ -364,8 +366,11 @@ def send_verification_email(to_email: str, nickname: str, token: str):
     smtp_email = os.environ.get('SMTP_EMAIL')
     smtp_password = os.environ.get('SMTP_PASSWORD')
     
-    if not smtp_email or not smtp_password:
-        raise Exception('SMTP настройки не заданы')
+    if not smtp_email:
+        raise Exception('SMTP_EMAIL не задан в секретах проекта')
+    
+    if not smtp_password:
+        raise Exception('SMTP_PASSWORD не задан в секретах проекта')
     
     verification_url = f"https://disaster-esports.ru/verify?token={token}"
     
@@ -421,11 +426,18 @@ def send_verification_email(to_email: str, nickname: str, token: str):
         smtp_server = 'smtp.gmail.com'
         smtp_port = 587
     
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(smtp_email, smtp_password)
-    server.send_message(msg)
-    server.quit()
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+        server.starttls()
+        server.login(smtp_email, smtp_password)
+        server.send_message(msg)
+        server.quit()
+    except smtplib.SMTPAuthenticationError as e:
+        raise Exception(f'Ошибка авторизации SMTP: проверьте SMTP_EMAIL и SMTP_PASSWORD. {str(e)}')
+    except smtplib.SMTPException as e:
+        raise Exception(f'Ошибка отправки email через SMTP: {str(e)}')
+    except Exception as e:
+        raise Exception(f'Неизвестная ошибка отправки email: {str(e)}')
 
 
 
@@ -700,10 +712,17 @@ def send_reset_email(to_email: str, nickname: str, token: str, smtp_email: str, 
         smtp_server = 'smtp.gmail.com'
         smtp_port = 587
     
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_email, smtp_password)
-        server.send_message(msg)
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+            server.starttls()
+            server.login(smtp_email, smtp_password)
+            server.send_message(msg)
+    except smtplib.SMTPAuthenticationError as e:
+        raise Exception(f'Ошибка авторизации SMTP: проверьте SMTP_EMAIL и SMTP_PASSWORD. {str(e)}')
+    except smtplib.SMTPException as e:
+        raise Exception(f'Ошибка отправки email через SMTP: {str(e)}')
+    except Exception as e:
+        raise Exception(f'Неизвестная ошибка отправки email: {str(e)}')
 
 
 def error_response(message: str, status: int) -> dict:
