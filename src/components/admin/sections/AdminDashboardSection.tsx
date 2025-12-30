@@ -72,9 +72,19 @@ export function AdminDashboardSection() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-4xl font-bold">Главная Панель</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-4xl font-bold">Главная Панель</h1>
+        <button
+          onClick={loadStats}
+          disabled={loading}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2"
+        >
+          <Icon name={loading ? "Loader2" : "RefreshCw"} size={18} className={loading ? "animate-spin" : ""} />
+          {loading ? 'Обновление...' : 'Обновить данные'}
+        </button>
+      </div>
       
-      {loading ? (
+      {loading && stats.total_users === 0 ? (
         <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
       ) : (
         <>
