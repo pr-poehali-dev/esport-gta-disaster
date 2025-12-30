@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
@@ -24,6 +25,7 @@ import {
 const ADMIN_API = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
 export function AdminTournamentsSection() {
+  const navigate = useNavigate();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -282,7 +284,14 @@ export function AdminTournamentsSection() {
             <tbody>
               {tournaments.map((tournament) => (
                 <tr key={tournament.id} className="border-b border-border hover:bg-muted/30">
-                  <td className="p-4 font-medium">{tournament.name}</td>
+                  <td className="p-4 font-medium">
+                    <button
+                      onClick={() => navigate('/admin/tournaments')}
+                      className="text-primary hover:underline cursor-pointer font-medium"
+                    >
+                      {tournament.name}
+                    </button>
+                  </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded text-sm ${getStatusColor(tournament.status)}`}>
                       {tournament.status === 'active' && 'Активен'}

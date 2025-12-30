@@ -146,17 +146,7 @@ export default function Admin() {
           {activeSection === 'mutes' && <MutesSection />}
           {activeSection === 'suspensions' && <SuspensionsSection />}
           {activeSection === 'content' && <ContentSection />}
-          {activeSection === 'tournaments' && (
-            <div className="space-y-4">
-              <TournamentsSection />
-              <button
-                onClick={() => navigate('/admin/tournaments')}
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition"
-              >
-                Управление турнирами →
-              </button>
-            </div>
-          )}
+          {activeSection === 'tournaments' && <TournamentsSection />}
           {activeSection === 'news' && <NewsSection />}
           {activeSection === 'roles' && <RolesSection />}
           {activeSection === 'discussions' && <DiscussionsSection />}
