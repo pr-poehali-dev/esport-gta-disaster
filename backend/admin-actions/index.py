@@ -569,19 +569,31 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     
     name = body.get('name')
     description = body.get('description')
-    game = body.get('game')
+    game = body.get('game_project', 'GTA V')
     start_date = body.get('start_date')
     end_date = body.get('end_date')
-    max_teams = body.get('max_teams')
+    max_teams = body.get('max_participants', 16)
     prize_pool = body.get('prize_pool')
     rules = body.get('rules')
-    format_type = body.get('format_type', 'single_elimination')
+    format_value = body.get('format', 'single-elimination')
+    location = body.get('location')
+    team_size = body.get('team_size')
+    best_of = body.get('best_of')
     
-    cur.execute(f"""
-        INSERT INTO t_p4831367_esport_gta_disaster.tournaments (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_type, created_by)
-        VALUES ('{escape_sql(name)}', '{escape_sql(description)}', '{escape_sql(game)}', '{escape_sql(start_date)}', '{escape_sql(end_date)}', {int(max_teams)}, '{escape_sql(prize_pool)}', '{escape_sql(rules)}', '{escape_sql(format_type)}', '{escape_sql(admin_id)}')
+    if not name or not start_date:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Название и дата начала обязательны'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.tournaments 
+        (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format, created_by, location, team_size, best_of, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming')
         RETURNING id
-    """)
+    """, (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_value, admin_id, location, team_size, best_of))
     
     tournament_id = cur.fetchone()[0]
     conn.commit()
@@ -589,7 +601,7 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Турнир создан', 'tournament_id': tournament_id}),
+        'body': json.dumps({'success': True, 'message': 'Турнир создан', 'tournament_id': tournament_id}),
         'isBase64Encoded': False
     }
 
