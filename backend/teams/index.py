@@ -232,19 +232,19 @@ def get_match_details(cur, conn, event: dict) -> dict:
     screenshots = cur.fetchall()
     
     cur.execute("""
-        SELECT tm.user_id, u.nickname, u.avatar_url, tm.role
+        SELECT tm.user_id, u.nickname, u.avatar_url, tm.player_role
         FROM t_p4831367_esport_gta_disaster.team_members tm
         JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
         WHERE tm.team_id = %s
-    """, (match[1],))
+    """, (match['team1_id'],))
     team1_members = cur.fetchall()
     
     cur.execute("""
-        SELECT tm.user_id, u.nickname, u.avatar_url, tm.role
+        SELECT tm.user_id, u.nickname, u.avatar_url, tm.player_role
         FROM t_p4831367_esport_gta_disaster.team_members tm
         JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
         WHERE tm.team_id = %s
-    """, (match[2],))
+    """, (match['team2_id'],))
     team2_members = cur.fetchall()
     
     return {
@@ -252,57 +252,57 @@ def get_match_details(cur, conn, event: dict) -> dict:
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({
             'match': {
-                'id': match[0],
-                'team1_id': match[1],
-                'team2_id': match[2],
-                'round': match[3],
-                'match_order': match[4],
-                'team1_score': match[5],
-                'team2_score': match[6],
-                'status': match[7],
-                'match_details': match[8],
-                'team1_captain_confirmed': match[9],
-                'team2_captain_confirmed': match[10],
-                'moderator_verified': match[11],
-                'completed_at': match[12].isoformat() if match[12] else None,
-                'referee_id': match[13],
+                'id': match['id'],
+                'team1_id': match['team1_id'],
+                'team2_id': match['team2_id'],
+                'round': match['round'],
+                'match_order': match['match_order'],
+                'team1_score': match['team1_score'],
+                'team2_score': match['team2_score'],
+                'status': match['status'],
+                'match_details': match['match_details'],
+                'team1_captain_confirmed': match['team1_captain_confirmed'],
+                'team2_captain_confirmed': match['team2_captain_confirmed'],
+                'moderator_verified': match['moderator_verified'],
+                'completed_at': match['completed_at'].isoformat() if match['completed_at'] else None,
+                'referee_id': match['referee_id'],
                 'team1': {
-                    'name': match[14],
-                    'logo_url': match[15],
-                    'captain_id': match[16],
-                    'color': match[17] or generate_random_color(),
+                    'name': match['team1_name'],
+                    'logo_url': match['team1_logo'],
+                    'captain_id': match['team1_captain'],
+                    'color': match['team1_color'] or generate_random_color(),
                     'members': [{
-                        'id': m[0],
-                        'nickname': m[1],
-                        'avatar_url': m[2],
-                        'role': m[3]
+                        'id': m['user_id'],
+                        'nickname': m['nickname'],
+                        'avatar_url': m['avatar_url'],
+                        'role': m['player_role']
                     } for m in team1_members]
                 },
                 'team2': {
-                    'name': match[18],
-                    'logo_url': match[19],
-                    'captain_id': match[20],
-                    'color': match[21] or generate_random_color(),
+                    'name': match['team2_name'],
+                    'logo_url': match['team2_logo'],
+                    'captain_id': match['team2_captain'],
+                    'color': match['team2_color'] or generate_random_color(),
                     'members': [{
-                        'id': m[0],
-                        'nickname': m[1],
-                        'avatar_url': m[2],
-                        'role': m[3]
+                        'id': m['user_id'],
+                        'nickname': m['nickname'],
+                        'avatar_url': m['avatar_url'],
+                        'role': m['player_role']
                     } for m in team2_members]
                 },
                 'referee': {
-                    'id': match[13],
-                    'nickname': match[22]
-                } if match[13] else None
+                    'id': match['referee_id'],
+                    'nickname': match['referee_name']
+                } if match['referee_id'] else None
             },
             'screenshots': [{
-                'id': s[0],
-                'team_id': s[1],
-                'screenshot_url': s[2],
-                'description': s[3],
-                'uploaded_at': s[4].isoformat() if s[4] else None,
-                'uploaded_by_name': s[5],
-                'team_name': s[6]
+                'id': s['id'],
+                'team_id': s['team_id'],
+                'screenshot_url': s['screenshot_url'],
+                'description': s['description'],
+                'uploaded_at': s['uploaded_at'].isoformat() if s['uploaded_at'] else None,
+                'uploaded_by_name': s['uploaded_by_name'],
+                'team_name': s['team_name']
             } for s in screenshots]
         }),
         'isBase64Encoded': False
@@ -344,7 +344,7 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
     if not team:
         return error_response('Команда не найдена', 404)
     
-    if team[0] != user_id:
+    if team['captain_id'] != user_id:
         return error_response('Только капитан команды может загружать скриншоты', 403)
     
     cur.execute("""
@@ -352,7 +352,8 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
         WHERE match_id = %s AND team_id = %s
     """, (match_id, team_id))
     
-    count = cur.fetchone()[0]
+    count_result = cur.fetchone()
+    count = count_result['count'] if count_result else 0
     
     if count >= 5:
         return error_response('Максимум 5 скриншотов на команду', 400)
@@ -386,7 +387,8 @@ def upload_screenshot(cur, conn, body: dict, event: dict) -> dict:
             RETURNING id
         """, (match_id, team_id, user_id, cdn_url, description))
         
-        screenshot_id = cur.fetchone()[0]
+        screenshot_result = cur.fetchone()
+        screenshot_id = screenshot_result['id']
         conn.commit()
         
         return {
@@ -428,7 +430,7 @@ def confirm_result(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Укажите match_id', 400)
     
     cur.execute("""
-        SELECT bm.team1_id, bm.team2_id, t1.captain_id, t2.captain_id,
+        SELECT bm.team1_id, bm.team2_id, t1.captain_id as captain1_id, t2.captain_id as captain2_id,
                bm.team1_captain_confirmed, bm.team2_captain_confirmed,
                bm.team1_score, bm.team2_score
         FROM t_p4831367_esport_gta_disaster.bracket_matches bm
@@ -442,7 +444,14 @@ def confirm_result(cur, conn, body: dict, event: dict) -> dict:
     if not match:
         return error_response('Матч не найден', 404)
     
-    team1_id, team2_id, captain1_id, captain2_id, team1_confirmed, team2_confirmed, team1_score, team2_score = match
+    team1_id = match['team1_id']
+    team2_id = match['team2_id']
+    captain1_id = match['captain1_id']
+    captain2_id = match['captain2_id']
+    team1_confirmed = match['team1_captain_confirmed']
+    team2_confirmed = match['team2_captain_confirmed']
+    team1_score = match['team1_score']
+    team2_score = match['team2_score']
     
     if user_id == captain1_id:
         cur.execute("""
@@ -508,7 +517,8 @@ def update_score(cur, conn, body: dict, event: dict) -> dict:
     if not user:
         return error_response('Сессия недействительна', 401)
     
-    user_id, user_role = user
+    user_id = user['id']
+    user_role = user['role']
     match_id = body.get('match_id')
     team1_score = body.get('team1_score')
     team2_score = body.get('team2_score')
@@ -517,7 +527,7 @@ def update_score(cur, conn, body: dict, event: dict) -> dict:
         return error_response('Укажите match_id, team1_score и team2_score', 400)
     
     cur.execute("""
-        SELECT t1.captain_id, t2.captain_id
+        SELECT t1.captain_id as captain1_id, t2.captain_id as captain2_id
         FROM t_p4831367_esport_gta_disaster.bracket_matches bm
         JOIN teams t1 ON bm.team1_id = t1.id
         JOIN teams t2 ON bm.team2_id = t2.id
@@ -529,7 +539,8 @@ def update_score(cur, conn, body: dict, event: dict) -> dict:
     if not match:
         return error_response('Матч не найден', 404)
     
-    captain1_id, captain2_id = match
+    captain1_id = match['captain1_id']
+    captain2_id = match['captain2_id']
     
     is_captain = user_id in [captain1_id, captain2_id]
     is_moderator = user_role in ['moderator', 'admin', 'founder']
@@ -570,7 +581,7 @@ def moderate_match(cur, conn, body: dict, event: dict) -> dict:
     if not user:
         return error_response('Сессия недействительна', 401)
     
-    user_role = user[0]
+    user_role = user['role']
     
     if user_role not in ['moderator', 'admin', 'founder']:
         return error_response('Недостаточно прав', 403)
@@ -608,7 +619,8 @@ def moderate_match(cur, conn, body: dict, event: dict) -> dict:
         if not match_info:
             return error_response('Матч не найден', 404)
         
-        team1_id, team2_id = match_info
+        team1_id = match_info['team1_id']
+        team2_id = match_info['team2_id']
         loser_id = team2_id if winner_id == team1_id else team1_id
         
         # Обновляем результат матча
@@ -654,7 +666,7 @@ def assign_referee(cur, conn, body: dict, event: dict) -> dict:
     if not user:
         return error_response('Сессия недействительна', 401)
     
-    user_role = user[0]
+    user_role = user['role']
     
     if user_role not in ['moderator', 'admin', 'founder']:
         return error_response('Недостаточно прав', 403)
@@ -685,7 +697,7 @@ def assign_referee(cur, conn, body: dict, event: dict) -> dict:
                 UPDATE bracket_matches
                 SET referee_id = %s
                 WHERE id = %s
-            """, (referee[0], match_id))
+            """, (referee['id'], match_id))
     
     conn.commit()
     
@@ -714,7 +726,8 @@ def nullify_match(cur, conn, body: dict, event: dict) -> dict:
     if not user:
         return error_response('Сессия недействительна', 401)
     
-    user_id, user_role = user
+    user_id = user['id']
+    user_role = user['role']
     match_id = body.get('match_id')
     
     if not match_id:
@@ -730,7 +743,7 @@ def nullify_match(cur, conn, body: dict, event: dict) -> dict:
     if not match:
         return error_response('Матч не найден', 404)
     
-    is_referee = match[0] == user_id
+    is_referee = match['referee_id'] == user_id
     is_moderator = user_role in ['moderator', 'admin', 'founder']
     
     if not is_referee and not is_moderator:
@@ -985,8 +998,9 @@ def create_team(cur, conn, body: dict, event: dict) -> dict:
     if not user_id:
         return error_response('Требуется авторизация', 401)
     
-    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (user_id,))
-    team_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) as count FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (user_id,))
+    team_count_result = cur.fetchone()
+    team_count = team_count_result['count'] if team_count_result else 0
     
     if team_count >= 3:
         return error_response('Вы не можете состоять более чем в 3 командах', 403)
@@ -1013,7 +1027,8 @@ def create_team(cur, conn, body: dict, event: dict) -> dict:
         RETURNING id
     """, (name, tag, description, user_id))
     
-    team_id = cur.fetchone()[0]
+    team_result = cur.fetchone()
+    team_id = team_result['id']
     
     cur.execute("""
         INSERT INTO t_p4831367_esport_gta_disaster.team_members 
@@ -1064,7 +1079,7 @@ def invite_player(cur, conn, body: dict, event: dict) -> dict:
     if not team:
         return error_response('Команда не найдена', 404)
     
-    if team[0] != int(user_id):
+    if team['captain_id'] != int(user_id):
         return error_response('Только капитан может приглашать игроков', 403)
     
     cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (invited_user_id,))
@@ -1113,7 +1128,9 @@ def respond_invitation(cur, conn, body: dict, event: dict) -> dict:
     if not invitation:
         return error_response('Приглашение не найдено', 404)
     
-    team_id, invited_user, role = invitation
+    team_id = invitation['team_id']
+    invited_user = invitation['invited_user_id']
+    role = invitation['player_role']
     
     if accept:
         cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (user_id,))
@@ -1182,15 +1199,15 @@ def get_invitations(cur, conn, event: dict) -> dict:
     invitations = []
     for row in cur.fetchall():
         invitations.append({
-            'id': row[0],
-            'team_id': row[1],
-            'team_name': row[2],
-            'tag': row[3],
-            'logo_url': row[4],
-            'inviter_name': row[5],
-            'player_role': row[6],
-            'created_at': row[7].isoformat() if row[7] else None,
-            'status': row[8]
+            'id': row['id'],
+            'team_id': row['team_id'],
+            'team_name': row['team_name'],
+            'tag': row['tag'],
+            'logo_url': row['logo_url'],
+            'inviter_name': row['inviter_name'],
+            'player_role': row['player_role'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'status': row['status']
         })
     
     return {
@@ -1228,16 +1245,16 @@ def get_user_teams(cur, conn, event: dict) -> dict:
     teams = []
     for row in cur.fetchall():
         teams.append({
-            'id': row[0],
-            'name': row[1],
-            'tag': row[2],
-            'logo_url': row[3],
-            'rating': row[4],
-            'wins': row[5],
-            'losses': row[6],
-            'draws': row[7],
-            'is_captain': row[8],
-            'player_role': row[9]
+            'id': row['id'],
+            'name': row['name'],
+            'tag': row['tag'],
+            'logo_url': row['logo_url'],
+            'rating': row['rating'],
+            'wins': row['wins'],
+            'losses': row['losses'],
+            'draws': row['draws'],
+            'is_captain': row['is_captain'],
+            'player_role': row['player_role']
         })
     
     return {
@@ -1308,7 +1325,7 @@ def register_tournament(cur, conn, body: dict, event: dict) -> dict:
     if not team:
         return error_response('Команда не найдена', 404)
     
-    if team[0] != int(user_id):
+    if team['captain_id'] != int(user_id):
         return error_response('Только капитан может регистрировать команду', 403)
     
     cur.execute("""
@@ -1320,16 +1337,17 @@ def register_tournament(cur, conn, body: dict, event: dict) -> dict:
     if not tournament:
         return error_response('Турнир не найден', 404)
     
-    if tournament[0]:
+    if tournament['is_started']:
         return error_response('Регистрация на турнир закрыта (турнир начат)', 403)
     
     for player_id in main_players + reserve_players:
         cur.execute("""
-            SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members 
+            SELECT COUNT(*) as count FROM t_p4831367_esport_gta_disaster.team_members 
             WHERE team_id = %s AND user_id = %s AND status = 'active'
         """, (team_id, player_id))
         
-        if cur.fetchone()[0] == 0:
+        player_check = cur.fetchone()
+        if not player_check or player_check['count'] == 0:
             return error_response(f'Игрок {player_id} не состоит в команде', 400)
     
     cur.execute("""
@@ -1429,7 +1447,7 @@ def generate_bracket(cur, conn, body: dict, event: dict) -> dict:
     cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id,))
     user_role = cur.fetchone()
     
-    if not user_role or user_role[0] not in ['founder', 'organizer', 'admin']:
+    if not user_role or user_role['role'] not in ['founder', 'organizer', 'admin']:
         return error_response('Недостаточно прав', 403)
     
     tournament_id = body.get('tournament_id')
@@ -1443,7 +1461,7 @@ def generate_bracket(cur, conn, body: dict, event: dict) -> dict:
         ORDER BY registered_at
     """, (tournament_id,))
     
-    teams = [row[0] for row in cur.fetchall()]
+    teams = [row['team_id'] for row in cur.fetchall()]
     
     if len(teams) < 2:
         return error_response('Недостаточно команд для создания сетки', 400)
@@ -1471,7 +1489,8 @@ def generate_bracket(cur, conn, body: dict, event: dict) -> dict:
             RETURNING id
         """, (tournament_id, stage_name, stage_num))
         
-        stages.append({'id': cur.fetchone()[0], 'name': stage_name, 'matches': current_size // 2})
+        stage_result = cur.fetchone()
+        stages.append({'id': stage_result['id'], 'name': stage_name, 'matches': current_size // 2})
         current_size //= 2
         stage_num += 1
     
@@ -1504,7 +1523,8 @@ def generate_bracket(cur, conn, body: dict, event: dict) -> dict:
                 RETURNING id
             """, (tournament_id, team1_id, team2_id, stage['id'], match_num + 1))
             
-            match_id = cur.fetchone()[0]
+            match_result = cur.fetchone()
+            match_id = match_result['id']
             match_id_map[(stage_idx, match_num)] = match_id
             
             if next_match_num is not None and (stage_idx + 1, next_match_num) in match_id_map:

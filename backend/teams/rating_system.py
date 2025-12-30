@@ -89,7 +89,7 @@ def update_team_rating_after_match(cur, conn, winner_id: int, loser_id: int):
         WHERE id IN (%s, %s)
     """, (winner_id, loser_id))
     
-    teams_data = {row[0]: row for row in cur.fetchall()}
+    teams_data = {row['id']: row for row in cur.fetchall()}
     
     if winner_id not in teams_data or loser_id not in teams_data:
         raise Exception("Одна или обе команды не найдены")
@@ -97,8 +97,8 @@ def update_team_rating_after_match(cur, conn, winner_id: int, loser_id: int):
     winner_data = teams_data[winner_id]
     loser_data = teams_data[loser_id]
     
-    winner_points = winner_data[1] or 200
-    loser_points = loser_data[1] or 200
+    winner_points = winner_data['points'] or 200
+    loser_points = loser_data['points'] or 200
     
     # Рассчитываем изменение очков
     winner_gain, loser_loss = calculate_points_change(winner_points, loser_points)
