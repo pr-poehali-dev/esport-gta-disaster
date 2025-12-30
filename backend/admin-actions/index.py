@@ -608,8 +608,7 @@ def get_tournaments(cur, conn) -> dict:
     
     cur.execute("""
         SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
-               rules, format, status, created_by, created_at, registration_open, is_hidden, is_started,
-               (SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE tournament_id = tournaments.id) as registrations_count
+               rules, format, status, created_by, created_at, registration_open
         FROM t_p4831367_esport_gta_disaster.tournaments
         ORDER BY start_date DESC
     """)
@@ -624,17 +623,13 @@ def get_tournaments(cur, conn) -> dict:
             'start_date': row['start_date'].isoformat() if row['start_date'] else None,
             'end_date': row['end_date'].isoformat() if row['end_date'] else None,
             'max_teams': row['max_teams'],
-            'max_participants': row['max_teams'],
             'prize_pool': row['prize_pool'],
             'rules': row['rules'],
             'format': row['format'],
             'status': row['status'],
             'created_by': row['created_by'],
             'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-            'registration_open': row['registration_open'],
-            'is_hidden': row.get('is_hidden', False),
-            'is_started': row.get('is_started', False),
-            'registrations_count': row.get('registrations_count', 0)
+            'registration_open': row['registration_open']
         })
     
     return {
@@ -2211,11 +2206,11 @@ def hide_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     """Скрывает турнир"""
     
     tournament_id = body.get('tournament_id')
-    is_hidden = body.get('is_hidden', True)
+    hidden = body.get('hidden', True)
     
     cur.execute(f"""
-        UPDATE t_p4831367_esport_gta_disaster.tournaments
-        SET is_hidden = {str(is_hidden).upper()}
+        UPDATE tournaments
+        SET hidden = {str(hidden).upper()}
         WHERE id = {int(tournament_id)}
     """)
     conn.commit()
@@ -2223,7 +2218,7 @@ def hide_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Статус видимости турнира обновлен'}),
+        'body': json.dumps({'message': 'Статус видимости турнира обновлен'}),
         'isBase64Encoded': False
     }
 
