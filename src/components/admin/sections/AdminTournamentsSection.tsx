@@ -61,7 +61,10 @@ export function AdminTournamentsSection() {
           'Content-Type': 'application/json',
           'X-Admin-Id': user.id,
         },
-        body: JSON.stringify({ action: 'get_tournaments' }),
+        body: JSON.stringify({ 
+          action: 'get_tournaments',
+          show_hidden: true
+        }),
       });
 
       const data = await response.json();
@@ -78,7 +81,7 @@ export function AdminTournamentsSection() {
   };
 
   const handleDeleteTournament = async (tournamentId: number) => {
-    if (!confirm('Вы уверены, что хотите удалить этот турнир?')) return;
+    if (!confirm('ВНИМАНИЕ! Удалить турнир? Это действие необратимо! Будут удалены все матчи, регистрации и чаты.')) return;
 
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -98,6 +101,8 @@ export function AdminTournamentsSection() {
       if (data.success) {
         toast({ title: 'Успешно', description: data.message });
         loadTournaments();
+      } else {
+        toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
       }
     } catch (error) {
       toast({
@@ -118,7 +123,7 @@ export function AdminTournamentsSection() {
           'X-Admin-Id': user.id,
         },
         body: JSON.stringify({
-          action: 'hide_tournament',
+          action: 'toggle_tournament_visibility',
           tournament_id: tournamentId,
           is_hidden: !isHidden,
         }),
@@ -128,6 +133,8 @@ export function AdminTournamentsSection() {
       if (data.success) {
         toast({ title: 'Успешно', description: data.message });
         loadTournaments();
+      } else {
+        toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
       }
     } catch (error) {
       toast({
