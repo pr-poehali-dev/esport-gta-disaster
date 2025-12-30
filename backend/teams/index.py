@@ -776,18 +776,18 @@ def get_tournaments(cur, conn, params: dict) -> dict:
             return error_response('Турнир не найден', 404)
         
         tournament = {
-            'id': row[0],
-            'name': row[1],
-            'description': row[2],
-            'startDate': row[3].isoformat() if row[3] else None,
-            'endDate': row[4].isoformat() if row[4] else None,
-            'maxTeams': row[5],
-            'registrationOpen': row[6],
-            'gameType': row[7],
-            'prizePool': row[8],
-            'rules': row[9],
-            'createdAt': row[10].isoformat(),
-            'registeredTeams': row[11]
+            'id': row['id'],
+            'name': row['name'],
+            'description': row['description'],
+            'startDate': row['start_date'].isoformat() if row['start_date'] else None,
+            'endDate': row['end_date'].isoformat() if row['end_date'] else None,
+            'maxTeams': row['max_teams'],
+            'registrationOpen': row['registration_open'],
+            'gameType': row['game_type'],
+            'prizePool': row['prize_pool'],
+            'rules': row['rules'],
+            'createdAt': row['created_at'].isoformat(),
+            'registeredTeams': row['registered_teams']
         }
         
         cur.execute("""
@@ -798,7 +798,7 @@ def get_tournaments(cur, conn, params: dict) -> dict:
         """, (tournament_id,))
         
         tournament['teams'] = [
-            {'id': r[0], 'name': r[1], 'logo': r[2], 'tag': r[3]}
+            {'id': r['id'], 'name': r['name'], 'logo': r['logo_url'], 'tag': r['tag']}
             for r in cur.fetchall()
         ]
         
@@ -823,15 +823,15 @@ def get_tournaments(cur, conn, params: dict) -> dict:
         tournaments = []
         for row in cur.fetchall():
             tournaments.append({
-                'id': row[0],
-                'name': row[1],
-                'description': row[2],
-                'startDate': row[3].isoformat() if row[3] else None,
-                'gameType': row[4],
-                'prizePool': row[5],
-                'maxTeams': row[6],
-                'registrationOpen': row[7],
-                'registeredTeams': row[8]
+                'id': row['id'],
+                'name': row['name'],
+                'description': row['description'],
+                'startDate': row['start_date'].isoformat() if row['start_date'] else None,
+                'gameType': row['game_type'],
+                'prizePool': row['prize_pool'],
+                'maxTeams': row['max_teams'],
+                'registrationOpen': row['registration_open'],
+                'registeredTeams': row['registered_teams']
             })
         
         return {
@@ -859,12 +859,12 @@ def get_news(cur, conn, params: dict) -> dict:
             return error_response('Новость не найдена', 404)
         
         news_item = {
-            'id': row[0],
-            'title': row[1],
-            'content': row[2],
-            'createdAt': row[3].isoformat() if row[3] else None,
-            'updatedAt': row[4].isoformat() if row[4] else None,
-            'author': row[5] or 'Администрация'
+            'id': row['id'],
+            'title': row['title'],
+            'content': row['content'],
+            'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
+            'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
+            'author': row['author_name'] or 'Администрация'
         }
         
         return {
@@ -890,15 +890,15 @@ def get_news(cur, conn, params: dict) -> dict:
         news_list = []
         for row in cur.fetchall():
             news_list.append({
-                'id': row[0],
-                'title': row[1],
-                'excerpt': row[2][:200] + '...' if len(row[2]) > 200 else row[2],
-                'createdAt': row[3].isoformat() if row[3] else None,
-                'author': row[4] or 'Администрация'
+                'id': row['id'],
+                'title': row['title'],
+                'excerpt': row['content'][:200] + '...' if len(row['content']) > 200 else row['content'],
+                'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
+                'author': row['author_name'] or 'Администрация'
             })
         
-        cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.news WHERE published = true")
-        total = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) as count FROM t_p4831367_esport_gta_disaster.news WHERE published = true")
+        total = cur.fetchone()['count']
         
         return {
             'statusCode': 200,
@@ -932,25 +932,25 @@ def get_tournament_matches(cur, conn, params: dict) -> dict:
     matches = []
     for row in cur.fetchall():
         matches.append({
-            'id': row[0],
+            'id': row['id'],
             'team1': {
-                'id': row[1],
-                'name': row[9],
-                'logo': row[10],
-                'tag': row[11],
-                'score': row[3]
+                'id': row['team1_id'],
+                'name': row['team1_name'],
+                'logo': row['team1_logo'],
+                'tag': row['team1_tag'],
+                'score': row['team1_score']
             },
             'team2': {
-                'id': row[2],
-                'name': row[12],
-                'logo': row[13],
-                'tag': row[14],
-                'score': row[4]
+                'id': row['team2_id'],
+                'name': row['team2_name'],
+                'logo': row['team2_logo'],
+                'tag': row['team2_tag'],
+                'score': row['team2_score']
             },
-            'status': row[5],
-            'scheduledTime': row[6].isoformat() if row[6] else None,
-            'matchNumber': row[7],
-            'roundName': row[8]
+            'status': row['status'],
+            'scheduledTime': row['scheduled_time'].isoformat() if row['scheduled_time'] else None,
+            'matchNumber': row['match_number'],
+            'roundName': row['round_name']
         })
     
     return {
