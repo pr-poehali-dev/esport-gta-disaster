@@ -61,6 +61,8 @@ def handler(event: dict, context) -> dict:
                 return search_users(cur, conn, body)
             elif action == 'remove_member':
                 return remove_member(cur, conn, body, event)
+            elif action == 'transfer_captaincy':
+                return transfer_captaincy(cur, conn, body, event)
             elif action == 'register_tournament':
                 return register_tournament(cur, conn, body, event)
             elif action == 'get_bracket':
@@ -1317,6 +1319,71 @@ def remove_member(cur, conn, body: dict, event: dict) -> dict:
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'success': True, 'message': 'Участник исключён из команды'}),
+        'isBase64Encoded': False
+    }
+
+def transfer_captaincy(cur, conn, body: dict, event: dict) -> dict:
+    '''Передача капитанства другому участнику команды'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    team_id = body.get('team_id')
+    new_captain_id = body.get('new_captain_id')
+    
+    if not team_id or not new_captain_id:
+        return error_response('Укажите team_id и new_captain_id', 400)
+    
+    cur.execute("""
+        SELECT captain_id FROM t_p4831367_esport_gta_disaster.teams 
+        WHERE id = %s
+    """, (team_id,))
+    
+    team = cur.fetchone()
+    if not team:
+        return error_response('Команда не найдена', 404)
+    
+    if team['captain_id'] != int(user_id):
+        return error_response('Только капитан может передавать капитанство', 403)
+    
+    if team['captain_id'] == int(new_captain_id):
+        return error_response('Этот пользователь уже является капитаном', 400)
+    
+    cur.execute("""
+        SELECT id FROM t_p4831367_esport_gta_disaster.team_members
+        WHERE team_id = %s AND user_id = %s AND status = 'active'
+    """, (team_id, new_captain_id))
+    
+    new_captain_member = cur.fetchone()
+    
+    if not new_captain_member:
+        return error_response('Новый капитан должен быть участником команды', 400)
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.teams
+        SET captain_id = %s
+        WHERE id = %s
+    """, (new_captain_id, team_id))
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.team_members
+        SET is_captain = FALSE
+        WHERE team_id = %s AND user_id = %s
+    """, (team_id, user_id))
+    
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.team_members
+        SET is_captain = TRUE
+        WHERE team_id = %s AND user_id = %s
+    """, (team_id, new_captain_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Капитанство успешно передано'}),
         'isBase64Encoded': False
     }
 

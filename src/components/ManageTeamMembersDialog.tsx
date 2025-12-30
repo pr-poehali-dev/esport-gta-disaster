@@ -47,6 +47,54 @@ export default function ManageTeamMembersDialog({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('main');
   const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
+  const [transferringTo, setTransferringTo] = useState<number | null>(null);
+
+  const handleTransferCaptaincy = async (newCaptainId: number) => {
+    if (!confirm('Вы уверены, что хотите передать капитанство? Это действие нельзя отменить.')) {
+      return;
+    }
+
+    setTransferringTo(newCaptainId);
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(TEAMS_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id?.toString() || ''
+        },
+        body: JSON.stringify({
+          action: 'transfer_captaincy',
+          team_id: team.id,
+          new_captain_id: newCaptainId
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        toast({
+          title: '✅ Капитанство передано',
+          description: data.message,
+        });
+        onSuccess();
+        onOpenChange(false);
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось передать капитанство',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Ошибка передачи капитанства',
+        variant: 'destructive',
+      });
+    } finally {
+      setTransferringTo(null);
+    }
+  };
 
   const handleSearchUsers = async () => {
     if (searchQuery.trim().length < 2) {
@@ -204,6 +252,16 @@ export default function ManageTeamMembersDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Информация о передаче капитанства */}
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+            <div className="flex items-start gap-2">
+              <Icon name="Info" size={16} className="text-primary mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                <strong className="text-foreground">Передача капитанства:</strong> Нажмите на иконку короны рядом с участником, чтобы передать ему права капитана. После передачи вы станете обычным участником команды.
+              </p>
+            </div>
+          </div>
+
           {/* Текущий состав */}
           <div className="space-y-3">
             <h3 className="text-lg font-bold flex items-center gap-2">
@@ -249,18 +307,34 @@ export default function ManageTeamMembersDialog({
                     </div>
 
                     {!member.is_captain && (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRemoveMember(member.user_id)}
-                        disabled={removingMemberId === member.user_id || loading}
-                      >
-                        {removingMemberId === member.user_id ? (
-                          <Icon name="Loader2" size={16} className="animate-spin" />
-                        ) : (
-                          <Icon name="X" size={16} />
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleTransferCaptaincy(member.user_id)}
+                          disabled={transferringTo === member.user_id || loading}
+                          title="Передать капитанство"
+                        >
+                          {transferringTo === member.user_id ? (
+                            <Icon name="Loader2" size={16} className="animate-spin" />
+                          ) : (
+                            <Icon name="Crown" size={16} />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRemoveMember(member.user_id)}
+                          disabled={removingMemberId === member.user_id || loading}
+                          title="Исключить из команды"
+                        >
+                          {removingMemberId === member.user_id ? (
+                            <Icon name="Loader2" size={16} className="animate-spin" />
+                          ) : (
+                            <Icon name="X" size={16} />
+                          )}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))
