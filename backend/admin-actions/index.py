@@ -51,7 +51,7 @@ def handler(event: dict, context) -> dict:
                 elif action == 'get_support':
                     return get_support(cur, conn)
                 elif action == 'get_tournaments':
-                    return get_tournaments(cur, conn)
+                    return get_tournaments(cur, conn, body)
                 elif action == 'get_tournament':
                     return get_tournament(cur, conn, body)
                 elif action == 'register_team':
@@ -750,7 +750,7 @@ def get_tournaments(cur, conn, body: dict = None) -> dict:
             SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
                    rules, format, status, created_by, created_at, registration_open, is_hidden
             FROM t_p4831367_esport_gta_disaster.tournaments
-            WHERE is_hidden = FALSE
+            WHERE is_hidden = FALSE OR is_hidden IS NULL
             ORDER BY start_date DESC
         """)
     
