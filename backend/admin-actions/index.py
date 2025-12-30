@@ -1504,7 +1504,7 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
                 'isBase64Encoded': False
             }
         
-        max_teams = tournament_data[0] or 16  # По умолчанию 16 команд
+        max_teams = tournament_data['max_teams'] or 16  # По умолчанию 16 команд
         
         # Получаем все одобренные регистрации (статус approved или confirmed)
         cur.execute(f"""
@@ -1557,7 +1557,7 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
         slots = [None] * max_teams
         for i, team in enumerate(teams):
             if i < max_teams:
-                slots[i] = team[0]  # team_id
+                slots[i] = team['team_id']  # team_id
         
         # Первый раунд - создаем матчи попарно
         match_number = 1
@@ -1651,7 +1651,8 @@ def get_bracket(cur, conn, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    bracket_id, bracket_format = bracket_data
+    bracket_id = bracket_data['id']
+    bracket_format = bracket_data['format']
     
     # Получаем все матчи
     cur.execute(f"""
@@ -1675,25 +1676,25 @@ def get_bracket(cur, conn, body: dict) -> dict:
     matches = []
     for row in cur.fetchall():
         matches.append({
-            'id': row[0],
-            'round': row[1],
-            'match_number': row[2],
-            'team1_id': row[3],
-            'team1_name': row[4],
-            'team1_logo_url': row[5],
-            'team2_id': row[6],
-            'team2_name': row[7],
-            'team2_logo_url': row[8],
-            'winner_id': row[9],
-            'winner_name': row[10],
-            'team1_score': row[11],
-            'team2_score': row[12],
-            'status': row[13],
-            'scheduled_at': row[14].isoformat() if row[14] else None,
-            'team1_confirmed': row[15],
-            'team2_confirmed': row[16],
-            'moderator_verified': row[17],
-            'map_name': row[18]
+            'id': row['id'],
+            'round': row['round'],
+            'match_number': row['match_number'],
+            'team1_id': row['team1_id'],
+            'team1_name': row['team1_name'],
+            'team1_logo_url': row['team1_logo'],
+            'team2_id': row['team2_id'],
+            'team2_name': row['team2_name'],
+            'team2_logo_url': row['team2_logo'],
+            'winner_id': row['winner_id'],
+            'winner_name': row['winner_name'],
+            'team1_score': row['team1_score'],
+            'team2_score': row['team2_score'],
+            'status': row['status'],
+            'scheduled_at': row['scheduled_at'].isoformat() if row['scheduled_at'] else None,
+            'team1_confirmed': row['team1_captain_confirmed'],
+            'team2_confirmed': row['team2_captain_confirmed'],
+            'moderator_verified': row['moderator_verified'],
+            'map_name': row['map_name']
         })
     
     return {
@@ -1776,7 +1777,12 @@ def complete_match(cur, conn, admin_id: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    bracket_id, current_round, match_number, winner_id, team1_score, team2_score = match_data
+    bracket_id = match_data['bracket_id']
+    current_round = match_data['round']
+    match_number = match_data['match_number']
+    winner_id = match_data['winner_id']
+    team1_score = match_data['team1_score']
+    team2_score = match_data['team2_score']
     
     if not winner_id:
         return {
