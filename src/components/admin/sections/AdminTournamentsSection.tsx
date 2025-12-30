@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const ADMIN_API = 'https://functions.poehali.dev/p4831367/admin-actions';
+const ADMIN_API = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
 export function AdminTournamentsSection() {
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -59,7 +59,7 @@ export function AdminTournamentsSection() {
           'Content-Type': 'application/json',
           'X-Admin-Id': user.id,
         },
-        body: JSON.stringify({ action: 'get_admin_tournaments' }),
+        body: JSON.stringify({ action: 'get_tournaments' }),
       });
 
       const data = await response.json();

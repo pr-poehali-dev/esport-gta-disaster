@@ -598,8 +598,8 @@ def get_tournaments(cur, conn) -> dict:
     
     cur.execute("""
         SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
-               rules, format_type, status, created_by, created_at
-        FROM tournaments
+               rules, format, status, created_by, created_at
+        FROM t_p4831367_esport_gta_disaster.tournaments
         ORDER BY start_date DESC
     """)
     
@@ -615,7 +615,7 @@ def get_tournaments(cur, conn) -> dict:
             'max_teams': row[6],
             'prize_pool': row[7],
             'rules': row[8],
-            'format_type': row[9],
+            'format': row[9],
             'status': row[10],
             'created_by': row[11],
             'created_at': row[12].isoformat() if row[12] else None
@@ -633,12 +633,12 @@ def get_tournament(cur, conn, body: dict) -> dict:
     
     tournament_id = body.get('tournament_id')
     
-    cur.execute(f"""
+    cur.execute("""
         SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool,
-               rules, format_type, status, created_by, created_at
-        FROM tournaments
-        WHERE id = {int(tournament_id)}
-    """)
+               rules, format, status, created_by, created_at
+        FROM t_p4831367_esport_gta_disaster.tournaments
+        WHERE id = %s
+    """, (int(tournament_id),))
     
     row = cur.fetchone()
     
@@ -660,7 +660,7 @@ def get_tournament(cur, conn, body: dict) -> dict:
         'max_teams': row[6],
         'prize_pool': row[7],
         'rules': row[8],
-        'format_type': row[9],
+        'format': row[9],
         'status': row[10],
         'created_by': row[11],
         'created_at': row[12].isoformat() if row[12] else None
