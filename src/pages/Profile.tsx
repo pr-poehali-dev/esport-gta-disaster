@@ -89,19 +89,6 @@ export default function Profile() {
 
       if (response.ok) {
         setProfile(data);
-        
-        // Обновляем данные пользователя в localStorage (включая роль)
-        const currentUser = localStorage.getItem('user');
-        if (currentUser) {
-          const userData = JSON.parse(currentUser);
-          const updatedUser = {
-            ...userData,
-            ...data,
-            role: data.role || userData.role || 'user'
-          };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-        }
-        
         setEditData({
           nickname: data.nickname || '',
           discord: data.discord || '',
@@ -254,6 +241,52 @@ export default function Profile() {
     }
   };
 
+  const handleRefreshData = async () => {
+    const sessionToken = localStorage.getItem('session_token');
+    if (!sessionToken) return;
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Token': sessionToken
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user) {
+          const currentUser = localStorage.getItem('user');
+          if (currentUser) {
+            const userData = JSON.parse(currentUser);
+            const updatedUser = { ...userData, ...data.user };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+          
+          toast({
+            title: 'Успешно',
+            description: 'Данные профиля обновлены. Перезагрузите страницу для применения изменений.'
+          });
+          
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось обновить данные',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!editData.nickname.trim()) {
       toast({
@@ -326,6 +359,7 @@ export default function Profile() {
             handleBannerUpload={handleBannerUpload}
             handleAvatarUpload={handleAvatarUpload}
             onEditClick={() => setEditDialogOpen(true)}
+            onRefreshData={handleRefreshData}
           />
 
           <div className="mt-8">

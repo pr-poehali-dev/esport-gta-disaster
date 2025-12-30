@@ -27,6 +27,7 @@ interface ProfileBannerSectionProps {
   handleBannerUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onEditClick: () => void;
+  onRefreshData?: () => void;
 }
 
 export default function ProfileBannerSection({
@@ -35,6 +36,7 @@ export default function ProfileBannerSection({
   handleBannerUpload,
   handleAvatarUpload,
   onEditClick,
+  onRefreshData,
 }: ProfileBannerSectionProps) {
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
@@ -119,10 +121,18 @@ export default function ProfileBannerSection({
             </div>
           </div>
 
-          <Button className="gap-2" onClick={onEditClick}>
-            <Icon name="Edit" size={20} />
-            Изменить информацию
-          </Button>
+          <div className="flex gap-2">
+            {onRefreshData && (
+              <Button variant="outline" className="gap-2" onClick={onRefreshData}>
+                <Icon name="RefreshCw" size={20} />
+                Обновить данные
+              </Button>
+            )}
+            <Button className="gap-2" onClick={onEditClick}>
+              <Icon name="Edit" size={20} />
+              Изменить информацию
+            </Button>
+          </div>
         </div>
       </div>
     </Card>
