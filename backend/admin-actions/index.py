@@ -1489,6 +1489,23 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
         }
     
     try:
+        # Получаем информацию о турнире
+        cur.execute(f"""
+            SELECT max_teams FROM t_p4831367_esport_gta_disaster.tournaments
+            WHERE id = {tournament_id}
+        """)
+        tournament_data = cur.fetchone()
+        
+        if not tournament_data:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Турнир не найден'}),
+                'isBase64Encoded': False
+            }
+        
+        max_teams = tournament_data[0] or 16  # По умолчанию 16 команд
+        
         # Получаем все одобренные регистрации (статус approved или confirmed)
         cur.execute(f"""
             SELECT tr.team_id, t.name, t.logo_url
@@ -1500,11 +1517,11 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
         """)
         teams = cur.fetchall()
         
-        if len(teams) < 2:
+        if len(teams) == 0:
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'error': 'Недостаточно команд для создания сетки (минимум 2)'}),
+                'body': json.dumps({'error': 'Нет одобренных команд для создания сетки'}),
                 'isBase64Encoded': False
             }
         
@@ -1532,31 +1549,50 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
             """)
             bracket_id = cur.fetchone()[0]
         
-        # Генерируем матчи по схеме single elimination
+        # Генерируем сетку на основе max_teams (фиксированная сетка)
         import math
-        team_count = len(teams)
-        rounds = math.ceil(math.log2(team_count))
+        rounds = int(math.log2(max_teams))  # Например, 16 команд = 4 раунда
         
-        # Первый раунд
+        # Создаем список слотов для первого раунда
+        slots = [None] * max_teams
+        for i, team in enumerate(teams):
+            if i < max_teams:
+                slots[i] = team[0]  # team_id
+        
+        # Первый раунд - создаем матчи попарно
         match_number = 1
-        team_index = 0
-        
-        while team_index < len(teams):
-            team1_id = teams[team_index][0] if team_index < len(teams) else None
-            team2_id = teams[team_index + 1][0] if team_index + 1 < len(teams) else None
+        for i in range(0, max_teams, 2):
+            team1_id = slots[i] if slots[i] else None
+            team2_id = slots[i + 1] if slots[i + 1] else None
             
-            cur.execute(f"""
-                INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
-                (bracket_id, round, match_number, team1_id, team2_id, status, created_at, updated_at)
-                VALUES ({bracket_id}, 1, {match_number}, {team1_id if team1_id else 'NULL'}, {team2_id if team2_id else 'NULL'}, 'pending', NOW(), NOW())
-            """)
+            # Если только одна команда в паре - она автоматически проходит дальше
+            if team1_id and not team2_id:
+                # Команда проходит дальше автоматически
+                cur.execute(f"""
+                    INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+                    (bracket_id, round, match_number, team1_id, team2_id, winner_id, status, created_at, updated_at)
+                    VALUES ({bracket_id}, 1, {match_number}, {team1_id}, NULL, {team1_id}, 'walkover', NOW(), NOW())
+                """)
+            elif team2_id and not team1_id:
+                # Команда 2 проходит дальше автоматически
+                cur.execute(f"""
+                    INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+                    (bracket_id, round, match_number, team1_id, team2_id, winner_id, status, created_at, updated_at)
+                    VALUES ({bracket_id}, 1, {match_number}, NULL, {team2_id}, {team2_id}, 'walkover', NOW(), NOW())
+                """)
+            else:
+                # Обычный матч (может быть NULL vs NULL или team vs team)
+                cur.execute(f"""
+                    INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+                    (bracket_id, round, match_number, team1_id, team2_id, status, created_at, updated_at)
+                    VALUES ({bracket_id}, 1, {match_number}, {'NULL' if not team1_id else team1_id}, {'NULL' if not team2_id else team2_id}, 'pending', NOW(), NOW())
+                """)
             
             match_number += 1
-            team_index += 2
         
         # Создаем пустые матчи для следующих раундов
         for round_num in range(2, rounds + 1):
-            matches_in_round = 2 ** (rounds - round_num)
+            matches_in_round = max_teams // (2 ** round_num)
             for match_num in range(1, matches_in_round + 1):
                 cur.execute(f"""
                     INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
@@ -1572,9 +1608,10 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
             'body': json.dumps({
                 'success': True,
                 'bracket_id': bracket_id,
-                'total_teams': team_count,
+                'total_teams': len(teams),
+                'max_teams': max_teams,
                 'rounds': rounds,
-                'message': f'Турнирная сетка создана для {team_count} команд'
+                'message': f'Турнирная сетка создана для {len(teams)} из {max_teams} команд'
             }),
             'isBase64Encoded': False
         }

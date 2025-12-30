@@ -210,7 +210,7 @@ export default function AdminTournaments() {
         showNotification('error', 'Ошибка', data.error || 'Не удалось сгенерировать сетку');
       }
     } catch (error: any) {
-      showNotification('error', 'Ошибка', error.message);
+      showNotification('error', 'Ошибка генерации', error?.message || 'Произошла ошибка при генерации турнирной сетки');
     }
   };
 
