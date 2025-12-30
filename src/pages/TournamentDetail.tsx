@@ -71,10 +71,12 @@ export default function TournamentDetail() {
     try {
       const response = await fetch('https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id?.toString() || '0'
+        },
         body: JSON.stringify({
-          action: 'get_user_teams',
-          user_id: user.id,
+          action: 'get_user_teams'
         }),
       });
 
@@ -336,12 +338,44 @@ export default function TournamentDetail() {
                       <Button
                         key={team.id}
                         onClick={() => handleRegister(team.id)}
-                        disabled={registering}
+                        disabled={registering || !team.is_captain}
                         variant="outline"
-                        className="w-full justify-start"
+                        className="w-full justify-start h-auto py-3"
                       >
-                        <Icon name="Users" size={18} className="mr-2" />
-                        {team.name}
+                        <div className="flex items-center gap-3 w-full">
+                          {team.logo_url && (
+                            <img src={team.logo_url} alt={team.name} className="w-10 h-10 rounded" />
+                          )}
+                          <div className="flex-1 text-left">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{team.name}</span>
+                              {team.tag && <span className="text-xs text-muted-foreground">[{team.tag}]</span>}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <span className="flex items-center gap-1">
+                                <Icon name="Star" size={12} />
+                                {team.rating}
+                              </span>
+                              <span>•</span>
+                              <span>{team.wins}W / {team.losses}L</span>
+                              {team.is_captain && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-yellow-500 flex items-center gap-1">
+                                    <Icon name="Crown" size={12} />
+                                    Вы капитан
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            {!team.is_captain && (
+                              <p className="text-xs text-amber-600 mt-1">
+                                Только капитан может регистрировать команду
+                              </p>
+                            )}
+                          </div>
+                          {team.is_captain && <Icon name="ChevronRight" size={18} />}
+                        </div>
                       </Button>
                     ))}
                   </div>

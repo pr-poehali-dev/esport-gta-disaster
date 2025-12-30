@@ -1,13 +1,19 @@
 import { Card } from '@/components/ui/card';
 import ProfileInvitationsCard from '@/components/profile/ProfileInvitationsCard';
+import ProfileTeamsCard from '@/components/profile/ProfileTeamsCard';
 
 interface ProfileContentSectionProps {
   profile: any;
+  userTeams?: any[];
 }
 
-export default function ProfileContentSection({ profile }: ProfileContentSectionProps) {
+export default function ProfileContentSection({ profile, userTeams = [] }: ProfileContentSectionProps) {
   return (
     <>
+      <div className="mb-6">
+        <ProfileTeamsCard teams={userTeams} />
+      </div>
+
       {profile.bio && (
         <Card className="p-6 bg-card/50 mb-6">
           <h3 className="text-lg font-bold mb-3">О себе</h3>

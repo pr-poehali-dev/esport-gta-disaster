@@ -56,7 +56,7 @@ def handler(event: dict, context) -> dict:
             elif action == 'get_invitations':
                 return get_invitations(cur, conn, event)
             elif action == 'get_user_teams':
-                return get_user_teams(cur, conn, body)
+                return get_user_teams(cur, conn, event)
             elif action == 'search_users':
                 return search_users(cur, conn, body)
             elif action == 'register_tournament':

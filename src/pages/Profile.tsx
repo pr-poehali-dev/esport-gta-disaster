@@ -10,12 +10,14 @@ import ProfileContentSection from '@/components/profile/ProfileContentSection';
 import ProfileEditDialog from '@/components/profile/ProfileEditDialog';
 
 const PROFILE_API_URL = 'https://functions.poehali.dev/40668e0d-ec0a-41a3-95c1-34a0140e1c15';
+const TEAMS_API = 'https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515';
 
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [userTeams, setUserTeams] = useState<any[]>([]);
   
   const [editData, setEditData] = useState({
     nickname: '',
@@ -30,6 +32,7 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
+    loadUserTeams();
     
     const interval = setInterval(() => {
       trackActivity();
@@ -37,6 +40,31 @@ export default function Profile() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const loadUserTeams = async () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!user.id) return;
+
+    try {
+      const response = await fetch(TEAMS_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id.toString()
+        },
+        body: JSON.stringify({
+          action: 'get_user_teams'
+        })
+      });
+
+      const data = await response.json();
+      if (data.teams) {
+        setUserTeams(data.teams);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки команд:', error);
+    }
+  };
 
   const trackActivity = async () => {
     const sessionToken = localStorage.getItem('session_token');
@@ -364,7 +392,7 @@ export default function Profile() {
 
           <div className="mt-8">
             <ProfileStatsSection profile={profile} />
-            <ProfileContentSection profile={profile} />
+            <ProfileContentSection profile={profile} userTeams={userTeams} />
           </div>
 
           <ProfileEditDialog
