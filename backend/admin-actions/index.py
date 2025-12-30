@@ -724,7 +724,7 @@ def register_team(cur, conn, body: dict) -> dict:
     try:
         # Проверка существования турнира и его статуса
         cur.execute("""
-            SELECT id, registration_open, max_teams 
+            SELECT id, name, registration_open, max_teams 
             FROM t_p4831367_esport_gta_disaster.tournaments 
             WHERE id = %s
         """, (int(tournament_id),))
@@ -808,9 +808,9 @@ def register_team(cur, conn, body: dict) -> dict:
         # Регистрация команды
         cur.execute("""
             INSERT INTO t_p4831367_esport_gta_disaster.tournament_registrations 
-            (tournament_id, team_id, status, registered_at) 
-            VALUES (%s, %s, 'pending', NOW())
-        """, (int(tournament_id), int(team_id)))
+            (tournament_id, tournament_name, team_id, status, registered_at) 
+            VALUES (%s, %s, %s, 'pending', NOW())
+        """, (int(tournament_id), tournament['name'], int(team_id)))
         
         conn.commit()
         
