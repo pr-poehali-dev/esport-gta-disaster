@@ -77,6 +77,34 @@ export function AdminTournamentsSection() {
     }
   };
 
+  const loadRegistrations = async (tournamentId: number) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch(ADMIN_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id,
+        },
+        body: JSON.stringify({ 
+          action: 'get_tournament_registrations',
+          tournament_id: tournamentId 
+        }),
+      });
+
+      const data = await response.json();
+      if (data.registrations) {
+        setRegistrations(data.registrations);
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить заявки',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleDeleteTournament = async (tournamentId: number) => {
     if (!confirm('Вы уверены, что хотите удалить этот турнир?')) return;
 
@@ -333,6 +361,7 @@ export function AdminTournamentsSection() {
                         variant="outline"
                         onClick={() => {
                           setSelectedTournament(tournament);
+                          loadRegistrations(tournament.id);
                           setRegistrationsDialogOpen(true);
                         }}
                         title="Заявки"
@@ -452,6 +481,64 @@ export function AdminTournamentsSection() {
             <Button onClick={handleCreateTournament} disabled={loading} className="w-full">
               {loading ? 'Создание...' : 'Создать турнир'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={registrationsDialogOpen} onOpenChange={setRegistrationsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Заявки на турнир: {selectedTournament?.name}</DialogTitle>
+            <DialogDescription>
+              Всего заявок: {registrations.length}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {registrations.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Пока нет заявок на этот турнир
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {registrations.map((registration: any) => (
+                  <Card key={registration.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {registration.team_logo_url && (
+                          <img
+                            src={registration.team_logo_url}
+                            alt={registration.team_name}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        )}
+                        <div>
+                          <h3 className="font-semibold text-lg">{registration.team_name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {registration.team_tag && `[${registration.team_tag}]`}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Зарегистрирована: {new Date(registration.registered_at).toLocaleDateString('ru-RU')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 rounded text-sm ${
+                          registration.status === 'approved' 
+                            ? 'bg-green-500/20 text-green-500'
+                            : registration.status === 'rejected'
+                            ? 'bg-red-500/20 text-red-500'
+                            : 'bg-yellow-500/20 text-yellow-500'
+                        }`}>
+                          {registration.status === 'approved' ? 'Одобрена' : 
+                           registration.status === 'rejected' ? 'Отклонена' : 'Ожидает'}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
