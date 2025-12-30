@@ -689,23 +689,61 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
             }
         
         cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.match_history WHERE match_id IN (
+                SELECT id FROM t_p4831367_esport_gta_disaster.bracket_matches WHERE bracket_id IN (
+                    SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+                )
+            )
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.match_screenshots WHERE match_id IN (
+                SELECT id FROM t_p4831367_esport_gta_disaster.bracket_matches WHERE bracket_id IN (
+                    SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+                )
+            )
+        """, (int(tournament_id),))
+        
+        cur.execute("""
             DELETE FROM t_p4831367_esport_gta_disaster.ban_picks WHERE match_id IN (
-                SELECT id FROM t_p4831367_esport_gta_disaster.tournament_matches WHERE tournament_id = %s
+                SELECT id FROM t_p4831367_esport_gta_disaster.bracket_matches WHERE bracket_id IN (
+                    SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+                )
             )
         """, (int(tournament_id),))
         
         cur.execute("""
             DELETE FROM t_p4831367_esport_gta_disaster.match_chat WHERE match_id IN (
-                SELECT id FROM t_p4831367_esport_gta_disaster.tournament_matches WHERE tournament_id = %s
+                SELECT id FROM t_p4831367_esport_gta_disaster.bracket_matches WHERE bracket_id IN (
+                    SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+                )
             )
         """, (int(tournament_id),))
         
         cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_matches WHERE tournament_id = %s
+            DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches WHERE bracket_id IN (
+                SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+            )
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.matches WHERE tournament_id = %s
         """, (int(tournament_id),))
         
         cur.execute("""
             DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_exclusions WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_suspensions WHERE tournament_id = %s
         """, (int(tournament_id),))
         
         cur.execute("""
