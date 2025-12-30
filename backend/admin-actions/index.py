@@ -1719,39 +1719,53 @@ def complete_match(cur, conn, admin_id: str, body: dict) -> dict:
 def get_dashboard_stats(cur, conn) -> dict:
     """Получает статистику для дашборда"""
     
-    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.users")
-    total_users = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.tournaments WHERE status = 'active'")
-    active_tournaments = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.news")
-    published_news = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.bans WHERE active = TRUE")
-    active_bans = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.mutes WHERE active = TRUE")
-    active_mutes = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.teams")
-    total_teams = cur.fetchone()[0]
-    
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({
-            'stats': {
-                'total_users': total_users,
-                'active_tournaments': active_tournaments,
-                'published_news': published_news,
-                'active_bans': active_bans,
-                'active_mutes': active_mutes,
-                'total_teams': total_teams
-            }
-        }),
-        'isBase64Encoded': False
-    }
+    try:
+        cur.execute("SELECT COUNT(*) as cnt FROM t_p4831367_esport_gta_disaster.users")
+        result = cur.fetchone()
+        total_users = result['cnt'] if result else 0
+        
+        cur.execute("SELECT COUNT(*) as cnt FROM t_p4831367_esport_gta_disaster.tournaments WHERE status = 'active'")
+        result = cur.fetchone()
+        active_tournaments = result['cnt'] if result else 0
+        
+        cur.execute("SELECT COUNT(*) as cnt FROM t_p4831367_esport_gta_disaster.news")
+        result = cur.fetchone()
+        published_news = result['cnt'] if result else 0
+        
+        cur.execute("SELECT COUNT(*) as cnt FROM t_p4831367_esport_gta_disaster.bans")
+        result = cur.fetchone()
+        active_bans = result['cnt'] if result else 0
+        
+        cur.execute("SELECT COUNT(*) as cnt FROM t_p4831367_esport_gta_disaster.mutes")
+        result = cur.fetchone()
+        active_mutes = result['cnt'] if result else 0
+        
+        cur.execute("SELECT COUNT(*) as cnt FROM t_p4831367_esport_gta_disaster.teams")
+        result = cur.fetchone()
+        total_teams = result['cnt'] if result else 0
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'stats': {
+                    'total_users': total_users,
+                    'active_tournaments': active_tournaments,
+                    'published_news': published_news,
+                    'active_bans': active_bans,
+                    'active_mutes': active_mutes,
+                    'total_teams': total_teams
+                }
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка получения статистики: {str(e)}'}),
+            'isBase64Encoded': False
+        }
 
 def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     """Назначает роль пользователю"""
