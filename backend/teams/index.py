@@ -26,7 +26,7 @@ def handler(event: dict, context) -> dict:
 
     try:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         
         if method == 'GET':
             path = event.get('queryStringParameters', {})
@@ -41,7 +41,7 @@ def handler(event: dict, context) -> dict:
             elif path.get('match_id'):
                 return get_match_details(cur, conn, event)
             else:
-                return get_verified_teams(conn)
+                return get_verified_teams(cur, conn)
         
         elif method == 'POST':
             body = json.loads(event.get('body', '{}'))
@@ -87,11 +87,10 @@ def handler(event: dict, context) -> dict:
     except Exception as e:
         return error_response(str(e), 500)
 
-def get_verified_teams(conn) -> dict:
+def get_verified_teams(cur, conn) -> dict:
     '''Получение всех верифицированных команд с их составами'''
     try:
-        cursor = conn.cursor()
-        cursor.execute("""
+        cur.execute("""
             SELECT 
                 t.id,
                 t.name,
@@ -114,29 +113,29 @@ def get_verified_teams(conn) -> dict:
             FROM t_p4831367_esport_gta_disaster.teams t
             ORDER BY t.rating DESC, t.level DESC
         """)
-        team_rows = cursor.fetchall()
+        team_rows = cur.fetchall()
         
         teams = []
         for row in team_rows:
             team = {
-                'id': row[0],
-                'name': row[1],
-                'tag': row[2],
-                'logo_url': row[3],
-                'wins': row[4],
-                'losses': row[5],
-                'draws': row[6],
-                'rating': row[7],
-                'verified': row[8],
-                'description': row[9],
-                'created_at': row[10].isoformat() if row[10] else None,
-                'level': row[11],
-                'points': row[12],
-                'team_color': row[13],
-                'win_rate': row[14]
+                'id': row['id'],
+                'name': row['name'],
+                'tag': row['tag'],
+                'logo_url': row['logo_url'],
+                'wins': row['wins'],
+                'losses': row['losses'],
+                'draws': row['draws'],
+                'rating': row['rating'],
+                'verified': row['verified'],
+                'description': row['description'],
+                'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+                'level': row['level'],
+                'points': row['points'],
+                'team_color': row['team_color'],
+                'win_rate': row['win_rate']
             }
             
-            cursor.execute("""
+            cur.execute("""
                 SELECT 
                     tm.id,
                     tm.user_id,
@@ -151,14 +150,14 @@ def get_verified_teams(conn) -> dict:
             """, (team['id'],))
             
             members = []
-            for m_row in cursor.fetchall():
+            for m_row in cur.fetchall():
                 members.append({
-                    'id': m_row[0],
-                    'user_id': m_row[1],
-                    'member_role': m_row[2],
-                    'joined_at': m_row[3].isoformat() if m_row[3] else None,
-                    'nickname': m_row[4],
-                    'avatar_url': m_row[5]
+                    'id': m_row['id'],
+                    'user_id': m_row['user_id'],
+                    'member_role': m_row['member_role'],
+                    'joined_at': m_row['joined_at'].isoformat() if m_row['joined_at'] else None,
+                    'nickname': m_row['nickname'],
+                    'avatar_url': m_row['avatar_url']
                 })
             
             team['members'] = members
