@@ -1715,7 +1715,12 @@ def update_match_score(cur, conn, admin_id: str, body: dict) -> dict:
     team2_score = body.get('team2_score')
     
     if not match_id:
-        return error_response('match_id обязателен', 400)
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'match_id обязателен'}),
+            'isBase64Encoded': False
+        }
     
     # Определяем победителя
     winner_id = None
