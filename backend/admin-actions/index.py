@@ -609,16 +609,12 @@ def get_tournaments(cur, conn) -> dict:
     """Получает список всех турниров"""
     
     cur.execute("""
-        SELECT t.id, t.name, t.description, t.game, t.start_date, t.end_date, t.max_teams, t.prize_pool, 
-               t.rules, t.format, t.status, t.created_by, t.created_at,
-               COALESCE(t.is_hidden, FALSE) as is_hidden,
-               COALESCE(t.is_started, FALSE) as is_started,
-               COUNT(tr.id) as registrations_count
-        FROM t_p4831367_esport_gta_disaster.tournaments t
-        LEFT JOIN t_p4831367_esport_gta_disaster.tournament_registrations tr ON t.id = tr.tournament_id
-        GROUP BY t.id, t.name, t.description, t.game, t.start_date, t.end_date, t.max_teams, 
-                 t.prize_pool, t.rules, t.format, t.status, t.created_by, t.created_at, t.is_hidden, t.is_started
-        ORDER BY t.start_date DESC
+        SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
+               rules, format, status, created_by, created_at,
+               COALESCE(is_hidden, FALSE) as is_hidden,
+               COALESCE(is_started, FALSE) as is_started
+        FROM t_p4831367_esport_gta_disaster.tournaments
+        ORDER BY start_date DESC
     """)
     
     tournaments = []
@@ -639,7 +635,7 @@ def get_tournaments(cur, conn) -> dict:
             'created_at': row['created_at'].isoformat() if row['created_at'] else None,
             'is_hidden': row['is_hidden'],
             'is_started': row['is_started'],
-            'registrations_count': row['registrations_count'],
+            'registrations_count': 0,
             'max_participants': row['max_teams']
         })
     
