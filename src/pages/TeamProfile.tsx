@@ -61,24 +61,32 @@ export default function TeamProfile() {
       setError(null);
       
       try {
-        const response = await fetch(API_BASE);
-        if (!response.ok) throw new Error('Ошибка загрузки команд');
+        const response = await fetch(API_BASE, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': currentUser?.id?.toString() || '0'
+          },
+          body: JSON.stringify({
+            action: 'get_team_by_id',
+            team_id: parseInt(id)
+          })
+        });
+        
+        if (!response.ok) throw new Error('Ошибка загрузки команды');
         
         const data = await response.json();
-        const teams = data.teams || [];
         
-        const foundTeam = teams.find((t: Team) => t.id === parseInt(id));
-        
-        if (!foundTeam) {
-          setError('Команда не найдена');
-        } else {
-          setTeam(foundTeam);
-          setMembers(foundTeam.members || []);
+        if (data.team) {
+          setTeam(data.team);
+          setMembers(data.team.members || []);
           console.log('Team loaded:', { 
-            captain_id: foundTeam.captain_id, 
+            captain_id: data.team.captain_id, 
             currentUserId: currentUser?.id,
-            willShowButton: currentUser && foundTeam.captain_id === currentUser.id 
+            willShowButton: currentUser && data.team.captain_id === currentUser.id 
           });
+        } else {
+          setError('Команда не найдена');
         }
       } catch (err) {
         console.error('Error loading team:', err);

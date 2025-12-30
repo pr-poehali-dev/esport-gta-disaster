@@ -29,7 +29,11 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 5000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadMessages();
+      }
+    }, 15000);
     return () => clearInterval(interval);
   }, [matchId]);
 

@@ -35,8 +35,10 @@ export default function Profile() {
     loadUserTeams();
     
     const interval = setInterval(() => {
-      trackActivity();
-    }, 60000);
+      if (document.visibilityState === 'visible') {
+        trackActivity();
+      }
+    }, 300000); // 5 минут вместо 1 минуты
 
     return () => clearInterval(interval);
   }, []);
@@ -79,7 +81,7 @@ export default function Profile() {
         },
         body: JSON.stringify({
           action: 'track_activity',
-          duration_seconds: 60
+          duration_seconds: 300 // Обновлено для 5 минут
         })
       });
       
@@ -180,7 +182,11 @@ export default function Profile() {
         const data = await response.json();
 
         if (response.ok) {
-          setProfile({ ...profile, banner_url: data.banner_url });
+          if (data.profile) {
+            setProfile(data.profile);
+          } else {
+            setProfile({ ...profile, banner_url: data.banner_url });
+          }
           toast({
             title: 'Успешно',
             description: 'Баннер загружен'
@@ -243,7 +249,11 @@ export default function Profile() {
         const data = await response.json();
 
         if (response.ok) {
-          setProfile({ ...profile, avatar_url: data.avatar_url });
+          if (data.profile) {
+            setProfile(data.profile);
+          } else {
+            setProfile({ ...profile, avatar_url: data.avatar_url });
+          }
           toast({
             title: 'Успешно',
             description: 'Аватар загружен'

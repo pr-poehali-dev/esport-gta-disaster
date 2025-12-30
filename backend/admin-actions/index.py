@@ -841,12 +841,64 @@ def register_team(cur, conn, body: dict) -> dict:
         
         conn.commit()
         
+        # Получаем обновлённую информацию о турнире с зарегистрированными командами
+        cur.execute("""
+            SELECT t.id, t.name, t.description, t.start_date, t.end_date, 
+                   t.max_teams, t.prize_pool, t.rules, t.format, t.status, 
+                   t.registration_open, t.game, t.created_at
+            FROM t_p4831367_esport_gta_disaster.tournaments t
+            WHERE t.id = %s
+        """, (int(tournament_id),))
+        
+        updated_tournament = cur.fetchone()
+        
+        # Получаем все зарегистрированные команды
+        cur.execute("""
+            SELECT tr.id as registration_id, tr.team_id, tr.status, tr.registered_at,
+                   tm.name as team_name, tm.tag, tm.logo_url, tm.rating
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+            JOIN t_p4831367_esport_gta_disaster.teams tm ON tr.team_id = tm.id
+            WHERE tr.tournament_id = %s
+            ORDER BY tr.registered_at ASC
+        """, (int(tournament_id),))
+        
+        registered_teams = []
+        for reg_row in cur.fetchall():
+            registered_teams.append({
+                'registration_id': reg_row['registration_id'],
+                'team_id': reg_row['team_id'],
+                'team_name': reg_row['team_name'],
+                'tag': reg_row['tag'],
+                'logo_url': reg_row['logo_url'],
+                'rating': reg_row['rating'],
+                'status': reg_row['status'],
+                'registered_at': reg_row['registered_at'].isoformat() if reg_row['registered_at'] else None
+            })
+        
+        tournament_data = {
+            'id': updated_tournament['id'],
+            'name': updated_tournament['name'],
+            'description': updated_tournament['description'],
+            'start_date': updated_tournament['start_date'].isoformat() if updated_tournament['start_date'] else None,
+            'end_date': updated_tournament['end_date'].isoformat() if updated_tournament['end_date'] else None,
+            'max_teams': updated_tournament['max_teams'],
+            'prize_pool': updated_tournament['prize_pool'],
+            'rules': updated_tournament['rules'],
+            'format': updated_tournament['format'],
+            'status': updated_tournament['status'],
+            'registration_open': updated_tournament['registration_open'],
+            'game': updated_tournament['game'],
+            'created_at': updated_tournament['created_at'].isoformat() if updated_tournament['created_at'] else None,
+            'registered_teams': registered_teams
+        }
+        
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({
                 'success': True,
-                'message': f'Команда "{team["name"]}" успешно зарегистрирована на турнир'
+                'message': f'Команда "{team["name"]}" успешно зарегистрирована на турнир',
+                'tournament': tournament_data
             }),
             'isBase64Encoded': False
         }

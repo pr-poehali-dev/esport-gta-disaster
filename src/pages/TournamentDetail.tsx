@@ -36,9 +36,10 @@ export default function TournamentDetail() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
-    loadTournament();
     if (user.id) {
-      loadUserTeams();
+      Promise.all([loadTournament(), loadUserTeams()]);
+    } else {
+      loadTournament();
     }
   }, [id]);
 
@@ -123,7 +124,11 @@ export default function TournamentDetail() {
           title: 'Успешно!',
           description: data.message,
         });
-        loadTournament();
+        if (data.tournament) {
+          setTournament(data.tournament);
+        } else {
+          loadTournament();
+        }
       } else {
         toast({
           title: 'Ошибка',

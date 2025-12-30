@@ -57,6 +57,8 @@ def handler(event: dict, context) -> dict:
                 return get_invitations(cur, conn, event)
             elif action == 'get_user_teams':
                 return get_user_teams(cur, conn, event)
+            elif action == 'get_team_by_id':
+                return get_team_by_id(cur, conn, body)
             elif action == 'search_users':
                 return search_users(cur, conn, body)
             elif action == 'remove_member':
@@ -88,6 +90,85 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return error_response('Метод не поддерживается', 405)
     
+    except Exception as e:
+        return error_response(str(e), 500)
+
+def get_team_by_id(cur, conn, body) -> dict:
+    '''Получение одной команды по ID'''
+    try:
+        team_id = body.get('team_id')
+        if not team_id:
+            return error_response('team_id обязателен', 400)
+        
+        cur.execute("""
+            SELECT 
+                id, name, tag, logo_url, captain_id, wins, losses, draws,
+                rating, verified, description, created_at, level, points, team_color
+            FROM t_p4831367_esport_gta_disaster.teams
+            WHERE id = %s
+        """, (team_id,))
+        
+        row = cur.fetchone()
+        if not row:
+            return error_response('Команда не найдена', 404)
+        
+        wins = row.get('wins') or 0
+        losses = row.get('losses') or 0
+        win_rate = round((wins / (wins + losses) * 100)) if (wins + losses) > 0 else 0
+        
+        team = {
+            'id': row.get('id'),
+            'name': row.get('name'),
+            'tag': row.get('tag'),
+            'logo_url': row.get('logo_url'),
+            'captain_id': row.get('captain_id'),
+            'wins': wins,
+            'losses': losses,
+            'draws': row.get('draws') or 0,
+            'rating': row.get('rating') or 1000,
+            'verified': row.get('verified') or False,
+            'description': row.get('description'),
+            'created_at': row['created_at'].isoformat() if row.get('created_at') else None,
+            'level': row.get('level') or 2,
+            'points': row.get('points') or 200,
+            'team_color': row.get('team_color') or '#FFFFFF',
+            'win_rate': win_rate
+        }
+        
+        # Получаем членов команды
+        cur.execute("""
+            SELECT 
+                tm.id, tm.user_id, tm.player_role as member_role, tm.joined_at,
+                u.nickname, u.avatar_url
+            FROM t_p4831367_esport_gta_disaster.team_members tm
+            JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
+            WHERE tm.team_id = %s
+            ORDER BY tm.is_captain DESC, tm.joined_at ASC
+        """, (team_id,))
+        
+        members = []
+        for m_row in cur.fetchall():
+            members.append({
+                'id': m_row.get('id'),
+                'user_id': m_row.get('user_id'),
+                'member_role': m_row.get('member_role'),
+                'joined_at': m_row['joined_at'].isoformat() if m_row.get('joined_at') else None,
+                'nickname': m_row.get('nickname'),
+                'avatar_url': m_row.get('avatar_url')
+            })
+        
+        team['members'] = members
+        team['member_count'] = len(members)
+        
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps({'team': team}),
+            'isBase64Encoded': False
+        }
     except Exception as e:
         return error_response(str(e), 500)
 

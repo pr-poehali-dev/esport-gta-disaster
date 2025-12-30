@@ -206,13 +206,17 @@ def upload_avatar(cur, conn, user_id: int, body: dict) -> dict:
         # CDN URL
         cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
         
-        # Обновление аватара в БД
+        # Обновление аватара в БД и получение обновлённого профиля
         cur.execute("""
             UPDATE t_p4831367_esport_gta_disaster.users 
             SET avatar_url = %s, updated_at = NOW()
             WHERE id = %s
+            RETURNING id, nickname, email, discord, team, avatar_url, role, 
+                      auto_status, bio, signature_url, total_time_seconds, 
+                      created_at, achievement_points, banner_url
         """, (cdn_url, user_id))
         
+        user = cur.fetchone()
         conn.commit()
         
         return {
@@ -221,7 +225,24 @@ def upload_avatar(cur, conn, user_id: int, body: dict) -> dict:
             'body': json.dumps({
                 'success': True,
                 'avatar_url': cdn_url,
-                'message': 'Аватар загружен'
+                'message': 'Аватар загружен',
+                'profile': {
+                    'id': user[0],
+                    'nickname': user[1],
+                    'email': user[2],
+                    'discord': user[3],
+                    'team': user[4],
+                    'avatar_url': user[5],
+                    'role': user[6],
+                    'auto_status': user[7],
+                    'bio': user[8],
+                    'signature_url': user[9],
+                    'total_time_seconds': user[10],
+                    'total_time_hours': round(user[10] / 3600, 1) if user[10] else 0,
+                    'created_at': user[11].isoformat() if user[11] else None,
+                    'achievement_points': user[12],
+                    'banner_url': user[13]
+                }
             }),
             'isBase64Encoded': False
         }
@@ -316,8 +337,12 @@ def upload_banner(cur, conn, user_id: int, body: dict) -> dict:
             UPDATE t_p4831367_esport_gta_disaster.users 
             SET banner_url = %s, updated_at = NOW()
             WHERE id = %s
+            RETURNING id, nickname, email, discord, team, avatar_url, role, 
+                      auto_status, bio, signature_url, total_time_seconds, 
+                      created_at, achievement_points, banner_url
         """, (cdn_url, user_id))
         
+        user = cur.fetchone()
         conn.commit()
         
         return {
@@ -326,7 +351,24 @@ def upload_banner(cur, conn, user_id: int, body: dict) -> dict:
             'body': json.dumps({
                 'success': True,
                 'banner_url': cdn_url,
-                'message': 'Баннер загружен'
+                'message': 'Баннер загружен',
+                'profile': {
+                    'id': user[0],
+                    'nickname': user[1],
+                    'email': user[2],
+                    'discord': user[3],
+                    'team': user[4],
+                    'avatar_url': user[5],
+                    'role': user[6],
+                    'auto_status': user[7],
+                    'bio': user[8],
+                    'signature_url': user[9],
+                    'total_time_seconds': user[10],
+                    'total_time_hours': round(user[10] / 3600, 1) if user[10] else 0,
+                    'created_at': user[11].isoformat() if user[11] else None,
+                    'achievement_points': user[12],
+                    'banner_url': user[13]
+                }
             }),
             'isBase64Encoded': False
         }
