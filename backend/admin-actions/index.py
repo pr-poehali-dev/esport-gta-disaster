@@ -252,7 +252,7 @@ def send_verification_code(cur, conn, admin_id: str, body: dict) -> dict:
     conn.commit()
     
     cur.execute(f"SELECT email FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(admin_id)}'")
-    admin_email = cur.fetchone()[0]
+    admin_email = cur.fetchone()['email']
     
     smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
     smtp_port = int(os.environ.get('SMTP_PORT', 587))
@@ -316,8 +316,8 @@ def verify_and_execute(cur, conn, admin_id: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    action_type, action_data = result
-    action_data = json.loads(action_data)
+    action_type = result['action_type']
+    action_data = json.loads(result['action_data'])
     
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.admin_verification_codes
@@ -440,15 +440,15 @@ def get_bans(cur, conn) -> dict:
     bans = []
     for row in cur.fetchall():
         bans.append({
-            'id': row[0],
-            'user_id': row[1],
-            'username': row[2],
-            'admin_id': row[3],
-            'admin_username': row[4],
-            'reason': row[5],
-            'created_at': row[6].isoformat() if row[6] else None,
-            'expires_at': row[7].isoformat() if row[7] else None,
-            'active': row[8]
+            'id': row['id'],
+            'user_id': row['user_id'],
+            'username': row['username'],
+            'admin_id': row['admin_id'],
+            'admin_username': row['admin_username'],
+            'reason': row['reason'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'expires_at': row['expires_at'].isoformat() if row['expires_at'] else None,
+            'active': row['active']
         })
     
     return {
@@ -474,15 +474,15 @@ def get_mutes(cur, conn) -> dict:
     mutes = []
     for row in cur.fetchall():
         mutes.append({
-            'id': row[0],
-            'user_id': row[1],
-            'username': row[2],
-            'admin_id': row[3],
-            'admin_username': row[4],
-            'reason': row[5],
-            'created_at': row[6].isoformat() if row[6] else None,
-            'expires_at': row[7].isoformat() if row[7] else None,
-            'active': row[8]
+            'id': row['id'],
+            'user_id': row['user_id'],
+            'username': row['username'],
+            'admin_id': row['admin_id'],
+            'admin_username': row['admin_username'],
+            'reason': row['reason'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'expires_at': row['expires_at'].isoformat() if row['expires_at'] else None,
+            'active': row['active']
         })
     
     return {
@@ -508,15 +508,15 @@ def get_exclusions(cur, conn) -> dict:
     exclusions = []
     for row in cur.fetchall():
         exclusions.append({
-            'id': row[0],
-            'user_id': row[1],
-            'username': row[2],
-            'admin_id': row[3],
-            'admin_username': row[4],
-            'reason': row[5],
-            'created_at': row[6].isoformat() if row[6] else None,
-            'expires_at': row[7].isoformat() if row[7] else None,
-            'active': row[8]
+            'id': row['id'],
+            'user_id': row['user_id'],
+            'username': row['username'],
+            'admin_id': row['admin_id'],
+            'admin_username': row['admin_username'],
+            'reason': row['reason'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'expires_at': row['expires_at'].isoformat() if row['expires_at'] else None,
+            'active': row['active']
         })
     
     return {
@@ -594,7 +594,7 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
             RETURNING id
         """, (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_value, admin_id, location, team_size, best_of))
         
-        tournament_id = cur.fetchone()[0]
+        tournament_id = cur.fetchone()['id']
         conn.commit()
         
         return {
@@ -896,12 +896,12 @@ def get_match_chat(cur, conn, body: dict) -> dict:
     messages = []
     for row in cur.fetchall():
         messages.append({
-            'id': row[0],
-            'user_id': row[1],
-            'username': row[2],
-            'message': row[3],
-            'created_at': row[4].isoformat() if row[4] else None,
-            'message_type': row[5]
+            'id': row['id'],
+            'user_id': row['user_id'],
+            'username': row['username'],
+            'message': row['message'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'message_type': row['message_type']
         })
     
     return {
@@ -924,7 +924,7 @@ def send_chat_message(cur, conn, admin_id: str, body: dict) -> dict:
         RETURNING id
     """)
     
-    message_id = cur.fetchone()[0]
+    message_id = cur.fetchone()['id']
     conn.commit()
     
     return {
@@ -950,13 +950,13 @@ def get_ban_pick(cur, conn, body: dict) -> dict:
     ban_picks = []
     for row in cur.fetchall():
         ban_picks.append({
-            'id': row[0],
-            'team_id': row[1],
-            'team_name': row[2],
-            'hero_name': row[3],
-            'action_type': row[4],
-            'action_order': row[5],
-            'created_at': row[6].isoformat() if row[6] else None
+            'id': row['id'],
+            'team_id': row['team_id'],
+            'team_name': row['team_name'],
+            'hero_name': row['hero_name'],
+            'action_type': row['action_type'],
+            'action_order': row['action_order'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
     return {
@@ -975,12 +975,12 @@ def make_ban_pick(cur, conn, body: dict) -> dict:
     action_type = body.get('action_type')
     
     cur.execute(f"""
-        SELECT COALESCE(MAX(action_order), 0) + 1
+        SELECT COALESCE(MAX(action_order), 0) + 1 AS next_order
         FROM ban_pick
         WHERE match_id = {int(match_id)}
     """)
     
-    action_order = cur.fetchone()[0]
+    action_order = cur.fetchone()['next_order']
     
     cur.execute(f"""
         INSERT INTO t_p4831367_esport_gta_disaster.ban_pick (match_id, team_id, hero_name, action_type, action_order)
@@ -988,7 +988,7 @@ def make_ban_pick(cur, conn, body: dict) -> dict:
         RETURNING id
     """)
     
-    ban_pick_id = cur.fetchone()[0]
+    ban_pick_id = cur.fetchone()['id']
     conn.commit()
     
     return {
@@ -1011,13 +1011,13 @@ def calculate_match_rating(cur, conn, admin_id: str, body: dict) -> dict:
         SELECT rating FROM team_ratings WHERE team_id = {int(winner_id)}
     """)
     winner_rating_row = cur.fetchone()
-    winner_rating = winner_rating_row[0] if winner_rating_row else 1000
+    winner_rating = winner_rating_row['rating'] if winner_rating_row else 1000
     
     cur.execute(f"""
         SELECT rating FROM team_ratings WHERE team_id = {int(loser_id)}
     """)
     loser_rating_row = cur.fetchone()
-    loser_rating = loser_rating_row[0] if loser_rating_row else 1000
+    loser_rating = loser_rating_row['rating'] if loser_rating_row else 1000
     
     expected_winner = 1 / (1 + 10 ** ((loser_rating - winner_rating) / 400))
     expected_loser = 1 / (1 + 10 ** ((winner_rating - loser_rating) / 400))
@@ -1075,12 +1075,12 @@ def get_team_ratings(cur, conn) -> dict:
     ratings = []
     for row in cur.fetchall():
         ratings.append({
-            'team_id': row[0],
-            'team_name': row[1],
-            'rating': row[2],
-            'matches_played': row[3],
-            'wins': row[4],
-            'losses': row[5]
+            'team_id': row['team_id'],
+            'team_name': row['team_name'],
+            'rating': row['rating'],
+            'matches_played': row['matches_played'],
+            'wins': row['wins'],
+            'losses': row['losses']
         })
     
     return {
@@ -1260,13 +1260,13 @@ def get_news(cur, conn, body: dict) -> dict:
     news_list = []
     for row in cur.fetchall():
         news_list.append({
-            'id': row[0],
-            'title': row[1],
-            'content': row[2],
-            'category': row[3],
-            'author_id': row[4],
-            'author_username': row[5],
-            'created_at': row[6].isoformat() if row[6] else None
+            'id': row['id'],
+            'title': row['title'],
+            'content': row['content'],
+            'category': row['category'],
+            'author_id': row['author_id'],
+            'author_username': row['author_username'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
     return {
@@ -1297,7 +1297,7 @@ def create_rule(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
         RETURNING id
     """)
     
-    rule_id = cur.fetchone()[0]
+    rule_id = cur.fetchone()['id']
     conn.commit()
     
     return {
@@ -1374,12 +1374,12 @@ def get_rules(cur, conn) -> dict:
     rules = []
     for row in cur.fetchall():
         rules.append({
-            'id': row[0],
-            'title': row[1],
-            'content': row[2],
-            'category': row[3],
-            'created_by': row[4],
-            'created_at': row[5].isoformat() if row[5] else None
+            'id': row['id'],
+            'title': row['title'],
+            'content': row['content'],
+            'category': row['category'],
+            'created_by': row['created_by'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
     return {
@@ -1431,9 +1431,9 @@ def get_support(cur, conn) -> dict:
     
     if row:
         support_info = {
-            'email': row[0],
-            'discord': row[1],
-            'telegram': row[2]
+            'email': row['email'],
+            'discord': row['discord'],
+            'telegram': row['telegram']
         }
     else:
         support_info = {
@@ -1461,11 +1461,11 @@ def get_all_users(cur, conn) -> dict:
     users = []
     for row in cur.fetchall():
         users.append({
-            'id': row[0],
-            'username': row[1],
-            'email': row[2],
-            'role': row[3],
-            'created_at': row[4].isoformat() if row[4] else None
+            'id': row['id'],
+            'username': row['username'],
+            'email': row['email'],
+            'role': row['role'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
     return {
@@ -1533,7 +1533,7 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
         existing_bracket = cur.fetchone()
         
         if existing_bracket:
-            bracket_id = existing_bracket[0]
+            bracket_id = existing_bracket['id']
             # Удаляем старые матчи
             cur.execute(f"""
                 DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches
@@ -1547,7 +1547,7 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
                 VALUES ({tournament_id}, '{escape_sql(bracket_format)}', {admin_id}, NOW(), NOW())
                 RETURNING id
             """)
-            bracket_id = cur.fetchone()[0]
+            bracket_id = cur.fetchone()['id']
         
         # Генерируем сетку на основе max_teams (фиксированная сетка)
         import math
@@ -1731,7 +1731,7 @@ def update_match_score(cur, conn, admin_id: str, body: dict) -> dict:
         """)
         teams = cur.fetchone()
         if teams:
-            winner_id = teams[0] if team1_score > team2_score else teams[1] if team2_score > team1_score else None
+            winner_id = teams['team1_id'] if team1_score > team2_score else teams['team2_id'] if team2_score > team1_score else None
     
     # Обновляем матч
     winner_sql = f", winner_id = {winner_id}" if winner_id else ""
@@ -1960,7 +1960,7 @@ def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     
     cur.execute(f"""
         INSERT INTO t_p4831367_esport_gta_disaster.role_history (user_id, assigned_by, role, action)
-        VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(current_role[0])}', 'revoked')
+        VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(current_role['role'])}', 'revoked')
     """)
     
     conn.commit()
@@ -1985,11 +1985,11 @@ def get_staff(cur, conn) -> dict:
     staff = []
     for row in cur.fetchall():
         staff.append({
-            'id': row[0],
-            'username': row[1],
-            'email': row[2],
-            'role': row[3],
-            'created_at': row[4].isoformat() if row[4] else None
+            'id': row['id'],
+            'username': row['username'],
+            'email': row['email'],
+            'role': row['role'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
     return {
