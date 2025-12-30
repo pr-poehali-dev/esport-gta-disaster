@@ -40,6 +40,7 @@ export default function TeamProfile() {
   const [error, setError] = useState<string | null>(null);
   const [manageMembersOpen, setManageMembersOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(true);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -143,6 +144,26 @@ export default function TeamProfile() {
             <Icon name="ArrowLeft" className="h-4 w-4 mr-2" />
             Назад к командам
           </Button>
+
+          {/* Debug Panel */}
+          {showDebug && (
+            <Card className="p-4 mb-6 bg-yellow-50 border-yellow-300">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-yellow-900">🔍 Отладочная информация</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowDebug(false)}>
+                  <Icon name="X" className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-2 text-sm font-mono text-yellow-900">
+                <div><strong>localStorage user:</strong> {localStorage.getItem('user') || 'null'}</div>
+                <div><strong>currentUser:</strong> {JSON.stringify(currentUser)}</div>
+                <div><strong>currentUser.id:</strong> {currentUser?.id} (тип: {typeof currentUser?.id})</div>
+                <div><strong>team.captain_id:</strong> {team?.captain_id} (тип: {typeof team?.captain_id})</div>
+                <div><strong>Равны?</strong> {currentUser && team?.captain_id === currentUser.id ? '✅ ДА' : '❌ НЕТ'}</div>
+                <div><strong>Кнопка показана?</strong> {currentUser && team?.captain_id === currentUser.id ? '✅ ДА' : '❌ НЕТ'}</div>
+              </div>
+            </Card>
+          )}
 
           <Card className="p-8 mb-6">
             <div className="flex items-start gap-8">
