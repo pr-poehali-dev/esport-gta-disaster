@@ -44,7 +44,11 @@ export default function TeamProfile() {
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      console.log('Current user loaded:', user);
+    } else {
+      console.log('No user in localStorage');
     }
   }, []);
 
@@ -69,6 +73,11 @@ export default function TeamProfile() {
         } else {
           setTeam(foundTeam);
           setMembers(foundTeam.members || []);
+          console.log('Team loaded:', { 
+            captain_id: foundTeam.captain_id, 
+            currentUserId: currentUser?.id,
+            willShowButton: currentUser && foundTeam.captain_id === currentUser.id 
+          });
         }
       } catch (err) {
         console.error('Error loading team:', err);
@@ -146,7 +155,7 @@ export default function TeamProfile() {
               </div>
 
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-3 mb-4">
                   <TeamLevelBadge level={team.level || 2} size="lg" />
                   <h1 className="text-5xl font-black">{team.name}</h1>
                   {team.tag && <Badge variant="outline" className="text-lg">[{team.tag}]</Badge>}
