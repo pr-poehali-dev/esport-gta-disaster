@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
+import { Team } from '@/services/api';
+import TeamLevelBadge from '@/components/TeamLevelBadge';
 
 interface TeamMember {
   id: number;
+  user_id: number;
   nickname: string;
   avatar_url: string | null;
-  role: string;
-  rating: number;
-  is_reserve: boolean;
+  member_role: string;
+  joined_at: string;
 }
 
 interface Match {
@@ -26,35 +28,50 @@ interface Match {
   tournament: string;
 }
 
+const API_BASE = 'https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515';
+
 export default function TeamProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [team, setTeam] = useState<Team | null>(null);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const team = {
-    id: 1,
-    name: 'Team Alpha',
-    logo_url: null,
-    rating: 1650,
-    wins: 25,
-    losses: 10,
-    draws: 3,
-    website: 'https://teamalpha.com',
-    created_at: '2024-01-15'
-  };
+  useEffect(() => {
+    const loadTeam = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch(API_BASE);
+        if (!response.ok) throw new Error('Ошибка загрузки команд');
+        
+        const data = await response.json();
+        const teams = data.teams || [];
+        
+        const foundTeam = teams.find((t: Team) => t.id === parseInt(id));
+        
+        if (!foundTeam) {
+          setError('Команда не найдена');
+        } else {
+          setTeam(foundTeam);
+          setMembers(foundTeam.members || []);
+        }
+      } catch (err) {
+        console.error('Error loading team:', err);
+        setError('Ошибка загрузки данных команды');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadTeam();
+  }, [id]);
 
-  const members: TeamMember[] = [
-    { id: 1, nickname: 'Player1', avatar_url: null, role: 'Капитан', rating: 1720, is_reserve: false },
-    { id: 2, nickname: 'Player2', avatar_url: null, role: 'Игрок', rating: 1680, is_reserve: false },
-    { id: 3, nickname: 'Player3', avatar_url: null, role: 'Игрок', rating: 1620, is_reserve: false },
-    { id: 4, nickname: 'Player4', avatar_url: null, role: 'Запасной', rating: 1500, is_reserve: true }
-  ];
-
-  const matches: Match[] = [
-    { id: 1, opponent: 'Team Beta', result: 'win', score: '16-12', date: '2025-01-10', tournament: 'Зимний чемпионат' },
-    { id: 2, opponent: 'Pro Gamers', result: 'loss', score: '10-16', date: '2025-01-08', tournament: 'Зимний чемпионат' },
-    { id: 3, opponent: 'Cyber Warriors', result: 'win', score: '16-14', date: '2025-01-05', tournament: 'Зимний чемпионат' }
-  ];
+  const matches: Match[] = [];
 
   const getRatingColor = (rating: number) => {
     if (rating >= 1700) return 'text-yellow-500';
@@ -63,7 +80,39 @@ export default function TeamProfile() {
     return 'text-green-500';
   };
 
-  const winRate = Math.round((team.wins / (team.wins + team.losses + team.draws)) * 100);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 py-12">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center py-12">Загрузка...</div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !team) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 py-12">
+          <div className="max-w-7xl mx-auto px-4">
+            <Button variant="ghost" onClick={() => navigate('/teams')} className="mb-6">
+              <Icon name="ArrowLeft" className="h-4 w-4 mr-2" />
+              Назад к командам
+            </Button>
+            <div className="text-center py-12 text-muted-foreground">{error || 'Команда не найдена'}</div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const winRate = team.win_rate || Math.round((team.wins / (team.wins + team.losses + (team.draws || 0))) * 100) || 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -87,12 +136,24 @@ export default function TeamProfile() {
               </div>
 
               <div className="flex-1">
-                <h1 className="text-5xl font-black mb-4">{team.name}</h1>
+                <div className="flex items-center gap-3 mb-4">
+                  <TeamLevelBadge level={team.level || 2} size="lg" />
+                  <h1 className="text-5xl font-black">{team.name}</h1>
+                  {team.tag && <Badge variant="outline" className="text-lg">[{team.tag}]</Badge>}
+                </div>
                 
-                <div className="grid grid-cols-4 gap-6 mb-4">
+                {team.description && (
+                  <p className="text-muted-foreground mb-4">{team.description}</p>
+                )}
+                
+                <div className="grid grid-cols-5 gap-6 mb-4">
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Рейтинг</div>
                     <div className={`text-3xl font-black ${getRatingColor(team.rating)}`}>{team.rating}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Очки</div>
+                    <div className="text-3xl font-black text-primary">{team.points || 200}</div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Побед</div>
@@ -109,16 +170,16 @@ export default function TeamProfile() {
                 </div>
 
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  {team.website && (
-                    <a href={team.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
-                      <Icon name="Globe" className="h-4 w-4" />
-                      <span>Сайт команды</span>
-                    </a>
-                  )}
                   <div className="flex items-center gap-1">
-                    <Icon name="Calendar" className="h-4 w-4" />
-                    <span>Создана {new Date(team.created_at).toLocaleDateString('ru-RU')}</span>
+                    <Icon name="Users" className="h-4 w-4" />
+                    <span>{members.length} участников</span>
                   </div>
+                  {team.created_at && (
+                    <div className="flex items-center gap-1">
+                      <Icon name="Calendar" className="h-4 w-4" />
+                      <span>Создана {new Date(team.created_at).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -138,39 +199,46 @@ export default function TeamProfile() {
 
             <TabsContent value="members" className="space-y-4">
               <div className="grid gap-4">
-                {members.map((member) => (
-                  <Card key={member.id} className="p-6 hover:border-primary transition-colors cursor-pointer" onClick={() => navigate(`/user/${member.id}`)}>
-                    <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                        {member.avatar_url ? (
-                          <img src={member.avatar_url} alt={member.nickname} className="w-full h-full object-cover rounded-full" />
-                        ) : (
-                          <Icon name="User" className="h-8 w-8 text-primary" />
-                        )}
-                      </div>
-
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-2xl font-bold">{member.nickname}</h3>
-                          <Badge variant={member.is_reserve ? 'outline' : 'default'}>{member.role}</Badge>
+                {members.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">В команде пока нет участников</div>
+                ) : (
+                  members.map((member) => (
+                    <Card key={member.id} className="p-6 hover:border-primary transition-colors cursor-pointer" onClick={() => navigate(`/user/${member.user_id}`)}>
+                      <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                          {member.avatar_url ? (
+                            <img src={member.avatar_url} alt={member.nickname} className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            <Icon name="User" className="h-8 w-8 text-primary" />
+                          )}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          Рейтинг: <span className={`font-bold ${getRatingColor(member.rating)}`}>{member.rating}</span>
-                        </div>
-                      </div>
 
-                      <Button variant="ghost" size="sm">
-                        <Icon name="ChevronRight" className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-2xl font-bold">{member.nickname}</h3>
+                            <Badge variant="default">{member.member_role}</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Вступил: {new Date(member.joined_at).toLocaleDateString('ru-RU')}
+                          </div>
+                        </div>
+
+                        <Button variant="ghost" size="sm">
+                          <Icon name="ChevronRight" className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="matches" className="space-y-4">
               <div className="grid gap-4">
-                {matches.map((match) => (
+                {matches.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">История матчей пока пуста</div>
+                ) : (
+                  matches.map((match) => (
                   <Card key={match.id} className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-6 flex-1">
@@ -193,7 +261,8 @@ export default function TeamProfile() {
                       </div>
                     </div>
                   </Card>
-                ))}
+                  ))
+                )}
               </div>
             </TabsContent>
           </Tabs>
