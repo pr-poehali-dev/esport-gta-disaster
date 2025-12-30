@@ -90,78 +90,87 @@ def handler(event: dict, context) -> dict:
 def get_verified_teams(cur, conn) -> dict:
     '''Получение всех верифицированных команд с их составами'''
     try:
+        # Простой запрос без сложных вычислений
         cur.execute("""
             SELECT 
-                t.id,
-                t.name,
-                t.tag,
-                t.logo_url,
-                t.wins,
-                t.losses,
-                t.draws,
-                t.rating,
-                t.verified,
-                t.description,
-                t.created_at,
-                COALESCE(t.level, 2) as level,
-                COALESCE(t.points, 200) as points,
-                COALESCE(t.team_color, '#FFFFFF') as team_color,
-                CASE 
-                    WHEN (t.wins + t.losses) > 0 THEN ROUND((t.wins::decimal / (t.wins + t.losses)) * 100)
-                    ELSE 0 
-                END as win_rate
-            FROM t_p4831367_esport_gta_disaster.teams t
-            ORDER BY t.rating DESC, t.level DESC
+                id,
+                name,
+                tag,
+                logo_url,
+                wins,
+                losses,
+                draws,
+                rating,
+                verified,
+                description,
+                created_at,
+                level,
+                points,
+                team_color
+            FROM t_p4831367_esport_gta_disaster.teams
+            ORDER BY rating DESC, level DESC NULLS LAST
         """)
         team_rows = cur.fetchall()
         
         teams = []
         for row in team_rows:
+            # Безопасное получение значений с дефолтами
+            wins = row.get('wins') or 0
+            losses = row.get('losses') or 0
+            win_rate = round((wins / (wins + losses) * 100)) if (wins + losses) > 0 else 0
+            
             team = {
-                'id': row['id'],
-                'name': row['name'],
-                'tag': row['tag'],
-                'logo_url': row['logo_url'],
-                'wins': row['wins'],
-                'losses': row['losses'],
-                'draws': row['draws'],
-                'rating': row['rating'],
-                'verified': row['verified'],
-                'description': row['description'],
-                'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-                'level': row['level'],
-                'points': row['points'],
-                'team_color': row['team_color'],
-                'win_rate': row['win_rate']
+                'id': row.get('id'),
+                'name': row.get('name'),
+                'tag': row.get('tag'),
+                'logo_url': row.get('logo_url'),
+                'wins': wins,
+                'losses': losses,
+                'draws': row.get('draws') or 0,
+                'rating': row.get('rating') or 1000,
+                'verified': row.get('verified') or False,
+                'description': row.get('description'),
+                'created_at': row['created_at'].isoformat() if row.get('created_at') else None,
+                'level': row.get('level') or 2,
+                'points': row.get('points') or 200,
+                'team_color': row.get('team_color') or '#FFFFFF',
+                'win_rate': win_rate
             }
             
-            cur.execute("""
-                SELECT 
-                    tm.id,
-                    tm.user_id,
-                    tm.role as member_role,
-                    tm.joined_at,
-                    u.nickname,
-                    u.avatar_url
-                FROM t_p4831367_esport_gta_disaster.team_members tm
-                JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
-                WHERE tm.team_id = %s
-                ORDER BY tm.joined_at ASC
-            """, (team['id'],))
+            # Получаем членов команды
+            try:
+                cur.execute("""
+                    SELECT 
+                        tm.id,
+                        tm.user_id,
+                        tm.role as member_role,
+                        tm.joined_at,
+                        u.nickname,
+                        u.avatar_url
+                    FROM t_p4831367_esport_gta_disaster.team_members tm
+                    JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
+                    WHERE tm.team_id = %s
+                    ORDER BY tm.joined_at ASC
+                """, (team['id'],))
+                
+                members = []
+                for m_row in cur.fetchall():
+                    members.append({
+                        'id': m_row.get('id'),
+                        'user_id': m_row.get('user_id'),
+                        'member_role': m_row.get('member_role'),
+                        'joined_at': m_row['joined_at'].isoformat() if m_row.get('joined_at') else None,
+                        'nickname': m_row.get('nickname'),
+                        'avatar_url': m_row.get('avatar_url')
+                    })
+                
+                team['members'] = members
+                team['member_count'] = len(members)
+            except Exception as member_error:
+                # Если ошибка при получении членов, просто ставим пустой список
+                team['members'] = []
+                team['member_count'] = 0
             
-            members = []
-            for m_row in cur.fetchall():
-                members.append({
-                    'id': m_row['id'],
-                    'user_id': m_row['user_id'],
-                    'member_role': m_row['member_role'],
-                    'joined_at': m_row['joined_at'].isoformat() if m_row['joined_at'] else None,
-                    'nickname': m_row['nickname'],
-                    'avatar_url': m_row['avatar_url']
-                })
-            
-            team['members'] = members
-            team['member_count'] = len(members)
             teams.append(team)
         
         return {
@@ -178,7 +187,7 @@ def get_verified_teams(cur, conn) -> dict:
         }
     
     except Exception as e:
-        return error_response(str(e), 500)
+        return error_response(f'Error in get_verified_teams: {str(e)}', 500)
 
 def get_match_details(cur, conn, event: dict) -> dict:
     '''Получение подробной информации о матче'''
