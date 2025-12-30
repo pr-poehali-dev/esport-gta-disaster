@@ -586,22 +586,47 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.tournaments 
-        (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format, created_by, location, team_size, best_of, status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming')
-        RETURNING id
-    """, (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_value, admin_id, location, team_size, best_of))
-    
-    tournament_id = cur.fetchone()[0]
-    conn.commit()
-    
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Турнир создан', 'tournament_id': tournament_id}),
-        'isBase64Encoded': False
-    }
+    try:
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.tournaments 
+            (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format, created_by, location, team_size, best_of, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming')
+            RETURNING id
+        """, (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_value, admin_id, location, team_size, best_of))
+        
+        tournament_id = cur.fetchone()[0]
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Турнир создан', 'tournament_id': tournament_id}),
+            'isBase64Encoded': False
+        }
+    except psycopg2.IntegrityError as e:
+        conn.rollback()
+        error_msg = str(e)
+        if 'unique constraint' in error_msg.lower() or 'duplicate key' in error_msg.lower():
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Турнир с таким названием уже существует'}),
+                'isBase64Encoded': False
+            }
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка базы данных: {error_msg}'}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Неожиданная ошибка: {str(e)}'}),
+            'isBase64Encoded': False
+        }
 
 def get_tournaments(cur, conn) -> dict:
     """Получает список всех турниров"""
