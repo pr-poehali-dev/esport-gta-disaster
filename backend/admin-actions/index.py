@@ -618,19 +618,19 @@ def get_tournaments(cur, conn) -> dict:
     tournaments = []
     for row in cur.fetchall():
         tournaments.append({
-            'id': row[0],
-            'name': row[1],
-            'description': row[2],
-            'game': row[3],
-            'start_date': row[4].isoformat() if row[4] else None,
-            'end_date': row[5].isoformat() if row[5] else None,
-            'max_teams': row[6],
-            'prize_pool': row[7],
-            'rules': row[8],
-            'format': row[9],
-            'status': row[10],
-            'created_by': row[11],
-            'created_at': row[12].isoformat() if row[12] else None
+            'id': row['id'],
+            'name': row['name'],
+            'description': row['description'],
+            'game': row['game'],
+            'start_date': row['start_date'].isoformat() if row['start_date'] else None,
+            'end_date': row['end_date'].isoformat() if row['end_date'] else None,
+            'max_teams': row['max_teams'],
+            'prize_pool': row['prize_pool'],
+            'rules': row['rules'],
+            'format': row['format'],
+            'status': row['status'],
+            'created_by': row['created_by'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
     return {
@@ -663,37 +663,37 @@ def get_tournament(cur, conn, body: dict) -> dict:
         }
     
     tournament = {
-        'id': row[0],
-        'name': row[1],
-        'description': row[2],
-        'game': row[3],
-        'start_date': row[4].isoformat() if row[4] else None,
-        'end_date': row[5].isoformat() if row[5] else None,
-        'max_teams': row[6],
-        'prize_pool': row[7],
-        'rules': row[8],
-        'format': row[9],
-        'status': row[10],
-        'created_by': row[11],
-        'created_at': row[12].isoformat() if row[12] else None
+        'id': row['id'],
+        'name': row['name'],
+        'description': row['description'],
+        'game': row['game'],
+        'start_date': row['start_date'].isoformat() if row['start_date'] else None,
+        'end_date': row['end_date'].isoformat() if row['end_date'] else None,
+        'max_teams': row['max_teams'],
+        'prize_pool': row['prize_pool'],
+        'rules': row['rules'],
+        'format': row['format'],
+        'status': row['status'],
+        'created_by': row['created_by'],
+        'created_at': row['created_at'].isoformat() if row['created_at'] else None
     }
     
-    cur.execute(f"""
+    cur.execute("""
         SELECT tr.id, tr.team_id, t.name, tr.status, tr.registered_at
         FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
         JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
-        WHERE tr.tournament_id = {int(tournament_id)}
+        WHERE tr.tournament_id = %s
         ORDER BY tr.registered_at
-    """)
+    """, (int(tournament_id),))
     
     registrations = []
     for row in cur.fetchall():
         registrations.append({
-            'id': row[0],
-            'team_id': row[1],
-            'team_name': row[2],
-            'status': row[3],
-            'registered_at': row[4].isoformat() if row[4] else None
+            'id': row['id'],
+            'team_id': row['team_id'],
+            'team_name': row['name'],
+            'status': row['status'],
+            'registered_at': row['registered_at'].isoformat() if row['registered_at'] else None
         })
     
     tournament['registrations'] = registrations
