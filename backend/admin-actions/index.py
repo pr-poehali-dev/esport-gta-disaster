@@ -186,6 +186,8 @@ def handler(event: dict, context) -> dict:
                 return get_admin_tournaments(cur, conn)
             elif action == 'approve_registration':
                 return approve_registration(cur, conn, admin_id, body)
+            elif action == 'reject_registration':
+                return reject_registration(cur, conn, admin_id, body)
             elif action == 'get_moderation_logs':
                 return get_moderation_logs(cur, conn)
             elif action == 'get_active_bans':
@@ -2267,6 +2269,25 @@ def approve_registration(cur, conn, admin_id: str, body: dict) -> dict:
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'message': f'Регистрация {status}'}),
+        'isBase64Encoded': False
+    }
+
+def reject_registration(cur, conn, admin_id: str, body: dict) -> dict:
+    """Отклоняет регистрацию команды на турнир"""
+    
+    registration_id = body.get('registration_id')
+    
+    cur.execute(f"""
+        UPDATE tournament_registrations
+        SET status = 'rejected'
+        WHERE id = {int(registration_id)}
+    """)
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Регистрация отклонена'}),
         'isBase64Encoded': False
     }
 
