@@ -1483,12 +1483,13 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
     if not tournament_id:
         return error_response('tournament_id обязателен', 400)
     
-    # Получаем все подтвержденные регистрации
+    # Получаем все одобренные регистрации (статус approved или confirmed)
     cur.execute(f"""
-        SELECT tr.team_id, t.name
+        SELECT tr.team_id, t.name, t.logo_url
         FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
         JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
-        WHERE tr.tournament_id = {tournament_id} AND tr.approved = TRUE
+        WHERE tr.tournament_id = {tournament_id} 
+        AND (tr.status = 'approved' OR tr.status = 'confirmed')
         ORDER BY tr.registered_at
     """)
     teams = cur.fetchall()
@@ -1595,13 +1596,13 @@ def get_bracket(cur, conn, body: dict) -> dict:
     cur.execute(f"""
         SELECT 
             bm.id, bm.round, bm.match_number,
-            bm.team1_id, t1.name as team1_name,
-            bm.team2_id, t2.name as team2_name,
+            bm.team1_id, t1.name as team1_name, t1.logo_url as team1_logo,
+            bm.team2_id, t2.name as team2_name, t2.logo_url as team2_logo,
             bm.winner_id, tw.name as winner_name,
             bm.team1_score, bm.team2_score,
             bm.status, bm.scheduled_at,
             bm.team1_captain_confirmed, bm.team2_captain_confirmed,
-            bm.moderator_verified
+            bm.moderator_verified, bm.map_name
         FROM t_p4831367_esport_gta_disaster.bracket_matches bm
         LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
         LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
@@ -1618,17 +1619,20 @@ def get_bracket(cur, conn, body: dict) -> dict:
             'match_number': row[2],
             'team1_id': row[3],
             'team1_name': row[4],
-            'team2_id': row[5],
-            'team2_name': row[6],
-            'winner_id': row[7],
-            'winner_name': row[8],
-            'team1_score': row[9],
-            'team2_score': row[10],
-            'status': row[11],
-            'scheduled_at': row[12].isoformat() if row[12] else None,
-            'team1_confirmed': row[13],
-            'team2_confirmed': row[14],
-            'moderator_verified': row[15]
+            'team1_logo_url': row[5],
+            'team2_id': row[6],
+            'team2_name': row[7],
+            'team2_logo_url': row[8],
+            'winner_id': row[9],
+            'winner_name': row[10],
+            'team1_score': row[11],
+            'team2_score': row[12],
+            'status': row[13],
+            'scheduled_at': row[14].isoformat() if row[14] else None,
+            'team1_confirmed': row[15],
+            'team2_confirmed': row[16],
+            'moderator_verified': row[17],
+            'map_name': row[18]
         })
     
     return {
