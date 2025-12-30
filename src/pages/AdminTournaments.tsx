@@ -189,6 +189,8 @@ export default function AdminTournaments() {
 
     try {
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      console.log('Generating bracket for tournament:', tournamentId);
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -202,14 +204,20 @@ export default function AdminTournaments() {
         })
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok && data.success) {
         showNotification('success', 'Успех', data.message || 'Турнирная сетка сгенерирована');
+        loadTournaments();
       } else {
-        showNotification('error', 'Ошибка', data.error || 'Не удалось сгенерировать сетку');
+        const errorMsg = data.error || JSON.stringify(data) || 'Не удалось сгенерировать сетку';
+        console.error('Error response:', errorMsg);
+        showNotification('error', 'Ошибка', errorMsg);
       }
     } catch (error: any) {
+      console.error('Exception:', error);
       showNotification('error', 'Ошибка генерации', error?.message || 'Произошла ошибка при генерации турнирной сетки');
     }
   };

@@ -1753,7 +1753,12 @@ def complete_match(cur, conn, admin_id: str, body: dict) -> dict:
     match_id = body.get('match_id')
     
     if not match_id:
-        return error_response('match_id обязателен', 400)
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'match_id обязателен'}),
+            'isBase64Encoded': False
+        }
     
     # Получаем данные матча
     cur.execute(f"""
@@ -1764,12 +1769,22 @@ def complete_match(cur, conn, admin_id: str, body: dict) -> dict:
     match_data = cur.fetchone()
     
     if not match_data:
-        return error_response('Матч не найден', 404)
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Матч не найден'}),
+            'isBase64Encoded': False
+        }
     
     bracket_id, current_round, match_number, winner_id, team1_score, team2_score = match_data
     
     if not winner_id:
-        return error_response('Не определен победитель матча', 400)
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Не определен победитель матча'}),
+            'isBase64Encoded': False
+        }
     
     # Обновляем статус матча
     cur.execute(f"""
