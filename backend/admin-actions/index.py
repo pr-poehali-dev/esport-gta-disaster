@@ -610,7 +610,7 @@ def get_tournaments(cur, conn) -> dict:
     
     cur.execute("""
         SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
-               rules, format, status, created_by, created_at
+               rules, format, status, created_by, created_at, registration_open
         FROM t_p4831367_esport_gta_disaster.tournaments
         ORDER BY start_date DESC
     """)
@@ -630,7 +630,8 @@ def get_tournaments(cur, conn) -> dict:
             'format': row['format'],
             'status': row['status'],
             'created_by': row['created_by'],
-            'created_at': row['created_at'].isoformat() if row['created_at'] else None
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'registration_open': row['registration_open']
         })
     
     return {
@@ -647,7 +648,7 @@ def get_tournament(cur, conn, body: dict) -> dict:
     
     cur.execute("""
         SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool,
-               rules, format, status, created_by, created_at
+               rules, format, status, created_by, created_at, registration_open
         FROM t_p4831367_esport_gta_disaster.tournaments
         WHERE id = %s
     """, (int(tournament_id),))
@@ -675,7 +676,8 @@ def get_tournament(cur, conn, body: dict) -> dict:
         'format': row['format'],
         'status': row['status'],
         'created_by': row['created_by'],
-        'created_at': row['created_at'].isoformat() if row['created_at'] else None
+        'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+        'registration_open': row['registration_open']
     }
     
     cur.execute("""
