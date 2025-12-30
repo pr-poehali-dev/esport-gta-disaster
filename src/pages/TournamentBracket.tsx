@@ -179,47 +179,7 @@ export default function TournamentBracket() {
     }
   };
 
-  const generateBracket = async () => {
-    if (!confirm('Сгенерировать турнирную сетку? Это перезапишет существующую сетку.')) return;
 
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const response = await fetch(ADMIN_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Id': user.id
-        },
-        body: JSON.stringify({
-          action: 'generate_bracket',
-          tournament_id: id,
-          format: 'single_elimination'
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        toast({
-          title: 'Успешно',
-          description: data.message || 'Турнирная сетка сгенерирована'
-        });
-        loadBracket();
-      } else {
-        toast({
-          title: 'Ошибка',
-          description: data.error || 'Не удалось сгенерировать сетку',
-          variant: 'destructive'
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось сгенерировать турнирную сетку',
-        variant: 'destructive'
-      });
-    }
-  };
 
   const renderMatch = (match: Match) => (
     <Card key={match.id} className="p-4 bg-card/50 relative group cursor-pointer hover:border-primary transition-colors"
@@ -315,14 +275,7 @@ export default function TournamentBracket() {
               <p className="text-muted-foreground">Формат: {format}</p>
             </div>
 
-            {canEdit && (
-              <div className="flex gap-2">
-                <Button onClick={generateBracket} variant="default">
-                  <Icon name="GitBranch" className="h-4 w-4 mr-2" />
-                  Сгенерировать сетку
-                </Button>
-              </div>
-            )}
+
           </div>
 
           <div className="flex gap-6 overflow-x-auto pb-6">

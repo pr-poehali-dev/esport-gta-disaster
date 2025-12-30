@@ -184,6 +184,36 @@ export default function AdminTournaments() {
     }
   };
 
+  const handleGenerateBracket = async (tournamentId: number) => {
+    if (!confirm('Сгенерировать турнирную сетку? Это перезапишет существующую сетку.')) return;
+
+    try {
+      const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString()
+        },
+        body: JSON.stringify({
+          action: 'generate_bracket',
+          tournament_id: tournamentId,
+          format: 'single_elimination'
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showNotification('success', 'Успех', data.message || 'Турнирная сетка сгенерирована');
+      } else {
+        showNotification('error', 'Ошибка', data.error || 'Не удалось сгенерировать сетку');
+      }
+    } catch (error: any) {
+      showNotification('error', 'Ошибка', error.message);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { bg: string; text: string; label: string }> = {
       registration: { bg: 'bg-blue-500/20', text: 'text-blue-500', label: 'Регистрация' },
@@ -389,6 +419,14 @@ export default function AdminTournaments() {
                     {tournament.registered_teams}
                   </span>
                 )}
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => handleGenerateBracket(tournament.id)}
+              >
+                <Icon name="GitBranch" className="h-4 w-4 mr-2" />
+                Сгенерировать сетку
               </Button>
               {tournament.status === 'registration' && (
                 <>
