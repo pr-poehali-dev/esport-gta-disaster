@@ -141,10 +141,11 @@ export default function AdminTournamentRegistrations() {
     const statusMap: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string }> = {
       pending: { variant: 'outline', label: 'На рассмотрении' },
       approved: { variant: 'default', label: 'Одобрено' },
+      confirmed: { variant: 'default', label: 'Подтверждено' },
       rejected: { variant: 'destructive', label: 'Отклонено' }
     };
 
-    const { variant, label } = statusMap[status] || statusMap.pending;
+    const { variant, label } = statusMap[status] || { variant: 'outline' as const, label: status || 'Неизвестно' };
     return <Badge variant={variant}>{label}</Badge>;
   };
 
@@ -266,25 +267,25 @@ export default function AdminTournamentRegistrations() {
                     <div className="flex items-center gap-3">
                       {getStatusBadge(reg.status)}
                       
-                      {reg.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprove(reg.id)}
-                          >
-                            <Icon name="Check" className="h-4 w-4 mr-2" />
-                            Одобрить
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleReject(reg.id)}
-                          >
-                            <Icon name="X" className="h-4 w-4 mr-2" />
-                            Отклонить
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(reg.id)}
+                          disabled={reg.status === 'approved'}
+                        >
+                          <Icon name="Check" className="h-4 w-4 mr-2" />
+                          {reg.status === 'approved' ? 'Одобрено' : 'Одобрить'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleReject(reg.id)}
+                          disabled={reg.status === 'rejected'}
+                        >
+                          <Icon name="X" className="h-4 w-4 mr-2" />
+                          {reg.status === 'rejected' ? 'Отклонено' : 'Отклонить'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
