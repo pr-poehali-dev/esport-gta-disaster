@@ -59,6 +59,8 @@ def handler(event: dict, context) -> dict:
                 return get_user_teams(cur, conn, event)
             elif action == 'search_users':
                 return search_users(cur, conn, body)
+            elif action == 'remove_member':
+                return remove_member(cur, conn, body, event)
             elif action == 'register_tournament':
                 return register_tournament(cur, conn, body, event)
             elif action == 'get_bracket':
@@ -1267,6 +1269,54 @@ def get_user_teams(cur, conn, event: dict) -> dict:
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'teams': teams}),
+        'isBase64Encoded': False
+    }
+
+def remove_member(cur, conn, body: dict, event: dict) -> dict:
+    '''Исключение участника из команды'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    team_id = body.get('team_id')
+    member_user_id = body.get('member_user_id')
+    
+    if not team_id or not member_user_id:
+        return error_response('Укажите team_id и member_user_id', 400)
+    
+    cur.execute("""
+        SELECT captain_id FROM t_p4831367_esport_gta_disaster.teams 
+        WHERE id = %s
+    """, (team_id,))
+    
+    team = cur.fetchone()
+    if not team:
+        return error_response('Команда не найдена', 404)
+    
+    if team['captain_id'] != int(user_id):
+        return error_response('Только капитан может исключать участников', 403)
+    
+    if team['captain_id'] == int(member_user_id):
+        return error_response('Капитан не может исключить сам себя', 400)
+    
+    cur.execute("""
+        DELETE FROM t_p4831367_esport_gta_disaster.team_members
+        WHERE team_id = %s AND user_id = %s AND is_captain = FALSE
+        RETURNING id
+    """, (team_id, member_user_id))
+    
+    deleted = cur.fetchone()
+    
+    if not deleted:
+        return error_response('Участник не найден или не может быть исключён', 404)
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Участник исключён из команды'}),
         'isBase64Encoded': False
     }
 

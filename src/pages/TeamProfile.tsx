@@ -9,6 +9,7 @@ import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
 import { Team } from '@/services/api';
 import TeamLevelBadge from '@/components/TeamLevelBadge';
+import ManageTeamMembersDialog from '@/components/ManageTeamMembersDialog';
 
 interface TeamMember {
   id: number;
@@ -37,6 +38,15 @@ export default function TeamProfile() {
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [manageMembersOpen, setManageMembersOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   useEffect(() => {
     const loadTeam = async () => {
@@ -140,6 +150,17 @@ export default function TeamProfile() {
                   <TeamLevelBadge level={team.level || 2} size="lg" />
                   <h1 className="text-5xl font-black">{team.name}</h1>
                   {team.tag && <Badge variant="outline" className="text-lg">[{team.tag}]</Badge>}
+                  {currentUser && team.captain_id === currentUser.id && (
+                    <Button
+                      onClick={() => setManageMembersOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto"
+                    >
+                      <Icon name="Settings" className="h-4 w-4 mr-2" />
+                      Управление составом
+                    </Button>
+                  )}
                 </div>
                 
                 {team.description && (
@@ -270,6 +291,34 @@ export default function TeamProfile() {
       </main>
 
       <Footer />
+
+      {team && (
+        <ManageTeamMembersDialog
+          open={manageMembersOpen}
+          onOpenChange={setManageMembersOpen}
+          team={team}
+          members={members}
+          onSuccess={() => {
+            const loadTeam = async () => {
+              if (!id) return;
+              try {
+                const response = await fetch(API_BASE);
+                if (!response.ok) throw new Error('Ошибка загрузки команд');
+                const data = await response.json();
+                const teams = data.teams || [];
+                const foundTeam = teams.find((t: Team) => t.id === parseInt(id));
+                if (foundTeam) {
+                  setTeam(foundTeam);
+                  setMembers(foundTeam.members || []);
+                }
+              } catch (err) {
+                console.error('Error loading team:', err);
+              }
+            };
+            loadTeam();
+          }}
+        />
+      )}
     </div>
   );
 }
