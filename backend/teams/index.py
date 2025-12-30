@@ -1265,10 +1265,10 @@ def search_users(cur, conn, body: dict) -> dict:
     users = []
     for row in cur.fetchall():
         users.append({
-            'id': row[0],
-            'nickname': row[1],
-            'avatar_url': row[2],
-            'rating': row[3]
+            'id': row['id'],
+            'nickname': row['nickname'],
+            'avatar_url': row['avatar_url'],
+            'rating': row['rating'] or 1000
         })
     
     return {
