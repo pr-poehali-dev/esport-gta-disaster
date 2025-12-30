@@ -66,6 +66,7 @@ export default function Admin() {
         },
         body: JSON.stringify({
           action: 'verify_admin_password',
+          admin_id: user?.id,
           password: password
         })
       });

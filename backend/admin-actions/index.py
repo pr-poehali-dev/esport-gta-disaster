@@ -970,9 +970,27 @@ def verify_admin_password(cur, conn, body: dict) -> dict:
     admin_id = body.get('admin_id')
     password = body.get('password')
     
-    cur.execute(f"""
-        SELECT password_hash FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(admin_id)}'
-    """)
+    if not admin_id or not password:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Не указан ID администратора или пароль'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        admin_id_int = int(admin_id)
+    except (ValueError, TypeError):
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Неверный формат ID администратора'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute("""
+        SELECT password_hash FROM t_p4831367_esport_gta_disaster.users WHERE id = %s
+    """, (admin_id_int,))
     
     password_hash = cur.fetchone()
     
@@ -984,20 +1002,21 @@ def verify_admin_password(cur, conn, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    import bcrypt
+    import hashlib
+    password_hash_sha256 = hashlib.sha256(password.encode()).hexdigest()
     
-    if bcrypt.checkpw(password.encode('utf-8'), password_hash[0].encode('utf-8')):
+    if password_hash_sha256 == password_hash[0]:
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'valid': True}),
+            'body': json.dumps({'success': True}),
             'isBase64Encoded': False
         }
     else:
         return {
-            'statusCode': 200,
+            'statusCode': 401,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'valid': False}),
+            'body': json.dumps({'error': 'Неверный пароль'}),
             'isBase64Encoded': False
         }
 
