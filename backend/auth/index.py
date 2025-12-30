@@ -372,7 +372,7 @@ def send_verification_email(to_email: str, nickname: str, token: str):
     if not smtp_password:
         raise Exception('SMTP_PASSWORD не задан в секретах проекта')
     
-    verification_url = f"https://disaster-esports.ru/verify?token={token}"
+    verification_url = f"https://disasteresports.ru/verify?token={token}"
     
     msg = MIMEMultipart()
     msg['From'] = smtp_email
@@ -708,7 +708,7 @@ def admin_update_user(cur, conn, body: dict, event: dict) -> dict:
 def send_reset_email(to_email: str, nickname: str, token: str, smtp_email: str, smtp_password: str):
     '''Отправка email с кодом восстановления'''
     subject = "Восстановление пароля DISASTER ESPORTS"
-    reset_url = f"https://disaster-esports.ru/forgot-password?token={token}"
+    reset_url = f"https://disasteresports.ru/forgot-password?token={token}"
     
     html_content = f"""
     <html>
