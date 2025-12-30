@@ -21,6 +21,7 @@ interface Tournament {
   registration_open: boolean;
   start_date: string | null;
   registered_teams: number;
+  is_hidden?: boolean;
 }
 
 export default function AdminTournaments() {
@@ -75,7 +76,10 @@ export default function AdminTournaments() {
           'Content-Type': 'application/json',
           'X-Admin-Id': userId.toString()
         },
-        body: JSON.stringify({ action: 'get_tournaments' })
+        body: JSON.stringify({ 
+          action: 'get_tournaments',
+          show_hidden: true
+        })
       });
 
       const data = await response.json();
@@ -175,6 +179,68 @@ export default function AdminTournaments() {
 
       if (response.ok) {
         showNotification('success', 'Успех', 'Статус обновлен');
+        loadTournaments();
+      } else {
+        showNotification('error', 'Ошибка', data.error);
+      }
+    } catch (error: any) {
+      showNotification('error', 'Ошибка', error.message);
+    }
+  };
+
+  const handleToggleVisibility = async (tournamentId: number, currentlyHidden: boolean) => {
+    const action = currentlyHidden ? 'показать' : 'скрыть';
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} турнир?`)) return;
+
+    try {
+      const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString()
+        },
+        body: JSON.stringify({
+          action: 'toggle_tournament_visibility',
+          tournament_id: tournamentId,
+          is_hidden: !currentlyHidden
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showNotification('success', 'Успех', data.message);
+        loadTournaments();
+      } else {
+        showNotification('error', 'Ошибка', data.error);
+      }
+    } catch (error: any) {
+      showNotification('error', 'Ошибка', error.message);
+    }
+  };
+
+  const handleDeleteTournament = async (tournamentId: number) => {
+    if (!confirm('ВНИМАНИЕ! Удалить турнир? Это действие необратимо! Будут удалены все матчи, регистрации и чаты.')) return;
+
+    try {
+      const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString()
+        },
+        body: JSON.stringify({
+          action: 'delete_tournament',
+          tournament_id: tournamentId
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showNotification('success', 'Успех', data.message);
         loadTournaments();
       } else {
         showNotification('error', 'Ошибка', data.error);
@@ -387,8 +453,15 @@ export default function AdminTournaments() {
         {tournaments.map((tournament) => (
           <Card key={tournament.id} className="p-6">
             <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-bold mb-2">{tournament.name}</h3>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-xl font-bold">{tournament.name}</h3>
+                  {tournament.is_hidden && (
+                    <span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-bold">
+                      СКРЫТ
+                    </span>
+                  )}
+                </div>
                 <p className="text-muted-foreground text-sm">{tournament.description}</p>
               </div>
               {getStatusBadge(tournament.status)}
@@ -457,6 +530,22 @@ export default function AdminTournaments() {
               <Button size="sm" variant="outline" onClick={() => navigate(`/tournaments/${tournament.id}`)}>
                 <Icon name="Eye" className="h-4 w-4 mr-2" />
                 Подробнее
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => handleToggleVisibility(tournament.id, tournament.is_hidden || false)}
+              >
+                <Icon name={tournament.is_hidden ? "EyeOff" : "Eye"} className="h-4 w-4 mr-2" />
+                {tournament.is_hidden ? 'Показать' : 'Скрыть'}
+              </Button>
+              <Button 
+                size="sm" 
+                variant="destructive"
+                onClick={() => handleDeleteTournament(tournament.id)}
+              >
+                <Icon name="Trash2" className="h-4 w-4 mr-2" />
+                Удалить
               </Button>
             </div>
           </Card>

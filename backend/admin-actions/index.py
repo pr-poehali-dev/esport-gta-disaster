@@ -112,6 +112,10 @@ def handler(event: dict, context) -> dict:
                 return create_tournament(cur, conn, admin_id, body)
             elif action == 'update_tournament_status':
                 return update_tournament_status(cur, conn, admin_id, body)
+            elif action == 'toggle_tournament_visibility':
+                return toggle_tournament_visibility(cur, conn, admin_id, body)
+            elif action == 'delete_tournament':
+                return delete_tournament(cur, conn, admin_id, body)
             elif action == 'get_match_chat':
                 return get_match_chat(cur, conn, body)
             elif action == 'send_chat_message':
@@ -628,15 +632,127 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
 
-def get_tournaments(cur, conn) -> dict:
-    """Получает список всех турниров"""
+def toggle_tournament_visibility(cur, conn, admin_id, body: dict) -> dict:
+    """Скрывает или показывает турнир"""
+    try:
+        tournament_id = body.get('tournament_id')
+        is_hidden = body.get('is_hidden', True)
+        
+        if not tournament_id:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Не указан ID турнира'}),
+                'isBase64Encoded': False
+            }
+        
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.tournaments 
+            SET is_hidden = %s, updated_at = NOW() 
+            WHERE id = %s
+        """, (is_hidden, int(tournament_id)))
+        
+        conn.commit()
+        
+        action_text = 'скрыт' if is_hidden else 'показан'
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': f'Турнир успешно {action_text}'
+            }),
+            'isBase64Encoded': False
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка при изменении видимости: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
+    """Полностью удаляет турнир и все связанные данные"""
+    try:
+        tournament_id = body.get('tournament_id')
+        
+        if not tournament_id:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Не указан ID турнира'}),
+                'isBase64Encoded': False
+            }
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.ban_picks WHERE match_id IN (
+                SELECT id FROM t_p4831367_esport_gta_disaster.tournament_matches WHERE tournament_id = %s
+            )
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.match_chat WHERE match_id IN (
+                SELECT id FROM t_p4831367_esport_gta_disaster.tournament_matches WHERE tournament_id = %s
+            )
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_matches WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournaments WHERE id = %s
+        """, (int(tournament_id),))
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': 'Турнир и все связанные данные успешно удалены'
+            }),
+            'isBase64Encoded': False
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка при удалении турнира: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+def get_tournaments(cur, conn, body: dict = None) -> dict:
+    """Получает список всех турниров (скрытые только для админов)"""
     
-    cur.execute("""
-        SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
-               rules, format, status, created_by, created_at, registration_open
-        FROM t_p4831367_esport_gta_disaster.tournaments
-        ORDER BY start_date DESC
-    """)
+    show_hidden = body.get('show_hidden', False) if body else False
+    
+    if show_hidden:
+        cur.execute("""
+            SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
+                   rules, format, status, created_by, created_at, registration_open, is_hidden
+            FROM t_p4831367_esport_gta_disaster.tournaments
+            ORDER BY start_date DESC
+        """)
+    else:
+        cur.execute("""
+            SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
+                   rules, format, status, created_by, created_at, registration_open, is_hidden
+            FROM t_p4831367_esport_gta_disaster.tournaments
+            WHERE is_hidden = FALSE
+            ORDER BY start_date DESC
+        """)
     
     tournaments = []
     for row in cur.fetchall():
@@ -654,7 +770,8 @@ def get_tournaments(cur, conn) -> dict:
             'status': row['status'],
             'created_by': row['created_by'],
             'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-            'registration_open': row['registration_open']
+            'registration_open': row['registration_open'],
+            'is_hidden': row.get('is_hidden', False)
         })
     
     return {

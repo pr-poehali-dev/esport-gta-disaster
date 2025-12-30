@@ -876,7 +876,7 @@ def get_tournaments(cur, conn, params: dict) -> dict:
                    COUNT(tr.id) as registered_teams
             FROM t_p4831367_esport_gta_disaster.tournaments t
             LEFT JOIN tournament_registrations tr ON t.id = tr.tournament_id AND tr.status = 'approved'
-            WHERE t.id = %s
+            WHERE t.id = %s AND (t.is_hidden = FALSE OR t.is_hidden IS NULL)
             GROUP BY t.id
         """, (tournament_id,))
         
@@ -925,6 +925,7 @@ def get_tournaments(cur, conn, params: dict) -> dict:
                    COUNT(tr.id) as registered_teams
             FROM t_p4831367_esport_gta_disaster.tournaments t
             LEFT JOIN tournament_registrations tr ON t.id = tr.tournament_id AND tr.status = 'approved'
+            WHERE t.is_hidden = FALSE OR t.is_hidden IS NULL
             GROUP BY t.id
             ORDER BY t.start_date DESC
         """)
