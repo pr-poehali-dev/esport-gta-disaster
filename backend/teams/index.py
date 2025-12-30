@@ -143,14 +143,14 @@ def get_verified_teams(cur, conn) -> dict:
                     SELECT 
                         tm.id,
                         tm.user_id,
-                        tm.role as member_role,
+                        tm.player_role as member_role,
                         tm.joined_at,
                         u.nickname,
                         u.avatar_url
                     FROM t_p4831367_esport_gta_disaster.team_members tm
                     JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
                     WHERE tm.team_id = %s
-                    ORDER BY tm.joined_at ASC
+                    ORDER BY tm.is_captain DESC, tm.joined_at ASC
                 """, (team['id'],))
                 
                 members = []
