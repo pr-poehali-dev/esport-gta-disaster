@@ -41,7 +41,7 @@ def handler(event: dict, context) -> dict:
             body = json.loads(event.get('body', '{}'))
             action = body.get('action')
             
-            public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament']
+            public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament', 'register_team']
             
             if action in public_actions:
                 if action == 'get_news':
@@ -54,6 +54,8 @@ def handler(event: dict, context) -> dict:
                     return get_tournaments(cur, conn)
                 elif action == 'get_tournament':
                     return get_tournament(cur, conn, body)
+                elif action == 'register_team':
+                    return register_team(cur, conn, body)
         
         admin_id = event.get('headers', {}).get('X-Admin-Id') or event.get('headers', {}).get('x-admin-id')
         
@@ -108,12 +110,6 @@ def handler(event: dict, context) -> dict:
                 return remove_mute(cur, conn, admin_id, body)
             elif action == 'create_tournament':
                 return create_tournament(cur, conn, admin_id, body)
-            elif action == 'get_tournaments':
-                return get_tournaments(cur, conn)
-            elif action == 'get_tournament':
-                return get_tournament(cur, conn, body)
-            elif action == 'register_team':
-                return register_team(cur, conn, body)
             elif action == 'update_tournament_status':
                 return update_tournament_status(cur, conn, admin_id, body)
             elif action == 'get_match_chat':

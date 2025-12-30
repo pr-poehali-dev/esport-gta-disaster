@@ -18,6 +18,7 @@ import Ratings from "./pages/Ratings";
 import Admin from "./pages/Admin";
 import AdminUsers from "./pages/AdminUsers";
 import AdminTournaments from "./pages/AdminTournaments";
+import AdminTournamentRegistrations from "./pages/AdminTournamentRegistrations";
 import AdminNews from "./pages/AdminNews";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/tournaments" element={<ProtectedRoute requireAdmin><AdminTournaments /></ProtectedRoute>} />
+            <Route path="/admin/tournaments/:id/registrations" element={<ProtectedRoute requireAdmin><AdminTournamentRegistrations /></ProtectedRoute>} />
             <Route path="/admin/news" element={<ProtectedRoute requireAdmin><AdminNews /></ProtectedRoute>} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />

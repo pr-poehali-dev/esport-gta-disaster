@@ -375,7 +375,21 @@ export default function AdminTournaments() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => navigate(`/admin/tournaments/${tournament.id}/registrations`)}
+                className="relative"
+              >
+                <Icon name="Users" className="h-4 w-4 mr-2" />
+                Заявки
+                {tournament.registered_teams > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
+                    {tournament.registered_teams}
+                  </span>
+                )}
+              </Button>
               {tournament.status === 'registration' && (
                 <>
                   <Button size="sm" onClick={() => handleUpdateStatus(tournament.id, 'ongoing')}>
