@@ -27,7 +27,7 @@ def handler(event: dict, context) -> dict:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Id'
+                'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Id, X-User-Id'
             },
             'body': '',
             'isBase64Encoded': False
@@ -681,24 +681,27 @@ def get_tournament(cur, conn, body: dict) -> dict:
     }
     
     cur.execute("""
-        SELECT tr.id, tr.team_id, t.name, tr.status, tr.registered_at
+        SELECT tr.id, tr.team_id, t.name, t.tag, t.logo_url, t.rating, tr.status, tr.registered_at
         FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
         JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
         WHERE tr.tournament_id = %s
         ORDER BY tr.registered_at
     """, (int(tournament_id),))
     
-    registrations = []
+    registered_teams = []
     for row in cur.fetchall():
-        registrations.append({
+        registered_teams.append({
             'id': row['id'],
             'team_id': row['team_id'],
             'team_name': row['name'],
+            'team_tag': row['tag'],
+            'team_logo': row['logo_url'],
+            'team_rating': row['rating'],
             'status': row['status'],
             'registered_at': row['registered_at'].isoformat() if row['registered_at'] else None
         })
     
-    tournament['registrations'] = registrations
+    tournament['registered_teams'] = registered_teams
     
     return {
         'statusCode': 200,
@@ -712,41 +715,127 @@ def register_team(cur, conn, body: dict) -> dict:
     
     tournament_id = body.get('tournament_id')
     team_id = body.get('team_id')
+    user_id = body.get('user_id')
     
-    cur.execute(f"""
-        SELECT status FROM t_p4831367_esport_gta_disaster.tournaments WHERE id = {int(tournament_id)}
-    """)
-    
-    tournament_status = cur.fetchone()
-    
-    if not tournament_status:
-        return {
-            'statusCode': 404,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Турнир не найден'}),
-            'isBase64Encoded': False
-        }
-    
-    if tournament_status[0] != 'open':
+    if not all([tournament_id, team_id]):
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Регистрация на турнир закрыта'}),
+            'body': json.dumps({'error': 'Необходимо указать tournament_id и team_id'}),
             'isBase64Encoded': False
         }
     
-    cur.execute(f"""
-        INSERT INTO tournament_registrations (tournament_id, team_id, status)
-        VALUES ({int(tournament_id)}, {int(team_id)}, 'pending')
-    """)
-    conn.commit()
-    
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Команда зарегистрирована на турнир'}),
-        'isBase64Encoded': False
-    }
+    try:
+        # Проверка существования турнира и его статуса
+        cur.execute("""
+            SELECT id, registration_open, max_teams 
+            FROM t_p4831367_esport_gta_disaster.tournaments 
+            WHERE id = %s
+        """, (int(tournament_id),))
+        
+        tournament = cur.fetchone()
+        
+        if not tournament:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Турнир не найден'}),
+                'isBase64Encoded': False
+            }
+        
+        if not tournament['registration_open']:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Регистрация на турнир закрыта'}),
+                'isBase64Encoded': False
+            }
+        
+        # Проверка, что команда существует
+        cur.execute("""
+            SELECT id, name, captain_id 
+            FROM t_p4831367_esport_gta_disaster.teams 
+            WHERE id = %s
+        """, (int(team_id),))
+        
+        team = cur.fetchone()
+        
+        if not team:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Команда не найдена'}),
+                'isBase64Encoded': False
+            }
+        
+        # Проверка, что пользователь - капитан команды (если передан user_id)
+        if user_id and team['captain_id'] != int(user_id):
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Только капитан может регистрировать команду'}),
+                'isBase64Encoded': False
+            }
+        
+        # Проверка, что команда уже не зарегистрирована
+        cur.execute("""
+            SELECT id 
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations 
+            WHERE tournament_id = %s AND team_id = %s
+        """, (int(tournament_id), int(team_id)))
+        
+        if cur.fetchone():
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Команда уже зарегистрирована на этот турнир'}),
+                'isBase64Encoded': False
+            }
+        
+        # Проверка количества команд
+        cur.execute("""
+            SELECT COUNT(*) as count 
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations 
+            WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        teams_count = cur.fetchone()['count']
+        
+        if teams_count >= tournament['max_teams']:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Достигнуто максимальное количество команд'}),
+                'isBase64Encoded': False
+            }
+        
+        # Регистрация команды
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.tournament_registrations 
+            (tournament_id, team_id, status, registered_at) 
+            VALUES (%s, %s, 'pending', NOW())
+        """, (int(tournament_id), int(team_id)))
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': f'Команда "{team["name"]}" успешно зарегистрирована на турнир'
+            }),
+            'isBase64Encoded': False
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка регистрации: {str(e)}'}),
+            'isBase64Encoded': False
+        }
 
 def update_tournament_status(cur, conn, admin_id: str, body: dict) -> dict:
     """Обновляет статус турнира"""

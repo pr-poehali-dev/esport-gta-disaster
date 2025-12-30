@@ -112,6 +112,7 @@ export default function TournamentDetail() {
           action: 'register_team',
           tournament_id: parseInt(id || '0'),
           team_id: teamId,
+          user_id: user.id,
         }),
       });
 
@@ -133,7 +134,7 @@ export default function TournamentDetail() {
     } catch (error: any) {
       toast({
         title: 'Ошибка',
-        description: error.message,
+        description: error.message || 'Ошибка сети',
         variant: 'destructive',
       });
     } finally {
@@ -244,13 +245,34 @@ export default function TournamentDetail() {
                     {tournament.registered_teams && tournament.registered_teams.length > 0 ? (
                       <div className="space-y-3">
                         {tournament.registered_teams.map((reg, index) => (
-                          <div key={reg.id} className="flex items-center gap-4 p-3 rounded-lg border">
-                            <div className="text-2xl font-bold w-8 text-center">#{index + 1}</div>
+                          <div key={reg.id} className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 transition-colors">
+                            <div className="text-2xl font-bold w-8 text-center text-muted-foreground">#{index + 1}</div>
+                            {reg.team_logo ? (
+                              <img src={reg.team_logo} alt={reg.team_name} className="w-12 h-12 rounded object-cover" />
+                            ) : (
+                              <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center">
+                                <Icon name="Shield" size={24} className="text-primary" />
+                              </div>
+                            )}
                             <div className="flex-1">
-                              <p className="font-semibold">{reg.team_name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Зарегистрирована {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold">{reg.team_name}</p>
+                                {reg.team_tag && <span className="text-xs text-muted-foreground">[{reg.team_tag}]</span>}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                {reg.team_rating && (
+                                  <>
+                                    <span className="flex items-center gap-1">
+                                      <Icon name="Star" size={12} />
+                                      {reg.team_rating}
+                                    </span>
+                                    <span>•</span>
+                                  </>
+                                )}
+                                <span>
+                                  Регистрация: {new Date(reg.registered_at).toLocaleDateString('ru-RU')}
+                                </span>
+                              </div>
                             </div>
                             <Badge variant={reg.status === 'approved' ? 'default' : 'outline'}>
                               {reg.status === 'approved' ? 'Подтверждено' : 'На рассмотрении'}
