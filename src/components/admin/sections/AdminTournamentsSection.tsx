@@ -260,16 +260,10 @@ export function AdminTournamentsSection() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-4xl font-bold">Управление Турнирами</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={loadTournaments} disabled={loading}>
-            <Icon name="RefreshCw" size={20} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Обновить
-          </Button>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Icon name="Plus" size={20} className="mr-2" />
-            Создать турнир
-          </Button>
-        </div>
+        <Button onClick={() => setCreateDialogOpen(true)}>
+          <Icon name="Plus" size={20} className="mr-2" />
+          Создать турнир
+        </Button>
       </div>
 
       <Card>

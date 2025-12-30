@@ -610,9 +610,7 @@ def get_tournaments(cur, conn) -> dict:
     
     cur.execute("""
         SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
-               rules, format, status, created_by, created_at,
-               COALESCE(is_hidden, FALSE) as is_hidden,
-               COALESCE(is_started, FALSE) as is_started
+               rules, format, status, created_by, created_at
         FROM t_p4831367_esport_gta_disaster.tournaments
         ORDER BY start_date DESC
     """)
@@ -632,11 +630,7 @@ def get_tournaments(cur, conn) -> dict:
             'format': row['format'],
             'status': row['status'],
             'created_by': row['created_by'],
-            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-            'is_hidden': row['is_hidden'],
-            'is_started': row['is_started'],
-            'registrations_count': 0,
-            'max_participants': row['max_teams']
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
     return {
@@ -2093,7 +2087,7 @@ def delete_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Турнир удален'}),
+        'body': json.dumps({'message': 'Турнир удален'}),
         'isBase64Encoded': False
     }
 
@@ -2101,11 +2095,11 @@ def hide_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     """Скрывает турнир"""
     
     tournament_id = body.get('tournament_id')
-    is_hidden = body.get('is_hidden', True)
+    hidden = body.get('hidden', True)
     
     cur.execute(f"""
-        UPDATE t_p4831367_esport_gta_disaster.tournaments
-        SET is_hidden = {str(is_hidden).upper()}
+        UPDATE tournaments
+        SET hidden = {str(hidden).upper()}
         WHERE id = {int(tournament_id)}
     """)
     conn.commit()
@@ -2113,7 +2107,7 @@ def hide_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Статус видимости турнира обновлен'}),
+        'body': json.dumps({'message': 'Статус видимости турнира обновлен'}),
         'isBase64Encoded': False
     }
 
@@ -2123,8 +2117,8 @@ def start_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     tournament_id = body.get('tournament_id')
     
     cur.execute(f"""
-        UPDATE t_p4831367_esport_gta_disaster.tournaments
-        SET status = 'active', is_started = TRUE
+        UPDATE tournaments
+        SET status = 'active'
         WHERE id = {int(tournament_id)}
     """)
     conn.commit()
@@ -2132,7 +2126,7 @@ def start_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Турнир запущен'}),
+        'body': json.dumps({'message': 'Турнир запущен'}),
         'isBase64Encoded': False
     }
 
