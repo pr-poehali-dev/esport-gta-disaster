@@ -338,21 +338,56 @@ export default function TournamentBracket() {
               </div>
             </div>
           ) : (
-            <div className="relative flex gap-8 overflow-x-auto pb-6 justify-center items-start">
-              {Object.entries(rounds).map(([round, roundMatches], index) => (
-                <div key={round} className="min-w-[280px] space-y-6 flex flex-col items-center">
-                  <div className="sticky top-0 z-10 bg-purple-900/40 backdrop-blur-md px-6 py-3 rounded-full border-2 border-purple-500/50 shadow-lg shadow-purple-500/20">
+            <div className="relative flex gap-12 overflow-x-auto pb-6 justify-center items-start px-8">
+              {Object.entries(rounds).map(([round, roundMatches], roundIndex) => (
+                <div key={round} className="relative min-w-[280px] flex flex-col items-center">
+                  <div className="sticky top-0 z-10 bg-purple-900/40 backdrop-blur-md px-6 py-3 rounded-full border-2 border-purple-500/50 shadow-lg shadow-purple-500/20 mb-6">
                     <h3 className="font-black text-xl text-center text-purple-200 tracking-wider">
                       {getRoundName(parseInt(round), totalRounds)}
                     </h3>
                   </div>
-                  <div className="space-y-6">
-                    {roundMatches.map(renderMatch)}
+                  
+                  <div className="relative space-y-6">
+                    {roundMatches.map((match, matchIndex) => (
+                      <div key={match.id} className="relative">
+                        {renderMatch(match)}
+                        
+                        {/* Соединительные линии к следующему раунду */}
+                        {roundIndex < Object.keys(rounds).length - 1 && (
+                          <svg className="absolute left-full top-1/2 -translate-y-1/2 pointer-events-none z-0" width="48" height="100" style={{ overflow: 'visible' }}>
+                            <line 
+                              x1="0" 
+                              y1="0" 
+                              x2="24" 
+                              y2="0" 
+                              stroke="rgb(168 85 247 / 0.3)" 
+                              strokeWidth="2"
+                            />
+                            <line 
+                              x1="24" 
+                              y1="0" 
+                              x2="24" 
+                              y2={matchIndex % 2 === 0 ? "50" : "-50"} 
+                              stroke="rgb(168 85 247 / 0.3)" 
+                              strokeWidth="2"
+                            />
+                            <line 
+                              x1="24" 
+                              y1={matchIndex % 2 === 0 ? "50" : "-50"} 
+                              x2="48" 
+                              y2={matchIndex % 2 === 0 ? "50" : "-50"} 
+                              stroke="rgb(168 85 247 / 0.3)" 
+                              strokeWidth="2"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    ))}
                   </div>
                   
                   {/* Центральная эмблема для финала */}
                   {parseInt(round) === totalRounds && (
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
                       <div className="relative w-48 h-48 flex items-center justify-center">
                         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-2xl"></div>
                         <div className="relative w-40 h-40 rounded-full border-4 border-purple-400/50 bg-gradient-to-br from-purple-900/60 to-pink-900/60 backdrop-blur-md flex items-center justify-center shadow-2xl shadow-purple-500/30">

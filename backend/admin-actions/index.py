@@ -1481,99 +1481,123 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
     bracket_format = body.get('format', 'single_elimination')
     
     if not tournament_id:
-        return error_response('tournament_id обязателен', 400)
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'tournament_id обязателен'}),
+            'isBase64Encoded': False
+        }
     
-    # Получаем все одобренные регистрации (статус approved или confirmed)
-    cur.execute(f"""
-        SELECT tr.team_id, t.name, t.logo_url
-        FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
-        JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
-        WHERE tr.tournament_id = {tournament_id} 
-        AND (tr.status = 'approved' OR tr.status = 'confirmed')
-        ORDER BY tr.registered_at
-    """)
-    teams = cur.fetchall()
-    
-    if len(teams) < 2:
-        return error_response('Недостаточно команд для создания сетки (минимум 2)', 400)
-    
-    # Проверяем, есть ли уже сетка
-    cur.execute(f"""
-        SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets
-        WHERE tournament_id = {tournament_id}
-    """)
-    existing_bracket = cur.fetchone()
-    
-    if existing_bracket:
-        bracket_id = existing_bracket[0]
-        # Удаляем старые матчи
+    try:
+        # Получаем все одобренные регистрации (статус approved или confirmed)
         cur.execute(f"""
-            DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches
-            WHERE bracket_id = {bracket_id}
+            SELECT tr.team_id, t.name, t.logo_url
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+            JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
+            WHERE tr.tournament_id = {tournament_id} 
+            AND (tr.status = 'approved' OR tr.status = 'confirmed')
+            ORDER BY tr.registered_at
         """)
-    else:
-        # Создаем новый bracket
-        cur.execute(f"""
-            INSERT INTO t_p4831367_esport_gta_disaster.tournament_brackets 
-            (tournament_id, format, created_by, created_at, updated_at)
-            VALUES ({tournament_id}, '{escape_sql(bracket_format)}', {admin_id}, NOW(), NOW())
-            RETURNING id
-        """)
-        bracket_id = cur.fetchone()[0]
-    
-    # Генерируем матчи по схеме single elimination
-    import math
-    team_count = len(teams)
-    rounds = math.ceil(math.log2(team_count))
-    
-    # Первый раунд
-    match_number = 1
-    team_index = 0
-    
-    while team_index < len(teams):
-        team1_id = teams[team_index][0] if team_index < len(teams) else None
-        team2_id = teams[team_index + 1][0] if team_index + 1 < len(teams) else None
+        teams = cur.fetchall()
         
-        cur.execute(f"""
-            INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
-            (bracket_id, round, match_number, team1_id, team2_id, status, created_at, updated_at)
-            VALUES ({bracket_id}, 1, {match_number}, {team1_id if team1_id else 'NULL'}, {team2_id if team2_id else 'NULL'}, 'pending', NOW(), NOW())
-        """)
+        if len(teams) < 2:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Недостаточно команд для создания сетки (минимум 2)'}),
+                'isBase64Encoded': False
+            }
         
-        match_number += 1
-        team_index += 2
-    
-    # Создаем пустые матчи для следующих раундов
-    for round_num in range(2, rounds + 1):
-        matches_in_round = 2 ** (rounds - round_num)
-        for match_num in range(1, matches_in_round + 1):
+        # Проверяем, есть ли уже сетка
+        cur.execute(f"""
+            SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets
+            WHERE tournament_id = {tournament_id}
+        """)
+        existing_bracket = cur.fetchone()
+        
+        if existing_bracket:
+            bracket_id = existing_bracket[0]
+            # Удаляем старые матчи
+            cur.execute(f"""
+                DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches
+                WHERE bracket_id = {bracket_id}
+            """)
+        else:
+            # Создаем новый bracket
+            cur.execute(f"""
+                INSERT INTO t_p4831367_esport_gta_disaster.tournament_brackets 
+                (tournament_id, format, created_by, created_at, updated_at)
+                VALUES ({tournament_id}, '{escape_sql(bracket_format)}', {admin_id}, NOW(), NOW())
+                RETURNING id
+            """)
+            bracket_id = cur.fetchone()[0]
+        
+        # Генерируем матчи по схеме single elimination
+        import math
+        team_count = len(teams)
+        rounds = math.ceil(math.log2(team_count))
+        
+        # Первый раунд
+        match_number = 1
+        team_index = 0
+        
+        while team_index < len(teams):
+            team1_id = teams[team_index][0] if team_index < len(teams) else None
+            team2_id = teams[team_index + 1][0] if team_index + 1 < len(teams) else None
+            
             cur.execute(f"""
                 INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
-                (bracket_id, round, match_number, status, created_at, updated_at)
-                VALUES ({bracket_id}, {round_num}, {match_num}, 'pending', NOW(), NOW())
+                (bracket_id, round, match_number, team1_id, team2_id, status, created_at, updated_at)
+                VALUES ({bracket_id}, 1, {match_number}, {team1_id if team1_id else 'NULL'}, {team2_id if team2_id else 'NULL'}, 'pending', NOW(), NOW())
             """)
-    
-    conn.commit()
-    
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({
-            'success': True,
-            'bracket_id': bracket_id,
-            'total_teams': team_count,
-            'rounds': rounds,
-            'message': f'Турнирная сетка создана для {team_count} команд'
-        }),
-        'isBase64Encoded': False
-    }
+            
+            match_number += 1
+            team_index += 2
+        
+        # Создаем пустые матчи для следующих раундов
+        for round_num in range(2, rounds + 1):
+            matches_in_round = 2 ** (rounds - round_num)
+            for match_num in range(1, matches_in_round + 1):
+                cur.execute(f"""
+                    INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+                    (bracket_id, round, match_number, status, created_at, updated_at)
+                    VALUES ({bracket_id}, {round_num}, {match_num}, 'pending', NOW(), NOW())
+                """)
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'bracket_id': bracket_id,
+                'total_teams': team_count,
+                'rounds': rounds,
+                'message': f'Турнирная сетка создана для {team_count} команд'
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка генерации сетки: {str(e)}'}),
+            'isBase64Encoded': False
+        }
 
 def get_bracket(cur, conn, body: dict) -> dict:
     """Получает турнирную сетку"""
     tournament_id = body.get('tournament_id')
     
     if not tournament_id:
-        return error_response('tournament_id обязателен', 400)
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'tournament_id обязателен'}),
+            'isBase64Encoded': False
+        }
     
     # Получаем bracket_id
     cur.execute(f"""
