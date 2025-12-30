@@ -286,7 +286,7 @@ export function AdminTournamentsSection() {
                 <tr key={tournament.id} className="border-b border-border hover:bg-muted/30">
                   <td className="p-4 font-medium">
                     <button
-                      onClick={() => navigate('/admin/tournaments')}
+                      onClick={() => navigate(`/admin/tournaments/${tournament.id}/registrations`)}
                       className="text-primary hover:underline cursor-pointer font-medium"
                     >
                       {tournament.name}
