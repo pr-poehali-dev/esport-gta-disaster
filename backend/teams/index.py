@@ -1038,14 +1038,20 @@ def create_team(cur, conn, body: dict, event: dict) -> dict:
     
     for idx, player in enumerate(players[:7]):
         if player.get('user_id') and player['user_id'] != int(user_id):
-            role = 'reserve' if idx >= 5 else 'main'
+            role = player.get('role', 'main')
             
             cur.execute("""
-                INSERT INTO t_p4831367_esport_gta_disaster.team_invitations 
-                (team_id, inviter_id, invited_user_id, player_role, status, created_at)
-                VALUES (%s, %s, %s, %s, 'pending', NOW())
-                ON CONFLICT (team_id, invited_user_id) DO NOTHING
-            """, (team_id, user_id, player['user_id'], role))
+                SELECT nickname FROM t_p4831367_esport_gta_disaster.users WHERE id = %s
+            """, (player['user_id'],))
+            
+            user_exists = cur.fetchone()
+            if user_exists:
+                cur.execute("""
+                    INSERT INTO t_p4831367_esport_gta_disaster.team_members 
+                    (team_id, user_id, player_role, is_captain, status, joined_at)
+                    VALUES (%s, %s, %s, FALSE, 'active', NOW())
+                    ON CONFLICT (team_id, user_id) DO NOTHING
+                """, (team_id, player['user_id'], role))
     
     conn.commit()
     
