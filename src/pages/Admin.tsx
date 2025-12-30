@@ -72,6 +72,7 @@ export default function Admin() {
       });
 
       const data = await response.json();
+      console.log('Admin login response:', { status: response.status, data });
 
       if (response.ok && data.success) {
         setIsAuthenticated(true);

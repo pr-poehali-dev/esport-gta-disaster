@@ -992,9 +992,9 @@ def verify_admin_password(cur, conn, body: dict) -> dict:
         SELECT password_hash FROM t_p4831367_esport_gta_disaster.users WHERE id = %s
     """, (admin_id_int,))
     
-    password_hash = cur.fetchone()
+    user_data = cur.fetchone()
     
-    if not password_hash:
+    if not user_data:
         return {
             'statusCode': 404,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -1005,7 +1005,7 @@ def verify_admin_password(cur, conn, body: dict) -> dict:
     import hashlib
     password_hash_sha256 = hashlib.sha256(password.encode()).hexdigest()
     
-    if password_hash_sha256 == password_hash[0]:
+    if password_hash_sha256 == user_data['password_hash']:
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
