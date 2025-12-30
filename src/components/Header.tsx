@@ -12,17 +12,45 @@ export default function Header() {
   const location = useLocation();
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    const token = localStorage.getItem('session_token');
-    if (user && token) {
-      try {
-        const userData = JSON.parse(user);
-        setUserRole(userData.role);
-        setIsAuthenticated(true);
-      } catch (e) {
-        console.error('Failed to parse user data');
+    const checkAuth = async () => {
+      const user = localStorage.getItem('user');
+      const token = localStorage.getItem('session_token');
+      
+      if (user && token) {
+        try {
+          const userData = JSON.parse(user);
+          setUserRole(userData.role);
+          setIsAuthenticated(true);
+          
+          // Обновляем данные пользователя из API (включая роль)
+          try {
+            const response = await fetch('https://functions.poehali.dev/48b769d9-54a9-49a4-a89a-6089b61817f4', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Session-Token': token
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.user) {
+                const updatedUser = { ...userData, ...data.user };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                setUserRole(updatedUser.role);
+              }
+            }
+          } catch (e) {
+            // Если не удалось обновить - продолжаем с текущими данными
+            console.log('Failed to refresh user data');
+          }
+        } catch (e) {
+          console.error('Failed to parse user data');
+        }
       }
-    }
+    };
+    
+    checkAuth();
   }, []);
 
   const isAdmin = userRole === 'admin' || userRole === 'founder' || userRole === 'organizer';

@@ -89,6 +89,19 @@ export default function Profile() {
 
       if (response.ok) {
         setProfile(data);
+        
+        // Обновляем данные пользователя в localStorage (включая роль)
+        const currentUser = localStorage.getItem('user');
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          const updatedUser = {
+            ...userData,
+            ...data,
+            role: data.role || userData.role || 'user'
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+        
         setEditData({
           nickname: data.nickname || '',
           discord: data.discord || '',
