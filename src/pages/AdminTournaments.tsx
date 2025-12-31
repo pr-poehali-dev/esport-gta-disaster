@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 import { showNotification } from '@/components/NotificationSystem';
+import TournamentCard from '@/components/admin/TournamentCard';
+import CreateTournamentForm from '@/components/admin/CreateTournamentForm';
 
 interface Tournament {
   id: number;
@@ -275,294 +274,88 @@ export default function AdminTournaments() {
       console.log('Response data:', data);
 
       if (response.ok && data.success) {
-        showNotification('success', 'Успех', data.message || 'Турнирная сетка сгенерирована');
+        showNotification('success', 'Успех', data.message || 'Турнирная сетка создана');
         loadTournaments();
       } else {
-        const errorMsg = data.error || JSON.stringify(data) || 'Не удалось сгенерировать сетку';
-        console.error('Error response:', errorMsg);
-        showNotification('error', 'Ошибка', errorMsg);
+        showNotification('error', 'Ошибка', data.error || 'Не удалось создать сетку');
       }
     } catch (error: any) {
-      console.error('Exception:', error);
-      showNotification('error', 'Ошибка генерации', error?.message || 'Произошла ошибка при генерации турнирной сетки');
+      console.error('Error generating bracket:', error);
+      showNotification('error', 'Ошибка', error.message);
     }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { bg: string; text: string; label: string }> = {
-      registration: { bg: 'bg-blue-500/20', text: 'text-blue-500', label: 'Регистрация' },
-      ongoing: { bg: 'bg-green-500/20', text: 'text-green-500', label: 'Идет' },
-      completed: { bg: 'bg-gray-500/20', text: 'text-gray-500', label: 'Завершен' },
-      cancelled: { bg: 'bg-red-500/20', text: 'text-red-500', label: 'Отменен' }
-    };
-
-    const badge = badges[status] || badges.registration;
-    return (
-      <span className={`px-3 py-1 rounded-full ${badge.bg} ${badge.text} text-sm font-bold`}>
-        {badge.label}
-      </span>
-    );
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Icon name="Loader2" className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
+        <div className="text-white text-xl">Загрузка...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black">Управление турнирами</h1>
-          <p className="text-muted-foreground">Создавайте и управляйте турнирами</p>
-        </div>
-        <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-          <Icon name={showCreateForm ? "X" : "Plus"} className="h-4 w-4 mr-2" />
-          {showCreateForm ? 'Отмена' : 'Создать турнир'}
-        </Button>
-      </div>
-
-      {showCreateForm && (
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Новый турнир</h2>
-          <form onSubmit={handleCreateTournament} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Название *</label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Название турнира"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Призовой фонд</label>
-                <Input
-                  value={formData.prize_pool}
-                  onChange={(e) => setFormData({ ...formData, prize_pool: e.target.value })}
-                  placeholder="100 000₽"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Место проведения</label>
-                <Input
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="Онлайн / Москва"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Проект</label>
-                <Input
-                  value={formData.game_project}
-                  onChange={(e) => setFormData({ ...formData, game_project: e.target.value })}
-                  placeholder="GTA 5, SAMP"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Формат</label>
-                <select
-                  className="w-full px-3 py-2 rounded-md border bg-background"
-                  value={formData.format}
-                  onChange={(e) => {
-                    const size = e.target.value === '5v5' ? 5 : e.target.value === '3v3' ? 3 : 1;
-                    setFormData({ ...formData, format: e.target.value, team_size: size });
-                  }}
-                >
-                  <option value="5v5">5 на 5</option>
-                  <option value="3v3">3 на 3</option>
-                  <option value="1v1">1 на 1</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Режим</label>
-                <select
-                  className="w-full px-3 py-2 rounded-md border bg-background"
-                  value={formData.best_of}
-                  onChange={(e) => setFormData({ ...formData, best_of: parseInt(e.target.value) })}
-                >
-                  <option value={1}>Best of 1</option>
-                  <option value={3}>Best of 3</option>
-                  <option value={5}>Best of 5</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Дата начала</label>
-                <Input
-                  type="datetime-local"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Описание</label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Описание турнира"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Пул карт *</label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  value={mapInput}
-                  onChange={(e) => setMapInput(e.target.value)}
-                  placeholder="Название карты"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddMap())}
-                />
-                <Button type="button" onClick={handleAddMap}>
-                  <Icon name="Plus" className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.map_pool.map((map, index) => (
-                  <div key={index} className="px-3 py-1 bg-primary/20 rounded-full flex items-center gap-2">
-                    <span>{map}</span>
-                    <button type="button" onClick={() => handleRemoveMap(index)}>
-                      <Icon name="X" className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full">
-              <Icon name="Plus" className="h-4 w-4 mr-2" />
-              Создать турнир
+    <div className="min-h-screen bg-[#0a0e1a] py-8 px-4">
+      <div className="container mx-auto max-w-7xl">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-white">Управление турнирами</h1>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => navigate('/admin')}
+              variant="outline"
+              className="border-white/10 text-white hover:bg-white/5"
+            >
+              <Icon name="ArrowLeft" size={16} className="mr-2" />
+              Назад
             </Button>
-          </form>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 gap-4">
-        {tournaments.map((tournament) => (
-          <Card key={tournament.id} className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-xl font-bold">{tournament.name}</h3>
-                  {tournament.is_hidden && (
-                    <span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-bold">
-                      СКРЫТ
-                    </span>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-sm">{tournament.description}</p>
-              </div>
-              {getStatusBadge(tournament.status)}
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div>
-                <div className="text-sm text-muted-foreground">Призовой</div>
-                <div className="font-bold">{tournament.prize_pool || '—'}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Формат</div>
-                <div className="font-bold">{tournament.format} • BO{tournament.best_of}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Команд</div>
-                <div className="font-bold">{tournament.registered_teams}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Место</div>
-                <div className="font-bold">{tournament.location || '—'}</div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 flex-wrap">
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => navigate(`/admin/tournaments/${tournament.id}/registrations`)}
-                className="relative"
-              >
-                <Icon name="Users" className="h-4 w-4 mr-2" />
-                Заявки
-                {tournament.registered_teams > 0 && (
-                  <span className="ml-2 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
-                    {tournament.registered_teams}
-                  </span>
-                )}
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => handleGenerateBracket(tournament.id)}
-              >
-                <Icon name="GitBranch" className="h-4 w-4 mr-2" />
-                Сгенерировать сетку
-              </Button>
-              {tournament.status === 'registration' && (
-                <>
-                  <Button size="sm" onClick={() => handleUpdateStatus(tournament.id, 'ongoing')}>
-                    <Icon name="Play" className="h-4 w-4 mr-2" />
-                    Начать турнир
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(tournament.id, 'cancelled')}>
-                    <Icon name="X" className="h-4 w-4 mr-2" />
-                    Отменить
-                  </Button>
-                </>
-              )}
-              {tournament.status === 'ongoing' && (
-                <Button size="sm" onClick={() => handleUpdateStatus(tournament.id, 'completed')}>
-                  <Icon name="Check" className="h-4 w-4 mr-2" />
-                  Завершить турнир
-                </Button>
-              )}
-              <Button size="sm" variant="outline" onClick={() => navigate(`/tournaments/${tournament.id}`)}>
-                <Icon name="Eye" className="h-4 w-4 mr-2" />
-                Подробнее
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => handleToggleVisibility(tournament.id, tournament.is_hidden || false)}
-              >
-                <Icon name={tournament.is_hidden ? "EyeOff" : "Eye"} className="h-4 w-4 mr-2" />
-                {tournament.is_hidden ? 'Показать' : 'Скрыть'}
-              </Button>
-              <Button 
-                size="sm" 
-                variant="destructive"
-                onClick={() => handleDeleteTournament(tournament.id)}
-              >
-                <Icon name="Trash2" className="h-4 w-4 mr-2" />
-                Удалить
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {tournaments.length === 0 && !showCreateForm && (
-        <div className="text-center py-20">
-          <Icon name="Trophy" className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-xl font-bold mb-2">Нет турниров</h3>
-          <p className="text-muted-foreground mb-4">Создайте первый турнир</p>
-          <Button onClick={() => setShowCreateForm(true)}>
-            <Icon name="Plus" className="h-4 w-4 mr-2" />
-            Создать турнир
-          </Button>
+            <Button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Icon name={showCreateForm ? "X" : "Plus"} size={16} className="mr-2" />
+              {showCreateForm ? 'Отменить' : 'Создать турнир'}
+            </Button>
+          </div>
         </div>
-      )}
+
+        {showCreateForm && (
+          <CreateTournamentForm
+            formData={formData}
+            mapInput={mapInput}
+            onFormDataChange={(data) => setFormData({ ...formData, ...data })}
+            onMapInputChange={setMapInput}
+            onAddMap={handleAddMap}
+            onRemoveMap={handleRemoveMap}
+            onSubmit={handleCreateTournament}
+            onCancel={() => setShowCreateForm(false)}
+          />
+        )}
+
+        <div className="space-y-4">
+          {tournaments.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">Турниры не найдены</p>
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                className="mt-4 bg-purple-600 hover:bg-purple-700"
+              >
+                Создать первый турнир
+              </Button>
+            </div>
+          ) : (
+            tournaments.map((tournament) => (
+              <TournamentCard
+                key={tournament.id}
+                tournament={tournament}
+                onUpdateStatus={handleUpdateStatus}
+                onToggleVisibility={handleToggleVisibility}
+                onDelete={handleDeleteTournament}
+                onGenerateBracket={handleGenerateBracket}
+                onNavigate={(id) => navigate(`/tournaments/${id}`)}
+              />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
