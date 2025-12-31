@@ -1701,6 +1701,7 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
     """Генерирует турнирную сетку для турнира"""
     tournament_id = body.get('tournament_id')
     bracket_format = body.get('format', 'single_elimination')
+    bracket_style = body.get('style', 'esports')
     
     if not tournament_id:
         return {
@@ -1756,17 +1757,22 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
         
         if existing_bracket:
             bracket_id = existing_bracket['id']
-            # Удаляем старые матчи
+            # Удаляем старые матчи и обновляем стиль
             cur.execute(f"""
                 DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches
                 WHERE bracket_id = {bracket_id}
+            """)
+            cur.execute(f"""
+                UPDATE t_p4831367_esport_gta_disaster.tournament_brackets
+                SET style = '{escape_sql(bracket_style)}', updated_at = NOW()
+                WHERE id = {bracket_id}
             """)
         else:
             # Создаем новый bracket
             cur.execute(f"""
                 INSERT INTO t_p4831367_esport_gta_disaster.tournament_brackets 
-                (tournament_id, format, created_by, created_at, updated_at)
-                VALUES ({tournament_id}, '{escape_sql(bracket_format)}', {admin_id}, NOW(), NOW())
+                (tournament_id, format, style, created_by, created_at, updated_at)
+                VALUES ({tournament_id}, '{escape_sql(bracket_format)}', '{escape_sql(bracket_style)}', {admin_id}, NOW(), NOW())
                 RETURNING id
             """)
             bracket_id = cur.fetchone()['id']
@@ -1860,7 +1866,7 @@ def get_bracket(cur, conn, body: dict) -> dict:
     
     # Получаем bracket_id
     cur.execute(f"""
-        SELECT id, format FROM t_p4831367_esport_gta_disaster.tournament_brackets
+        SELECT id, format, style FROM t_p4831367_esport_gta_disaster.tournament_brackets
         WHERE tournament_id = {tournament_id}
     """)
     bracket_data = cur.fetchone()
@@ -1875,6 +1881,7 @@ def get_bracket(cur, conn, body: dict) -> dict:
     
     bracket_id = bracket_data['id']
     bracket_format = bracket_data['format']
+    bracket_style = bracket_data.get('style', 'esports')
     
     # Получаем все матчи
     cur.execute(f"""
@@ -1925,6 +1932,7 @@ def get_bracket(cur, conn, body: dict) -> dict:
         'body': json.dumps({
             'bracket_id': bracket_id,
             'format': bracket_format,
+            'style': bracket_style,
             'matches': matches
         }),
         'isBase64Encoded': False

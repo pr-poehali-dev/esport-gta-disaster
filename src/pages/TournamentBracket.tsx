@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -11,9 +10,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import EsportsBracket from '@/components/brackets/EsportsBracket';
+import CyberpunkBracket from '@/components/brackets/CyberpunkBracket';
+import MinimalBracket from '@/components/brackets/MinimalBracket';
 
 const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
@@ -40,6 +41,7 @@ export default function TournamentBracket() {
   const [userRole, setUserRole] = useState<string>('');
   const [editMatch, setEditMatch] = useState<Match | null>(null);
   const [format, setFormat] = useState<string>('single-elimination');
+  const [bracketStyle, setBracketStyle] = useState<string>('esports');
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -93,6 +95,7 @@ export default function TournamentBracket() {
         }));
         setMatches(formattedMatches);
         setFormat(data.format || 'single-elimination');
+        setBracketStyle(data.style || 'esports');
       }
     } catch (error) {
       console.error('Ошибка загрузки сетки:', error);
@@ -338,70 +341,32 @@ export default function TournamentBracket() {
               </div>
             </div>
           ) : (
-            <div className="relative flex gap-12 overflow-x-auto pb-6 justify-center items-start px-8">
-              {Object.entries(rounds).map(([round, roundMatches], roundIndex) => (
-                <div key={round} className="relative min-w-[280px] flex flex-col items-center">
-                  <div className="sticky top-0 z-10 bg-purple-900/40 backdrop-blur-md px-6 py-3 rounded-full border-2 border-purple-500/50 shadow-lg shadow-purple-500/20 mb-6">
-                    <h3 className="font-black text-xl text-center text-purple-200 tracking-wider">
-                      {getRoundName(parseInt(round), totalRounds)}
-                    </h3>
-                  </div>
-                  
-                  <div className="relative space-y-6">
-                    {roundMatches.map((match, matchIndex) => (
-                      <div key={match.id} className="relative">
-                        {renderMatch(match)}
-                        
-                        {/* Соединительные линии к следующему раунду */}
-                        {roundIndex < Object.keys(rounds).length - 1 && (
-                          <svg className="absolute left-full top-1/2 -translate-y-1/2 pointer-events-none z-0" width="48" height="100" style={{ overflow: 'visible' }}>
-                            <line 
-                              x1="0" 
-                              y1="0" 
-                              x2="24" 
-                              y2="0" 
-                              stroke="rgb(168 85 247 / 0.3)" 
-                              strokeWidth="2"
-                            />
-                            <line 
-                              x1="24" 
-                              y1="0" 
-                              x2="24" 
-                              y2={matchIndex % 2 === 0 ? "50" : "-50"} 
-                              stroke="rgb(168 85 247 / 0.3)" 
-                              strokeWidth="2"
-                            />
-                            <line 
-                              x1="24" 
-                              y1={matchIndex % 2 === 0 ? "50" : "-50"} 
-                              x2="48" 
-                              y2={matchIndex % 2 === 0 ? "50" : "-50"} 
-                              stroke="rgb(168 85 247 / 0.3)" 
-                              strokeWidth="2"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Центральная эмблема для финала */}
-                  {parseInt(round) === totalRounds && (
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20">
-                      <div className="relative w-48 h-48 flex items-center justify-center">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-2xl"></div>
-                        <div className="relative w-40 h-40 rounded-full border-4 border-purple-400/50 bg-gradient-to-br from-purple-900/60 to-pink-900/60 backdrop-blur-md flex items-center justify-center shadow-2xl shadow-purple-500/30">
-                          <div className="text-center">
-                            <Icon name="Trophy" className="h-16 w-16 mx-auto mb-2 text-yellow-400" />
-                            <p className="text-xs font-bold text-purple-200">VICTORY</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <>
+              {bracketStyle === 'esports' && (
+                <EsportsBracket
+                  matches={matches}
+                  canEdit={canEdit}
+                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onEditMatch={setEditMatch}
+                />
+              )}
+              {bracketStyle === 'cyberpunk' && (
+                <CyberpunkBracket
+                  matches={matches}
+                  canEdit={canEdit}
+                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onEditMatch={setEditMatch}
+                />
+              )}
+              {bracketStyle === 'minimal' && (
+                <MinimalBracket
+                  matches={matches}
+                  canEdit={canEdit}
+                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onEditMatch={setEditMatch}
+                />
+              )}
+            </>
           )}
         </div>
       </main>

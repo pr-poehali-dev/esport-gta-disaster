@@ -5,6 +5,7 @@ import Icon from '@/components/ui/icon';
 import { showNotification } from '@/components/NotificationSystem';
 import TournamentCard from '@/components/admin/TournamentCard';
 import CreateTournamentForm from '@/components/admin/CreateTournamentForm';
+import BracketStyleSelector from '@/components/admin/BracketStyleSelector';
 
 interface Tournament {
   id: number;
@@ -28,6 +29,8 @@ export default function AdminTournaments() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -250,11 +253,17 @@ export default function AdminTournaments() {
   };
 
   const handleGenerateBracket = async (tournamentId: number) => {
-    if (!confirm('Сгенерировать турнирную сетку? Это перезапишет существующую сетку.')) return;
+    setSelectedTournamentId(tournamentId);
+    setShowStyleSelector(true);
+  };
+
+  const handleStyleSelect = async (styleId: string) => {
+    if (!selectedTournamentId) return;
+
+    setShowStyleSelector(false);
 
     try {
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
-      console.log('Generating bracket for tournament:', tournamentId);
       
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -264,14 +273,13 @@ export default function AdminTournaments() {
         },
         body: JSON.stringify({
           action: 'generate_bracket',
-          tournament_id: tournamentId,
-          format: 'single_elimination'
+          tournament_id: selectedTournamentId,
+          format: 'single_elimination',
+          style: styleId
         })
       });
 
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (response.ok && data.success) {
         showNotification('success', 'Успех', data.message || 'Турнирная сетка создана');
@@ -280,9 +288,10 @@ export default function AdminTournaments() {
         showNotification('error', 'Ошибка', data.error || 'Не удалось создать сетку');
       }
     } catch (error: any) {
-      console.error('Error generating bracket:', error);
       showNotification('error', 'Ошибка', error.message);
     }
+
+    setSelectedTournamentId(null);
   };
 
   if (loading) {
@@ -327,6 +336,16 @@ export default function AdminTournaments() {
             onRemoveMap={handleRemoveMap}
             onSubmit={handleCreateTournament}
             onCancel={() => setShowCreateForm(false)}
+          />
+        )}
+
+        {showStyleSelector && (
+          <BracketStyleSelector
+            onSelect={handleStyleSelect}
+            onCancel={() => {
+              setShowStyleSelector(false);
+              setSelectedTournamentId(null);
+            }}
           />
         )}
 
