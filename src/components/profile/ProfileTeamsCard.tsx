@@ -3,13 +3,62 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
+import { showNotification } from '@/components/NotificationSystem';
+import { useState } from 'react';
+
+const TEAMS_API = 'https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515';
 
 interface ProfileTeamsCardProps {
   teams: any[];
+  onTeamUpdate?: () => void;
 }
 
-export default function ProfileTeamsCard({ teams }: ProfileTeamsCardProps) {
+export default function ProfileTeamsCard({ teams, onTeamUpdate }: ProfileTeamsCardProps) {
   const navigate = useNavigate();
+  const [leavingTeamId, setLeavingTeamId] = useState<number | null>(null);
+
+  const handleLeaveTeam = async (teamId: number, teamName: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (!confirm(`Вы уверены, что хотите покинуть команду "${teamName}"?`)) {
+      return;
+    }
+
+    const user = localStorage.getItem('user');
+    if (!user) return;
+
+    const userData = JSON.parse(user);
+    setLeavingTeamId(teamId);
+
+    try {
+      const response = await fetch(TEAMS_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userData.id.toString()
+        },
+        body: JSON.stringify({
+          action: 'leave_team',
+          team_id: teamId
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showNotification('success', 'Успешно', 'Вы покинули команду');
+        if (onTeamUpdate) {
+          onTeamUpdate();
+        }
+      } else {
+        showNotification('error', 'Ошибка', data.error);
+      }
+    } catch (error: any) {
+      showNotification('error', 'Ошибка', 'Не удалось покинуть команду');
+    } finally {
+      setLeavingTeamId(null);
+    }
+  };
 
   if (!teams || teams.length === 0) {
     return (
@@ -56,10 +105,12 @@ export default function ProfileTeamsCard({ teams }: ProfileTeamsCardProps) {
         {teams.map((team) => (
           <div
             key={team.id}
-            className="flex items-center justify-between p-4 rounded-lg border bg-background/50 hover:bg-background hover:border-primary/50 transition-all cursor-pointer group"
-            onClick={() => navigate(`/teams/${team.id}`)}
+            className="flex items-center justify-between p-4 rounded-lg border bg-background/50 hover:bg-background hover:border-primary/50 transition-all group"
           >
-            <div className="flex items-center gap-3">
+            <div 
+              className="flex items-center gap-3 flex-1 cursor-pointer"
+              onClick={() => navigate(`/teams/${team.id}`)}
+            >
               {team.logo_url ? (
                 <img
                   src={team.logo_url}
@@ -98,9 +149,21 @@ export default function ProfileTeamsCard({ teams }: ProfileTeamsCardProps) {
                 </div>
               </div>
             </div>
-            <Icon name="ChevronRight" size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => handleLeaveTeam(team.id, team.name, e)}
+                disabled={leavingTeamId === team.id}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              >
+                <Icon name="LogOut" size={16} className="mr-1" />
+                Выйти
+              </Button>
+              <Icon name="ChevronRight" size={20} className="text-muted-foreground group-hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/teams/${team.id}`)} />
+            </div>
           </div>
-        ))}
+        ))
         
         {teams.length > 0 && (
           <Button 

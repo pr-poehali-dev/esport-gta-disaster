@@ -402,7 +402,7 @@ export default function Profile() {
 
           <div className="mt-8">
             <ProfileStatsSection profile={profile} />
-            <ProfileContentSection profile={profile} userTeams={userTeams} />
+            <ProfileContentSection profile={profile} userTeams={userTeams} onTeamUpdate={loadUserTeams} />
           </div>
 
           <ProfileEditDialog

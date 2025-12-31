@@ -53,6 +53,12 @@ def handler(event: dict, context) -> dict:
                 return invite_player(cur, conn, body, event)
             elif action == 'respond_invitation':
                 return respond_invitation(cur, conn, body, event)
+            elif action == 'accept_invitation':
+                return accept_invitation(cur, conn, body, event)
+            elif action == 'reject_invitation':
+                return reject_invitation(cur, conn, body, event)
+            elif action == 'leave_team':
+                return leave_team(cur, conn, body, event)
             elif action == 'get_invitations':
                 return get_invitations(cur, conn, event)
             elif action == 'get_user_teams':
@@ -1069,6 +1075,145 @@ def get_tournament_matches(cur, conn, params: dict) -> dict:
         'body': json.dumps({'matches': matches}),
         'isBase64Encoded': False
     }
+
+def accept_invitation(cur, conn, body: dict, event: dict) -> dict:
+    '''Принятие приглашения в команду (упрощенная версия)'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    team_id = body.get('team_id')
+    
+    if not team_id:
+        return error_response('Укажите team_id', 400)
+    
+    try:
+        cur.execute("""
+            SELECT id, player_role 
+            FROM t_p4831367_esport_gta_disaster.team_invitations 
+            WHERE team_id = %s AND invited_user_id = %s AND status = 'pending'
+            ORDER BY created_at DESC LIMIT 1
+        """, (team_id, user_id))
+        
+        invitation = cur.fetchone()
+        if not invitation:
+            return error_response('Приглашение не найдено', 404)
+        
+        cur.execute("SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s AND status = 'active'", (user_id,))
+        team_count = cur.fetchone()[0]
+        
+        if team_count >= 3:
+            return error_response('Вы уже состоите в 3 командах', 403)
+        
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.team_members 
+            (team_id, user_id, player_role, is_captain, status, joined_at)
+            VALUES (%s, %s, %s, FALSE, 'active', NOW())
+        """, (team_id, user_id, invitation['player_role']))
+        
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.team_invitations 
+            SET status = 'accepted', responded_at = NOW() 
+            WHERE id = %s
+        """, (invitation['id'],))
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Вы вступили в команду'}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return error_response(f'Ошибка: {str(e)}', 500)
+
+def reject_invitation(cur, conn, body: dict, event: dict) -> dict:
+    '''Отклонение приглашения в команду'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    team_id = body.get('team_id')
+    
+    if not team_id:
+        return error_response('Укажите team_id', 400)
+    
+    try:
+        cur.execute("""
+            SELECT id 
+            FROM t_p4831367_esport_gta_disaster.team_invitations 
+            WHERE team_id = %s AND invited_user_id = %s AND status = 'pending'
+            ORDER BY created_at DESC LIMIT 1
+        """, (team_id, user_id))
+        
+        invitation = cur.fetchone()
+        if not invitation:
+            return error_response('Приглашение не найдено', 404)
+        
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.team_invitations 
+            SET status = 'declined', responded_at = NOW() 
+            WHERE id = %s
+        """, (invitation['id'],))
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Приглашение отклонено'}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return error_response(f'Ошибка: {str(e)}', 500)
+
+def leave_team(cur, conn, body: dict, event: dict) -> dict:
+    '''Выход из команды'''
+    user_id = event.get('headers', {}).get('X-User-Id') or event.get('headers', {}).get('x-user-id')
+    
+    if not user_id:
+        return error_response('Требуется авторизация', 401)
+    
+    team_id = body.get('team_id')
+    
+    if not team_id:
+        return error_response('Укажите team_id', 400)
+    
+    try:
+        cur.execute("""
+            SELECT is_captain FROM t_p4831367_esport_gta_disaster.team_members 
+            WHERE team_id = %s AND user_id = %s AND status = 'active'
+        """, (team_id, user_id))
+        
+        member = cur.fetchone()
+        if not member:
+            return error_response('Вы не состоите в этой команде', 404)
+        
+        if member['is_captain']:
+            return error_response('Капитан не может покинуть команду. Сначала передайте капитанство другому игроку.', 403)
+        
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.team_members 
+            SET status = 'left', left_at = NOW() 
+            WHERE team_id = %s AND user_id = %s
+        """, (team_id, user_id))
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Вы покинули команду'}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return error_response(f'Ошибка: {str(e)}', 500)
 
 def error_response(message: str, status: int) -> dict:
     '''Формирование ответа с ошибкой'''

@@ -7,8 +7,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { showNotification } from '@/components/NotificationSystem';
 
 const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+const TEAMS_API = 'https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515';
 
 interface Notification {
   id: number;
@@ -18,6 +20,7 @@ interface Notification {
   link: string | null;
   read: boolean;
   created_at: string;
+  metadata?: any;
 }
 
 export default function NotificationBell() {
@@ -111,8 +114,6 @@ export default function NotificationBell() {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   const getNotificationIcon = (type: string) => {
@@ -145,8 +146,55 @@ export default function NotificationBell() {
     return date.toLocaleDateString('ru-RU');
   };
 
+  const handleTeamInvitationResponse = async (notificationId: number, teamId: number, accept: boolean, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const user = localStorage.getItem('user');
+    if (!user) return;
+
+    const userData = JSON.parse(user);
+
+    try {
+      const response = await fetch(TEAMS_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userData.id.toString()
+        },
+        body: JSON.stringify({
+          action: accept ? 'accept_invitation' : 'reject_invitation',
+          team_id: teamId
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showNotification('success', 'Успешно', accept ? 'Вы вступили в команду' : 'Приглашение отклонено');
+        await markAsRead(notificationId);
+        loadNotifications();
+      } else {
+        showNotification('error', 'Ошибка', data.error);
+      }
+    } catch (error: any) {
+      showNotification('error', 'Ошибка', 'Не удалось обработать приглашение');
+    }
+  };
+
+  const extractTeamIdFromLink = (link: string | null): number | null => {
+    if (!link) return null;
+    const match = link.match(/\/teams\/(\d+)/);
+    return match ? parseInt(match[1]) : null;
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (newOpen) {
+      loadNotifications();
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -164,16 +212,26 @@ export default function NotificationBell() {
       <PopoverContent className="w-96 bg-[#1a1f2e] border-white/10 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h3 className="font-semibold text-white">Уведомления</h3>
-          {unreadCount > 0 && (
+          <div className="flex gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={markAllAsRead}
-              className="text-xs text-purple-400 hover:text-purple-300"
+              onClick={loadNotifications}
+              className="text-xs text-gray-400 hover:text-white"
             >
-              Прочитать все
+              <Icon name="RefreshCw" className="h-3 w-3" />
             </Button>
-          )}
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAllAsRead}
+                className="text-xs text-purple-400 hover:text-purple-300"
+              >
+                Прочитать все
+              </Button>
+            )}
+          </div>
         </div>
 
         <ScrollArea className="h-[400px]">
@@ -189,42 +247,70 @@ export default function NotificationBell() {
             </div>
           ) : (
             <div className="divide-y divide-white/5">
-              {notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  className={`p-4 hover:bg-white/5 cursor-pointer transition-colors ${
-                    !notif.read ? 'bg-purple-500/10' : ''
-                  }`}
-                  onClick={() => {
-                    if (!notif.read) markAsRead(notif.id);
-                    if (notif.link) {
-                      window.location.href = notif.link;
-                      setOpen(false);
-                    }
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${!notif.read ? 'bg-purple-500/20' : 'bg-white/5'}`}>
-                      <Icon
-                        name={getNotificationIcon(notif.type)}
-                        className={`h-4 w-4 ${!notif.read ? 'text-purple-400' : 'text-gray-400'}`}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className={`font-semibold text-sm ${!notif.read ? 'text-white' : 'text-gray-300'}`}>
-                          {notif.title}
-                        </p>
-                        {!notif.read && (
-                          <div className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0 mt-1" />
+              {notifications.map((notif) => {
+                const isTeamInvitation = notif.type === 'team_invitation';
+                const teamId = isTeamInvitation ? extractTeamIdFromLink(notif.link) : null;
+
+                return (
+                  <div
+                    key={notif.id}
+                    className={`p-4 ${!isTeamInvitation ? 'hover:bg-white/5 cursor-pointer' : ''} transition-colors ${
+                      !notif.read ? 'bg-purple-500/10' : ''
+                    }`}
+                    onClick={() => {
+                      if (isTeamInvitation) return;
+                      if (!notif.read) markAsRead(notif.id);
+                      if (notif.link) {
+                        window.location.href = notif.link;
+                        setOpen(false);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${!notif.read ? 'bg-purple-500/20' : 'bg-white/5'}`}>
+                        <Icon
+                          name={getNotificationIcon(notif.type)}
+                          className={`h-4 w-4 ${!notif.read ? 'text-purple-400' : 'text-gray-400'}`}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`font-semibold text-sm ${!notif.read ? 'text-white' : 'text-gray-300'}`}>
+                            {notif.title}
+                          </p>
+                          {!notif.read && (
+                            <div className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0 mt-1" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-400 mt-1 line-clamp-2">{notif.message}</p>
+                        <p className="text-xs text-gray-500 mt-2">{formatTime(notif.created_at)}</p>
+                        
+                        {isTeamInvitation && teamId && (
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              onClick={(e) => handleTeamInvitationResponse(notif.id, teamId, true, e)}
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Icon name="Check" className="h-3 w-3 mr-1" />
+                              Принять
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => handleTeamInvitationResponse(notif.id, teamId, false, e)}
+                              className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                            >
+                              <Icon name="X" className="h-3 w-3 mr-1" />
+                              Отклонить
+                            </Button>
+                          </div>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400 mt-1 line-clamp-2">{notif.message}</p>
-                      <p className="text-xs text-gray-500 mt-2">{formatTime(notif.created_at)}</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>

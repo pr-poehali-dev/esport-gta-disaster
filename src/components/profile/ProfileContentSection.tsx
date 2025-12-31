@@ -5,13 +5,14 @@ import ProfileTeamsCard from '@/components/profile/ProfileTeamsCard';
 interface ProfileContentSectionProps {
   profile: any;
   userTeams?: any[];
+  onTeamUpdate?: () => void;
 }
 
-export default function ProfileContentSection({ profile, userTeams = [] }: ProfileContentSectionProps) {
+export default function ProfileContentSection({ profile, userTeams = [], onTeamUpdate }: ProfileContentSectionProps) {
   return (
     <>
       <div className="mb-6">
-        <ProfileTeamsCard teams={userTeams} />
+        <ProfileTeamsCard teams={userTeams} onTeamUpdate={onTeamUpdate} />
       </div>
 
       {profile.bio && (
