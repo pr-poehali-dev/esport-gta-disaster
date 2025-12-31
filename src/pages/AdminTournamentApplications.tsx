@@ -10,8 +10,8 @@ interface Application {
   team_id: number;
   team_name: string;
   team_tag: string;
-  team_logo: string;
-  team_rating: number;
+  logo_url: string;
+  members_count: number;
   registered_at: string;
   status: string;
 }
@@ -53,9 +53,9 @@ export default function AdminTournamentApplications() {
       });
 
       const data = await response.json();
-      if (data.tournament) {
-        setTournament(data.tournament);
-        setApplications(data.tournament.registered_teams || []);
+      if (data) {
+        setTournament(data);
+        setApplications(data.registrations || []);
       }
     } catch (error) {
       console.error('Ошибка загрузки:', error);
@@ -140,9 +140,9 @@ export default function AdminTournamentApplications() {
               <Card key={app.id} className="bg-[#1a1f2e]/50 border-white/10 p-6">
                 <div className="flex items-center gap-6">
                   <div className="flex-shrink-0">
-                    {app.team_logo ? (
+                    {app.logo_url ? (
                       <img 
-                        src={app.team_logo} 
+                        src={app.logo_url} 
                         alt={app.team_name} 
                         className="w-16 h-16 rounded-lg object-cover border-2 border-white/10"
                       />
@@ -162,16 +162,18 @@ export default function AdminTournamentApplications() {
                       <span className={`px-3 py-1 rounded-full text-xs ${
                         app.status === 'approved' 
                           ? 'bg-green-500/20 text-green-400' 
+                          : app.status === 'rejected'
+                          ? 'bg-red-500/20 text-red-400'
                           : 'bg-yellow-500/20 text-yellow-400'
                       }`}>
-                        {app.status === 'approved' ? 'Одобрено' : 'На рассмотрении'}
+                        {app.status === 'approved' ? 'Одобрено' : app.status === 'rejected' ? 'Отклонено' : 'На рассмотрении'}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-400">
-                      {app.team_rating && (
+                      {app.members_count && (
                         <span className="flex items-center gap-1">
-                          <Icon name="Star" size={14} />
-                          Рейтинг: {app.team_rating}
+                          <Icon name="Users" size={14} />
+                          Участников: {app.members_count}
                         </span>
                       )}
                       <span className="flex items-center gap-1">
