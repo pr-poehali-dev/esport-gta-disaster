@@ -83,8 +83,21 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (admin_id_int,))
-        admin_role = cur.fetchone()
+        try:
+            cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (admin_id_int,))
+            admin_role = cur.fetchone()
+        except Exception as e:
+            import traceback
+            error_msg = traceback.format_exc()
+            print(f"ERROR checking admin role: {error_msg}")
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 500,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': f'Ошибка проверки прав доступа: {str(e)}'}),
+                'isBase64Encoded': False
+            }
         
         if not admin_role or admin_role['role'] not in ['admin', 'founder', 'organizer']:
             cur.close()
