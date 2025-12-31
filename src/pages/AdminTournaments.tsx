@@ -370,6 +370,7 @@ export default function AdminTournaments() {
                 onDelete={handleDeleteTournament}
                 onGenerateBracket={handleGenerateBracket}
                 onNavigate={(id) => navigate(`/tournaments/${id}`)}
+                onManageGroupStage={(id) => navigate(`/admin/tournaments/${id}/group-stage`)}
               />
             ))
           )}

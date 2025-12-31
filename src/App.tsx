@@ -20,6 +20,7 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminTournaments from "./pages/AdminTournaments";
 import AdminTournamentRegistrations from "./pages/AdminTournamentRegistrations";
 import AdminNews from "./pages/AdminNews";
+import AdminGroupStage from "./pages/AdminGroupStage";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/tournaments" element={<ProtectedRoute requireAdmin><AdminTournaments /></ProtectedRoute>} />
             <Route path="/admin/tournaments/:id/registrations" element={<ProtectedRoute requireAdmin><AdminTournamentRegistrations /></ProtectedRoute>} />
+            <Route path="/admin/tournaments/:tournamentId/group-stage" element={<ProtectedRoute requireAdmin><AdminGroupStage /></ProtectedRoute>} />
             <Route path="/admin/news" element={<ProtectedRoute requireAdmin><AdminNews /></ProtectedRoute>} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />

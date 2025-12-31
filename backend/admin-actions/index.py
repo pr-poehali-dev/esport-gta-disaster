@@ -216,6 +216,12 @@ def handler(event: dict, context) -> dict:
                 return complete_match(cur, conn, admin_id, body)
             elif action == 'notify_match_start':
                 return notify_match_start(cur, conn, admin_id, body)
+            elif action == 'get_group_stage':
+                return get_group_stage(cur, conn, body)
+            elif action == 'create_group_stage':
+                return create_group_stage(cur, conn, admin_id, body)
+            elif action == 'update_group_match':
+                return update_group_match(cur, conn, admin_id, body)
             else:
                 return {
                     'statusCode': 400,
@@ -2909,3 +2915,244 @@ def notify_match_start(cur, conn, admin_id: str, body: dict) -> dict:
         }),
         'isBase64Encoded': False
     }
+
+
+def get_group_stage(cur, conn, body: dict) -> dict:
+    """Получает данные групповой стадии турнира"""
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'tournament_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        # Получаем все команды турнира
+        cur.execute(f"""
+            SELECT tr.team_id, t.name, t.logo_url
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+            JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
+            WHERE tr.tournament_id = {tournament_id} 
+            AND (tr.status = 'approved' OR tr.status = 'confirmed')
+            ORDER BY tr.registered_at
+        """)
+        teams = [dict(row) for row in cur.fetchall()]
+        
+        # Получаем матчи групповой стадии
+        cur.execute(f"""
+            SELECT id, group_name, team1_id, team2_id, team1_score, team2_score, played
+            FROM t_p4831367_esport_gta_disaster.group_stage_matches
+            WHERE tournament_id = {tournament_id}
+            ORDER BY group_name, id
+        """)
+        matches = [dict(row) for row in cur.fetchall()]
+        
+        # Вычисляем турнирную таблицу для каждой группы
+        standings = {}
+        groups = ['A', 'B', 'C', 'D']
+        
+        for group in groups:
+            group_matches = [m for m in matches if m['group_name'] == group]
+            team_stats = {}
+            
+            # Инициализируем статистику для всех команд группы
+            for match in group_matches:
+                for team_id in [match['team1_id'], match['team2_id']]:
+                    if team_id not in team_stats:
+                        team_name = next((t['name'] for t in teams if t['team_id'] == team_id), 'Unknown')
+                        team_stats[team_id] = {
+                            'team_id': team_id,
+                            'team_name': team_name,
+                            'matches_played': 0,
+                            'wins': 0,
+                            'draws': 0,
+                            'losses': 0,
+                            'goals_for': 0,
+                            'goals_against': 0,
+                            'goal_difference': 0,
+                            'points': 0
+                        }
+            
+            # Обрабатываем сыгранные матчи
+            for match in group_matches:
+                if match['played']:
+                    team1_id = match['team1_id']
+                    team2_id = match['team2_id']
+                    score1 = match['team1_score']
+                    score2 = match['team2_score']
+                    
+                    # Обновляем статистику
+                    team_stats[team1_id]['matches_played'] += 1
+                    team_stats[team2_id]['matches_played'] += 1
+                    
+                    team_stats[team1_id]['goals_for'] += score1
+                    team_stats[team1_id]['goals_against'] += score2
+                    team_stats[team2_id]['goals_for'] += score2
+                    team_stats[team2_id]['goals_against'] += score1
+                    
+                    if score1 > score2:
+                        team_stats[team1_id]['wins'] += 1
+                        team_stats[team1_id]['points'] += 3
+                        team_stats[team2_id]['losses'] += 1
+                    elif score2 > score1:
+                        team_stats[team2_id]['wins'] += 1
+                        team_stats[team2_id]['points'] += 3
+                        team_stats[team1_id]['losses'] += 1
+                    else:
+                        team_stats[team1_id]['draws'] += 1
+                        team_stats[team2_id]['draws'] += 1
+                        team_stats[team1_id]['points'] += 1
+                        team_stats[team2_id]['points'] += 1
+            
+            # Вычисляем разницу мячей и сортируем
+            for stats in team_stats.values():
+                stats['goal_difference'] = stats['goals_for'] - stats['goals_against']
+            
+            standings[group] = sorted(
+                team_stats.values(),
+                key=lambda x: (x['points'], x['goal_difference'], x['goals_for']),
+                reverse=True
+            )
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'teams': teams,
+                'matches': matches,
+                'standings': standings
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка получения групповой стадии: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+
+def create_group_stage(cur, conn, admin_id: str, body: dict) -> dict:
+    """Создает групповую стадию для турнира"""
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'tournament_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        # Получаем команды
+        cur.execute(f"""
+            SELECT tr.team_id, t.name
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+            JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
+            WHERE tr.tournament_id = {tournament_id} 
+            AND (tr.status = 'approved' OR tr.status = 'confirmed')
+            ORDER BY RANDOM()
+        """)
+        teams = cur.fetchall()
+        
+        if len(teams) < 16:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': f'Недостаточно команд для групповой стадии. Нужно минимум 16, есть {len(teams)}'}),
+                'isBase64Encoded': False
+            }
+        
+        # Удаляем старые матчи групповой стадии если есть
+        cur.execute(f"""
+            DELETE FROM t_p4831367_esport_gta_disaster.group_stage_matches
+            WHERE tournament_id = {tournament_id}
+        """)
+        
+        # Разбиваем команды на 4 группы по 4 команды
+        groups = {'A': [], 'B': [], 'C': [], 'D': []}
+        group_names = ['A', 'B', 'C', 'D']
+        
+        for i, team in enumerate(teams[:16]):
+            group_name = group_names[i % 4]
+            groups[group_name].append(team['team_id'])
+        
+        # Создаем матчи для каждой группы (каждый с каждым)
+        for group_name, team_ids in groups.items():
+            for i in range(len(team_ids)):
+                for j in range(i + 1, len(team_ids)):
+                    cur.execute(f"""
+                        INSERT INTO t_p4831367_esport_gta_disaster.group_stage_matches
+                        (tournament_id, group_name, team1_id, team2_id, team1_score, team2_score, played, created_at)
+                        VALUES ({tournament_id}, '{group_name}', {team_ids[i]}, {team_ids[j]}, 0, 0, false, NOW())
+                    """)
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': 'Групповая стадия создана',
+                'groups': {name: len(team_ids) for name, team_ids in groups.items()}
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка создания групповой стадии: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+
+def update_group_match(cur, conn, admin_id: str, body: dict) -> dict:
+    """Обновляет результат матча групповой стадии"""
+    tournament_id = body.get('tournament_id')
+    match_id = body.get('match_id')
+    team1_score = body.get('team1_score', 0)
+    team2_score = body.get('team2_score', 0)
+    played = body.get('played', False)
+    
+    if not tournament_id or not match_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'tournament_id и match_id обязательны'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        cur.execute(f"""
+            UPDATE t_p4831367_esport_gta_disaster.group_stage_matches
+            SET team1_score = {team1_score}, team2_score = {team2_score}, played = {played}, updated_at = NOW()
+            WHERE id = {match_id} AND tournament_id = {tournament_id}
+        """)
+        
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': 'Результат матча обновлен'
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка обновления матча: {str(e)}'}),
+            'isBase64Encoded': False
+        }

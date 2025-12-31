@@ -26,6 +26,7 @@ interface TournamentCardProps {
   onDelete: (tournamentId: number) => void;
   onGenerateBracket: (tournamentId: number) => void;
   onNavigate: (tournamentId: number) => void;
+  onManageGroupStage?: (tournamentId: number) => void;
 }
 
 export default function TournamentCard({
@@ -34,7 +35,8 @@ export default function TournamentCard({
   onToggleVisibility,
   onDelete,
   onGenerateBracket,
-  onNavigate
+  onNavigate,
+  onManageGroupStage
 }: TournamentCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -143,6 +145,18 @@ export default function TournamentCard({
           <Icon name="Network" size={16} className="mr-2" />
           Сетка
         </Button>
+
+        {onManageGroupStage && (
+          <Button
+            onClick={() => onManageGroupStage(tournament.id)}
+            variant="outline"
+            size="sm"
+            className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+          >
+            <Icon name="Trophy" size={16} className="mr-2" />
+            Группы
+          </Button>
+        )}
 
         <Button
           onClick={() => onToggleVisibility(tournament.id, tournament.is_hidden || false)}
