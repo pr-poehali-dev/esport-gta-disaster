@@ -211,7 +211,7 @@ def handler(event: dict, context) -> dict:
             elif action == 'get_settings':
                 return get_settings(cur, conn)
             elif action == 'update_setting':
-                return update_setting(cur, conn, admin_id, body, admin_role[0])
+                return update_setting(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'generate_bracket':
                 return generate_bracket(cur, conn, admin_id, body)
             elif action == 'get_bracket':
@@ -1638,6 +1638,9 @@ def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str
         }
     except Exception as e:
         conn.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"ERROR in create_news_with_image: {error_details}")
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
