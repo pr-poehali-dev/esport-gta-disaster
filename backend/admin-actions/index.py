@@ -1505,21 +1505,17 @@ def get_news(cur, conn, body: dict) -> dict:
     try:
         if include_unpublished:
             query = f"""
-                SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name, 
-                       n.published, n.pinned, n.created_at, n.updated_at
-                FROM t_p4831367_esport_gta_disaster.news n
-                LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
-                ORDER BY n.pinned DESC, n.created_at DESC
+                SELECT id, title, content, image_url, author_id, published, pinned, created_at, updated_at
+                FROM t_p4831367_esport_gta_disaster.news
+                ORDER BY pinned DESC, created_at DESC
                 LIMIT {limit} OFFSET {offset}
             """
         else:
             query = f"""
-                SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name,
-                       n.published, n.pinned, n.created_at, n.updated_at
-                FROM t_p4831367_esport_gta_disaster.news n
-                LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
-                WHERE n.published = TRUE
-                ORDER BY n.pinned DESC, n.created_at DESC
+                SELECT id, title, content, image_url, author_id, published, pinned, created_at, updated_at
+                FROM t_p4831367_esport_gta_disaster.news
+                WHERE published = TRUE
+                ORDER BY pinned DESC, created_at DESC
                 LIMIT {limit} OFFSET {offset}
             """
         
@@ -1545,7 +1541,7 @@ def get_news(cur, conn, body: dict) -> dict:
             'content': row['content'],
             'image_url': row['image_url'],
             'author_id': row['author_id'],
-            'author_name': row['author_name'] or 'Администратор',
+            'author_name': 'Администратор',
             'published': row['published'] if row['published'] is not None else False,
             'pinned': row['pinned'] if row['pinned'] is not None else False,
             'created_at': row['created_at'].isoformat() if row['created_at'] else None,
