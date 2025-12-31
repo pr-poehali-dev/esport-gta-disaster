@@ -1407,22 +1407,32 @@ def create_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
             'isBase64Encoded': False
         }
     
-    cur.execute("""
-        INSERT INTO t_p4831367_esport_gta_disaster.news 
-        (title, content, image_url, author_id, published, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
-        RETURNING id
-    """, (title, content, image_url, int(admin_id), published))
-    
-    news_id = cur.fetchone()[0]
-    conn.commit()
-    
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'success': True, 'message': 'Новость создана', 'news_id': news_id}),
-        'isBase64Encoded': False
-    }
+    try:
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.news 
+            (title, content, image_url, author_id, published, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+            RETURNING id
+        """, (title, content, image_url, int(admin_id), published))
+        
+        result = cur.fetchone()
+        news_id = result['id'] if result else None
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Новость создана', 'news_id': news_id}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка создания новости: {str(e)}'}),
+            'isBase64Encoded': False
+        }
 
 def update_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     """Обновляет новость"""
