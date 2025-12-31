@@ -168,6 +168,7 @@ def handler(event: dict, context) -> dict:
             elif action == 'create_news':
                 return create_news(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'create_news_with_image':
+                print(f"=== CALLING create_news_with_image", file=sys.stderr, flush=True)
                 return create_news_with_image(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'update_news':
                 return update_news(cur, conn, admin_id, body, admin_role['role'])
@@ -260,10 +261,11 @@ def handler(event: dict, context) -> dict:
             elif action == 'finalize_group_stage':
                 return finalize_group_stage(cur, conn, admin_id, body)
             else:
+                print(f"=== UNKNOWN ACTION: {action}", file=sys.stderr, flush=True)
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'Неизвестное действие'}),
+                    'body': json.dumps({'error': f'Неизвестное действие: {action}'}),
                     'isBase64Encoded': False
                 }
         
