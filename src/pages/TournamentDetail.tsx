@@ -282,8 +282,14 @@ export default function TournamentDetail() {
                                 </span>
                               </div>
                             </div>
-                            <Badge variant={reg.status === 'approved' ? 'default' : 'outline'}>
-                              {reg.status === 'approved' ? 'Подтверждено' : 'На рассмотрении'}
+                            <Badge variant={
+                              reg.status === 'approved' ? 'default' : 
+                              reg.status === 'rejected' ? 'destructive' : 
+                              'outline'
+                            }>
+                              {reg.status === 'approved' ? 'Подтверждено' : 
+                               reg.status === 'rejected' ? 'Отклонено' : 
+                               'На рассмотрении'}
                             </Badge>
                           </div>
                         ))}
