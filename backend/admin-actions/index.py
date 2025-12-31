@@ -1596,7 +1596,11 @@ def get_news(cur, conn, body: dict) -> dict:
 def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     """Создает новость с загрузкой изображения в S3"""
     
+    import sys
+    print(f"=== create_news_with_image called, admin_role={admin_role}", file=sys.stderr, flush=True)
+    
     if admin_role not in ['admin', 'founder']:
+        print(f"=== Role check failed: {admin_role}", file=sys.stderr, flush=True)
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -1609,7 +1613,10 @@ def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str
     image_base64 = body.get('image')
     published = body.get('published', False)
     
+    print(f"=== News data: title={title}, content_len={len(content) if content else 0}, has_image={bool(image_base64)}", file=sys.stderr, flush=True)
+    
     if not title or not content:
+        print(f"=== Validation failed", file=sys.stderr, flush=True)
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -1618,6 +1625,7 @@ def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str
         }
     
     try:
+        print(f"=== Starting news creation process", file=sys.stderr, flush=True)
         import boto3
         import base64
         import hashlib
