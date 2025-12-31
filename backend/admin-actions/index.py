@@ -757,10 +757,13 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
         
     except Exception as e:
         conn.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"ERROR deleting tournament: {error_details}")
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'Ошибка при удалении турнира: {str(e)}'}),
+            'body': json.dumps({'error': f'Ошибка при удалении турнира: {str(e)}', 'details': error_details}),
             'isBase64Encoded': False
         }
 

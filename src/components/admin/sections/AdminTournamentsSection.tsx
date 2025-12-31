@@ -98,16 +98,20 @@ export function AdminTournamentsSection() {
       });
 
       const data = await response.json();
+      console.error('Delete tournament response:', data);
+      
       if (data.success) {
         toast({ title: 'Успешно', description: data.message });
         loadTournaments();
       } else {
-        toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
+        console.error('Delete tournament error:', data.error);
+        toast({ title: 'Ошибка', description: data.error || 'Неизвестная ошибка', variant: 'destructive' });
       }
     } catch (error) {
+      console.error('Delete tournament exception:', error);
       toast({
         title: 'Ошибка',
-        description: 'Не удалось удалить турнир',
+        description: `Не удалось удалить турнир: ${error}`,
         variant: 'destructive',
       });
     }
