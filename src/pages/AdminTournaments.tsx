@@ -50,26 +50,52 @@ export default function AdminTournaments() {
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      setUser(userData);
-      
-      if (!['admin', 'founder', 'moderator'].includes(userData.role)) {
-        showNotification('error', 'Доступ запрещен', 'У вас нет прав администратора');
-        navigate('/');
-        return;
-      }
-    } else {
+    if (!savedUser) {
       navigate('/');
       return;
     }
-  }, [navigate]);
 
-  useEffect(() => {
-    if (user) {
-      loadTournaments();
+    const userData = JSON.parse(savedUser);
+    
+    if (!['admin', 'founder', 'moderator'].includes(userData.role)) {
+      showNotification('error', 'Доступ запрещен', 'У вас нет прав администратора');
+      navigate('/');
+      return;
     }
-  }, [user]);
+
+    setUser(userData);
+
+    const fetchTournaments = async () => {
+      try {
+        const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Id': userData.id.toString()
+          },
+          body: JSON.stringify({ 
+            action: 'get_tournaments',
+            show_hidden: true
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.tournaments) {
+          setTournaments(data.tournaments || []);
+        } else {
+          showNotification('error', 'Ошибка', data.error || 'Не удалось загрузить турниры');
+        }
+      } catch (error: any) {
+        showNotification('error', 'Ошибка', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTournaments();
+  }, [navigate]);
 
   const loadTournaments = async () => {
     try {
