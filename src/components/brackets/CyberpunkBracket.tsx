@@ -154,39 +154,39 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
                       style={{ 
                         width: '80px', 
                         height: `${spacing + MATCH_HEIGHT}px`,
-                        top: `${MATCH_HEIGHT / 2}px`
+                        top: '0'
                       }}
                     >
                       <line 
                         x1="0" 
-                        y1="0" 
+                        y1={`${MATCH_HEIGHT / 2}`} 
                         x2="40" 
-                        y2="0" 
-                        stroke="rgba(245, 158, 11, 0.6)" 
+                        y2={`${MATCH_HEIGHT / 2}`} 
+                        stroke="rgba(245, 158, 11, 0.7)" 
                         strokeWidth="2"
                       />
                       <line 
                         x1="40" 
-                        y1="0" 
+                        y1={`${MATCH_HEIGHT / 2}`} 
                         x2="40" 
-                        y2={`${spacing}`} 
-                        stroke="rgba(245, 158, 11, 0.6)" 
+                        y2={`${spacing + MATCH_HEIGHT / 2}`} 
+                        stroke="rgba(245, 158, 11, 0.7)" 
                         strokeWidth="2"
                       />
                       <line 
                         x1="0" 
-                        y1={`${spacing}`} 
+                        y1={`${spacing + MATCH_HEIGHT / 2}`} 
                         x2="40" 
-                        y2={`${spacing}`} 
-                        stroke="rgba(245, 158, 11, 0.6)" 
+                        y2={`${spacing + MATCH_HEIGHT / 2}`} 
+                        stroke="rgba(245, 158, 11, 0.7)" 
                         strokeWidth="2"
                       />
                       <line 
                         x1="40" 
-                        y1={`${spacing / 2}`} 
+                        y1={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
                         x2="80" 
-                        y2={`${spacing / 2}`} 
-                        stroke="rgba(245, 158, 11, 0.6)" 
+                        y2={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
+                        stroke="rgba(245, 158, 11, 0.7)" 
                         strokeWidth="2"
                       />
                     </svg>

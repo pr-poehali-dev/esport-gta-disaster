@@ -149,43 +149,43 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                         style={{ 
                           width: '80px', 
                           height: `${spacing + MATCH_HEIGHT}px`,
-                          top: `${MATCH_HEIGHT / 2}px`
+                          top: '0'
                         }}
                       >
                         {/* Горизонтальная линия от первого матча */}
                         <line 
                           x1="0" 
-                          y1="0" 
+                          y1={`${MATCH_HEIGHT / 2}`} 
                           x2="40" 
-                          y2="0" 
-                          stroke="rgba(168, 85, 247, 0.5)" 
+                          y2={`${MATCH_HEIGHT / 2}`} 
+                          stroke="rgba(168, 85, 247, 0.6)" 
                           strokeWidth="2"
                         />
                         {/* Вертикальная соединительная линия */}
                         <line 
                           x1="40" 
-                          y1="0" 
+                          y1={`${MATCH_HEIGHT / 2}`} 
                           x2="40" 
-                          y2={`${spacing}`} 
-                          stroke="rgba(168, 85, 247, 0.5)" 
+                          y2={`${spacing + MATCH_HEIGHT / 2}`} 
+                          stroke="rgba(168, 85, 247, 0.6)" 
                           strokeWidth="2"
                         />
                         {/* Горизонтальная линия от второго матча */}
                         <line 
                           x1="0" 
-                          y1={`${spacing}`} 
+                          y1={`${spacing + MATCH_HEIGHT / 2}`} 
                           x2="40" 
-                          y2={`${spacing}`} 
-                          stroke="rgba(168, 85, 247, 0.5)" 
+                          y2={`${spacing + MATCH_HEIGHT / 2}`} 
+                          stroke="rgba(168, 85, 247, 0.6)" 
                           strokeWidth="2"
                         />
                         {/* Линия к следующему раунду */}
                         <line 
                           x1="40" 
-                          y1={`${spacing / 2}`} 
+                          y1={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
                           x2="80" 
-                          y2={`${spacing / 2}`} 
-                          stroke="rgba(168, 85, 247, 0.5)" 
+                          y2={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
+                          stroke="rgba(168, 85, 247, 0.6)" 
                           strokeWidth="2"
                         />
                       </svg>

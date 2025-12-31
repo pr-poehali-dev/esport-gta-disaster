@@ -307,18 +307,51 @@ export default function TournamentBracket() {
     window.open(url, '_blank');
   };
 
+  const getBackgroundClass = () => {
+    switch (bracketStyle) {
+      case 'esports':
+        return 'bg-[#0a0e1a]';
+      case 'cyberpunk':
+        return 'bg-black';
+      case 'minimal':
+        return 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50';
+      default:
+        return 'bg-[#0a0e1a]';
+    }
+  };
+
+  const getButtonClasses = () => {
+    if (bracketStyle === 'minimal') {
+      return {
+        outline: 'border-slate-300 text-slate-900 hover:bg-slate-100',
+        primary: 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white'
+      };
+    } else if (bracketStyle === 'cyberpunk') {
+      return {
+        outline: 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10',
+        primary: 'bg-amber-500 hover:bg-amber-600 text-black font-bold'
+      };
+    }
+    return {
+      outline: 'border-white/10 text-white hover:bg-white/5',
+      primary: 'bg-purple-600 hover:bg-purple-700'
+    };
+  };
+
+  const buttonStyles = getButtonClasses();
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0e1a] relative overflow-hidden">
+    <div className={`min-h-screen flex flex-col ${getBackgroundClass()} relative overflow-hidden`}>
       <Header />
 
       <main className="flex-1 py-8">
         <div className="max-w-[98vw] mx-auto px-4">
           <div className="mb-6 flex justify-between items-center">
-            <Button variant="outline" onClick={() => navigate(`/tournaments/${id}`)} className="border-white/10 text-white hover:bg-white/5">
+            <Button variant="outline" onClick={() => navigate(`/tournaments/${id}`)} className={buttonStyles.outline}>
               <Icon name="ArrowLeft" className="h-4 w-4 mr-2" />
               Назад к турниру
             </Button>
-            <Button onClick={openFullscreen} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={openFullscreen} className={buttonStyles.primary}>
               <Icon name="Maximize" className="h-4 w-4 mr-2" />
               На весь экран
             </Button>
@@ -326,10 +359,22 @@ export default function TournamentBracket() {
 
           {matches.length === 0 ? (
             <div className="text-center py-20">
-              <div className="inline-block p-8 bg-[#1a1f2e] rounded-xl border border-white/10">
-                <Icon name="GitBranch" className="h-16 w-16 mx-auto mb-4 text-purple-400" />
-                <h3 className="text-xl font-bold mb-2 text-white">Турнирная сетка не сгенерирована</h3>
-                <p className="text-gray-400">Администратор должен сгенерировать сетку в админ-панели</p>
+              <div className={`inline-block p-8 rounded-xl border ${
+                bracketStyle === 'minimal' 
+                  ? 'bg-white border-slate-200 shadow-xl' 
+                  : bracketStyle === 'cyberpunk'
+                  ? 'bg-black border-amber-500/30'
+                  : 'bg-[#1a1f2e] border-white/10'
+              }`}>
+                <Icon name="GitBranch" className={`h-16 w-16 mx-auto mb-4 ${
+                  bracketStyle === 'minimal' ? 'text-purple-500' : bracketStyle === 'cyberpunk' ? 'text-amber-500' : 'text-purple-400'
+                }`} />
+                <h3 className={`text-xl font-bold mb-2 ${
+                  bracketStyle === 'minimal' ? 'text-slate-900' : 'text-white'
+                }`}>Турнирная сетка не сгенерирована</h3>
+                <p className={bracketStyle === 'minimal' ? 'text-slate-600' : 'text-gray-400'}>
+                  Администратор должен сгенерировать сетку в админ-панели
+                </p>
               </div>
             </div>
           ) : (

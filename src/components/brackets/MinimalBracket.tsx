@@ -47,7 +47,7 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
   const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * MATCH_HEIGHT;
 
   return (
-    <div className="relative overflow-x-auto bg-[#f8fafc]">
+    <div className="relative overflow-x-auto bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
       <div className="flex min-w-max p-8" style={{ gap: '80px' }}>
         {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
           const roundMatches = getRoundMatches(round);
@@ -56,8 +56,9 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
           return (
             <div key={round} className="relative" style={{ minWidth: '260px' }}>
               <div className="sticky top-0 z-20 mb-8 flex justify-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 rounded-lg shadow-md">
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-lg shadow-lg border border-white/20">
+                  <Icon name="Sparkles" size={16} className="text-white" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                     {getRoundName(round)}
                   </h3>
                 </div>
@@ -87,15 +88,16 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
                   )}
                   
                   <Card 
-                    className="bg-white border border-slate-200 cursor-pointer hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-100 transition-all duration-200"
+                    className="bg-white/90 backdrop-blur-sm border-2 border-slate-200 cursor-pointer hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-200 transition-all duration-300 group"
                     onClick={() => onMatchClick(match)}
                   >
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
                     <div className="p-4 space-y-2">
                       <div 
-                        className={`flex items-center justify-between py-3 px-4 rounded transition-all ${
+                        className={`relative flex items-center justify-between py-3 px-4 rounded-lg transition-all ${
                           match.winner_id === match.team1?.id 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-slate-50 text-slate-900 hover:bg-slate-100'
+                            ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-purple-300/50' 
+                            : 'bg-slate-50 text-slate-900 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50'
                         }`}
                       >
                         <div className="flex items-center gap-3 flex-1">
@@ -122,13 +124,13 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
                         </div>
                       </div>
 
-                      <div className="h-px w-full bg-slate-200"></div>
+                      <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-300 to-transparent my-1"></div>
 
                       <div 
-                        className={`flex items-center justify-between py-3 px-4 rounded transition-all ${
+                        className={`relative flex items-center justify-between py-3 px-4 rounded-lg transition-all ${
                           match.winner_id === match.team2?.id 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-slate-50 text-slate-900 hover:bg-slate-100'
+                            ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-purple-300/50' 
+                            : 'bg-slate-50 text-slate-900 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50'
                         }`}
                       >
                         <div className="flex items-center gap-3 flex-1">
@@ -164,40 +166,47 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
                       style={{ 
                         width: '80px', 
                         height: `${spacing + MATCH_HEIGHT}px`,
-                        top: `${MATCH_HEIGHT / 2}px`
+                        top: '0'
                       }}
                     >
+                      <defs>
+                        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style={{ stopColor: 'rgb(59, 130, 246)', stopOpacity: 0.6 }} />
+                          <stop offset="50%" style={{ stopColor: 'rgb(168, 85, 247)', stopOpacity: 0.6 }} />
+                          <stop offset="100%" style={{ stopColor: 'rgb(236, 72, 153)', stopOpacity: 0.6 }} />
+                        </linearGradient>
+                      </defs>
                       <line 
                         x1="0" 
-                        y1="0" 
+                        y1={`${MATCH_HEIGHT / 2}`} 
                         x2="40" 
-                        y2="0" 
-                        stroke="rgba(99, 102, 241, 0.4)" 
-                        strokeWidth="2"
+                        y2={`${MATCH_HEIGHT / 2}`} 
+                        stroke="url(#lineGradient)" 
+                        strokeWidth="2.5"
                       />
                       <line 
                         x1="40" 
-                        y1="0" 
+                        y1={`${MATCH_HEIGHT / 2}`} 
                         x2="40" 
-                        y2={`${spacing}`} 
-                        stroke="rgba(99, 102, 241, 0.4)" 
-                        strokeWidth="2"
+                        y2={`${spacing + MATCH_HEIGHT / 2}`} 
+                        stroke="url(#lineGradient)" 
+                        strokeWidth="2.5"
                       />
                       <line 
                         x1="0" 
-                        y1={`${spacing}`} 
+                        y1={`${spacing + MATCH_HEIGHT / 2}`} 
                         x2="40" 
-                        y2={`${spacing}`} 
-                        stroke="rgba(99, 102, 241, 0.4)" 
-                        strokeWidth="2"
+                        y2={`${spacing + MATCH_HEIGHT / 2}`} 
+                        stroke="url(#lineGradient)" 
+                        strokeWidth="2.5"
                       />
                       <line 
                         x1="40" 
-                        y1={`${spacing / 2}`} 
+                        y1={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
                         x2="80" 
-                        y2={`${spacing / 2}`} 
-                        stroke="rgba(99, 102, 241, 0.4)" 
-                        strokeWidth="2"
+                        y2={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
+                        stroke="url(#lineGradient)" 
+                        strokeWidth="2.5"
                       />
                     </svg>
                   )}

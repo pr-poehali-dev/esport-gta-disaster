@@ -185,22 +185,44 @@ export default function TournamentBracketFullscreen() {
     }
   };
 
+  const getBackgroundClass = () => {
+    switch (bracketStyle) {
+      case 'esports':
+        return 'bg-[#0a0e1a]';
+      case 'cyberpunk':
+        return 'bg-black';
+      case 'minimal':
+        return 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50';
+      default:
+        return 'bg-[#0a0e1a]';
+    }
+  };
+
+  const getButtonClass = () => {
+    if (bracketStyle === 'minimal') {
+      return 'border-slate-300 text-slate-900 hover:bg-slate-100';
+    } else if (bracketStyle === 'cyberpunk') {
+      return 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10';
+    }
+    return 'border-white/10 text-white hover:bg-white/5';
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
-        <div className="text-white text-xl">Загрузка...</div>
+      <div className={`min-h-screen ${getBackgroundClass()} flex items-center justify-center`}>
+        <div className={bracketStyle === 'minimal' ? 'text-slate-900 text-xl' : 'text-white text-xl'}>Загрузка...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] relative overflow-hidden">
+    <div className={`min-h-screen ${getBackgroundClass()} relative overflow-hidden`}>
       <div className="absolute top-4 right-4 z-50">
         <Button 
           variant="outline" 
           size="sm"
           onClick={() => window.close()}
-          className="border-white/10 text-white hover:bg-white/5"
+          className={getButtonClass()}
         >
           <Icon name="X" className="h-4 w-4 mr-2" />
           Закрыть
