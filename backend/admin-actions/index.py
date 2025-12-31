@@ -768,7 +768,7 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'Ошибка при удалении турнира: {str(e)}', 'details': error_details}),
+            'body': json.dumps({'error': error_details}),
             'isBase64Encoded': False
         }
 
