@@ -88,14 +88,16 @@ def handler(event: dict, context) -> dict:
             admin_role = cur.fetchone()
         except Exception as e:
             import traceback
+            import sys
             error_msg = traceback.format_exc()
-            print(f"ERROR checking admin role: {error_msg}")
+            print(f"ERROR checking admin role: {error_msg}", file=sys.stderr, flush=True)
+            print(f"Admin ID: {admin_id_int}", file=sys.stderr, flush=True)
             cur.close()
             conn.close()
             return {
                 'statusCode': 500,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'error': f'Ошибка проверки прав доступа: {str(e)}'}),
+                'body': json.dumps({'error': f'Ошибка проверки прав доступа: {str(e)}', 'traceback': error_msg}),
                 'isBase64Encoded': False
             }
         
