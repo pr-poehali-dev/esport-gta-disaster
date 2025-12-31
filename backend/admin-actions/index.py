@@ -1396,13 +1396,23 @@ def create_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     
     title = body.get('title')
     content = body.get('content')
-    category = body.get('category', 'general')
+    image_url = body.get('image_url')
+    published = body.get('published', False)
     
-    cur.execute(f"""
-        INSERT INTO t_p4831367_esport_gta_disaster.news (title, content, category, author_id)
-        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', '{escape_sql(admin_id)}')
+    if not title or not content:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Заполните заголовок и содержание'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.news 
+        (title, content, image_url, author_id, published, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
         RETURNING id
-    """)
+    """, (title, content, image_url, int(admin_id), published))
     
     news_id = cur.fetchone()[0]
     conn.commit()
@@ -1410,7 +1420,7 @@ def create_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Новость создана', 'news_id': news_id}),
+        'body': json.dumps({'success': True, 'message': 'Новость создана', 'news_id': news_id}),
         'isBase64Encoded': False
     }
 
@@ -1428,19 +1438,47 @@ def update_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     news_id = body.get('news_id')
     title = body.get('title')
     content = body.get('content')
-    category = body.get('category')
+    image_url = body.get('image_url')
+    published = body.get('published')
+    
+    update_fields = []
+    params = []
+    
+    if title is not None:
+        update_fields.append("title = %s")
+        params.append(title)
+    if content is not None:
+        update_fields.append("content = %s")
+        params.append(content)
+    if image_url is not None:
+        update_fields.append("image_url = %s")
+        params.append(image_url)
+    if published is not None:
+        update_fields.append("published = %s")
+        params.append(published)
+    
+    if not update_fields:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Нет данных для обновления'}),
+            'isBase64Encoded': False
+        }
+    
+    update_fields.append("updated_at = NOW()")
+    params.append(int(news_id))
     
     cur.execute(f"""
-        UPDATE news
-        SET title = '{escape_sql(title)}', content = '{escape_sql(content)}', category = '{escape_sql(category)}'
-        WHERE id = {int(news_id)}
-    """)
+        UPDATE t_p4831367_esport_gta_disaster.news
+        SET {', '.join(update_fields)}
+        WHERE id = %s
+    """, tuple(params))
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Новость обновлена'}),
+        'body': json.dumps({'success': True, 'message': 'Новость обновлена'}),
         'isBase64Encoded': False
     }
 
@@ -1472,27 +1510,29 @@ def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
 def get_news(cur, conn, body: dict) -> dict:
     """Получает новости"""
     
-    limit = body.get('limit', 10)
+    limit = body.get('limit', 50)
     offset = body.get('offset', 0)
-    category = body.get('category')
+    include_unpublished = body.get('include_unpublished', False)
     
-    if category:
-        cur.execute(f"""
-            SELECT n.id, n.title, n.content, n.category, n.author_id, u.username, n.created_at
+    if include_unpublished:
+        cur.execute("""
+            SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name, 
+                   n.published, n.pinned, n.created_at, n.updated_at
             FROM t_p4831367_esport_gta_disaster.news n
-            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
-            WHERE n.category = '{escape_sql(category)}'
-            ORDER BY n.created_at DESC
-            LIMIT {int(limit)} OFFSET {int(offset)}
-        """)
+            LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
+            ORDER BY n.pinned DESC, n.created_at DESC
+            LIMIT %s OFFSET %s
+        """, (int(limit), int(offset)))
     else:
-        cur.execute(f"""
-            SELECT n.id, n.title, n.content, n.category, n.author_id, u.username, n.created_at
+        cur.execute("""
+            SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name,
+                   n.published, n.pinned, n.created_at, n.updated_at
             FROM t_p4831367_esport_gta_disaster.news n
-            JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
-            ORDER BY n.created_at DESC
-            LIMIT {int(limit)} OFFSET {int(offset)}
-        """)
+            LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
+            WHERE n.published = TRUE
+            ORDER BY n.pinned DESC, n.created_at DESC
+            LIMIT %s OFFSET %s
+        """, (int(limit), int(offset)))
     
     news_list = []
     for row in cur.fetchall():
@@ -1500,16 +1540,19 @@ def get_news(cur, conn, body: dict) -> dict:
             'id': row['id'],
             'title': row['title'],
             'content': row['content'],
-            'category': row['category'],
+            'image_url': row['image_url'],
             'author_id': row['author_id'],
-            'author_username': row['author_username'],
-            'created_at': row['created_at'].isoformat() if row['created_at'] else None
+            'author_name': row['author_name'] or 'Администратор',
+            'published': row['published'] if row['published'] is not None else False,
+            'pinned': row['pinned'] if row['pinned'] is not None else False,
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'updated_at': row['updated_at'].isoformat() if row['updated_at'] else None
         })
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'news': news_list}),
+        'body': json.dumps({'news': news_list}, ensure_ascii=False),
         'isBase64Encoded': False
     }
 
