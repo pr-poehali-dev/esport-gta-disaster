@@ -267,11 +267,11 @@ export default function TournamentDetail() {
                               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                                 {reg.team_rating && (
                                   <>
-                                    <span className="flex items-center gap-1">
+                                    <span key="rating" className="flex items-center gap-1">
                                       <Icon name="Star" size={12} />
                                       {reg.team_rating}
                                     </span>
-                                    <span>•</span>
+                                    <span key="dot">•</span>
                                   </>
                                 )}
                                 <span>
