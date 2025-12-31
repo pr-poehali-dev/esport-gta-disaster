@@ -379,6 +379,7 @@ export default function AdminTournaments() {
                 onGenerateBracket={handleGenerateBracket}
                 onNavigate={(id) => navigate(`/tournaments/${id}`)}
                 onManageGroupStage={(id) => navigate(`/admin/tournaments/${id}/group-stage`)}
+                onViewApplications={(id) => navigate(`/admin/tournaments/${id}/applications`)}
               />
             ))
           )}

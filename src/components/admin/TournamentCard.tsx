@@ -27,6 +27,7 @@ interface TournamentCardProps {
   onGenerateBracket: (tournamentId: number) => void;
   onNavigate: (tournamentId: number) => void;
   onManageGroupStage?: (tournamentId: number) => void;
+  onViewApplications: (tournamentId: number) => void;
 }
 
 export default function TournamentCard({
@@ -36,7 +37,8 @@ export default function TournamentCard({
   onDelete,
   onGenerateBracket,
   onNavigate,
-  onManageGroupStage
+  onManageGroupStage,
+  onViewApplications
 }: TournamentCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -135,6 +137,16 @@ export default function TournamentCard({
             Завершить
           </Button>
         )}
+
+        <Button
+          onClick={() => onViewApplications(tournament.id)}
+          variant="outline"
+          size="sm"
+          className="border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
+        >
+          <Icon name="Users" size={16} className="mr-2" />
+          Заявки ({tournament.registered_teams || 0})
+        </Button>
 
         <Button
           onClick={() => onGenerateBracket(tournament.id)}
