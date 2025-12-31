@@ -1598,7 +1598,7 @@ def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str
         
         image_url = None
         
-        if image_base64:
+        if image_base64 and len(image_base64) > 0:
             s3 = boto3.client('s3',
                 endpoint_url='https://bucket.poehali.dev',
                 aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
