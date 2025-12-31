@@ -56,10 +56,15 @@ export function AdminNewsSection() {
       });
 
       const data = await response.json();
-      if (data.news) {
+      
+      if (response.ok && data.news) {
         setNews(data.news);
+      } else {
+        console.error('Failed to load news:', data);
+        showNotification('error', 'Ошибка', data.error || 'Не удалось загрузить новости');
       }
     } catch (error: any) {
+      console.error('Exception loading news:', error);
       showNotification('error', 'Ошибка', error.message);
     } finally {
       setLoading(false);
