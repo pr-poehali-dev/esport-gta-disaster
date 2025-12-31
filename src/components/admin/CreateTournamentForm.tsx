@@ -115,7 +115,7 @@ export default function CreateTournamentForm({
             <Input
               type="number"
               value={formData.team_size}
-              onChange={(e) => onFormDataChange({ team_size: parseInt(e.target.value) })}
+              onChange={(e) => onFormDataChange({ team_size: parseInt(e.target.value) || 0 })}
               className="bg-[#1a1f2e] border-white/10 text-white"
             />
           </div>
@@ -125,7 +125,7 @@ export default function CreateTournamentForm({
             <Input
               type="number"
               value={formData.best_of}
-              onChange={(e) => onFormDataChange({ best_of: parseInt(e.target.value) })}
+              onChange={(e) => onFormDataChange({ best_of: parseInt(e.target.value) || 0 })}
               className="bg-[#1a1f2e] border-white/10 text-white"
             />
           </div>
