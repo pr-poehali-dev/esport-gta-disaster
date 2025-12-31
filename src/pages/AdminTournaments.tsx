@@ -63,9 +63,13 @@ export default function AdminTournaments() {
       navigate('/');
       return;
     }
+  }, [navigate]);
 
-    loadTournaments();
-  }, []);
+  useEffect(() => {
+    if (user) {
+      loadTournaments();
+    }
+  }, [user]);
 
   const loadTournaments = async () => {
     try {
