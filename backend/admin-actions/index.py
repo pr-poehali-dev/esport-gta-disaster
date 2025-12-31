@@ -722,13 +722,13 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
             )
         """, (int(tournament_id),))
         
-        # 3. Удаляем bracket_matches (зависит от tournament_brackets или tournament_id)
+        # 3. Удаляем bracket_matches (зависит от tournament_brackets)
         cur.execute("""
             DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches 
-            WHERE tournament_id = %s OR bracket_id IN (
+            WHERE bracket_id IN (
                 SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
             )
-        """, (int(tournament_id), int(tournament_id)))
+        """, (int(tournament_id),))
         
         # 4. Удаляем matches (может ссылаться на bracket_stages через stage_id)
         cur.execute("""
