@@ -214,30 +214,3 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
     </div>
   );
 }
-          </div>
-        ))}
-      </div>
-      
-      <style>{`
-        @keyframes glitch-0 {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-2px); }
-          40% { transform: translateX(2px); }
-          60% { transform: translateX(-1px); }
-          80% { transform: translateX(1px); }
-        }
-        @keyframes glitch-1 {
-          0%, 100% { transform: translateY(0); }
-          25% { transform: translateY(-1px); }
-          50% { transform: translateY(1px); }
-          75% { transform: translateY(-1px); }
-        }
-        @keyframes glitch-2 {
-          0%, 100% { transform: skewX(0deg); }
-          30% { transform: skewX(1deg); }
-          60% { transform: skewX(-1deg); }
-        }
-      `}</style>
-    </div>
-  );
-}
