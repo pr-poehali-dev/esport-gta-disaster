@@ -163,7 +163,7 @@ export default function ProfileTeamsCard({ teams, onTeamUpdate }: ProfileTeamsCa
               <Icon name="ChevronRight" size={20} className="text-muted-foreground group-hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/teams/${team.id}`)} />
             </div>
           </div>
-        ))
+        ))}
         
         {teams.length > 0 && (
           <Button 
