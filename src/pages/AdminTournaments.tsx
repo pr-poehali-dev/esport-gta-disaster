@@ -270,7 +270,7 @@ export default function AdminTournaments() {
       const data = await response.json();
       addLog(`Response data: ${JSON.stringify(data, null, 2)}`);
 
-      if (response.ok && data.success) {
+      if (response.ok && data.message) {
         addLog('✅ SUCCESS: Tournament deleted');
         showNotification('success', 'Успех', data.message);
         loadTournaments();
