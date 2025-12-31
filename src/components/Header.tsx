@@ -83,19 +83,19 @@ export default function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
+    <header className="sticky top-0 z-50 bg-gradient-to-r from-background via-background/98 to-background backdrop-blur-xl border-b border-primary/20 shadow-lg shadow-primary/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-between h-16 gap-6">
+          <div className="flex items-center gap-3 min-w-0">
             {!isHomePage && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleBack}
-                className="hover:bg-primary/10 flex-shrink-0"
+                className="hover:bg-primary/20 hover:scale-110 transition-all duration-300 flex-shrink-0 group"
                 title="Назад"
               >
-                <Icon name="ArrowLeft" className="h-4 w-4" />
+                <Icon name="ArrowLeft" className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
               </Button>
             )}
             <div className="flex-shrink-0">
@@ -103,39 +103,39 @@ export default function Header() {
             </div>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-4 flex-1 justify-center">
+          <nav className="hidden lg:flex items-center gap-6 flex-1 justify-center">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-[11px] font-semibold text-muted-foreground hover:text-primary transition-colors uppercase tracking-wide relative group whitespace-nowrap"
+                className="text-sm font-bold text-muted-foreground hover:text-primary transition-all duration-300 uppercase tracking-wider relative group whitespace-nowrap hover:scale-105"
               >
                 {link.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary group-hover:w-full transition-all duration-300" />
               </a>
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
             {!isAuthenticated ? (
               <>
                 <Button
                   onClick={() => navigate('/login')}
                   variant="ghost"
                   size="sm"
-                  className="font-semibold text-xs h-8"
+                  className="font-bold text-sm h-9 hover:bg-primary/10 hover:scale-105 transition-all duration-300"
                 >
-                  <Icon name="LogIn" className="h-3 w-3 mr-1.5" />
+                  <Icon name="LogIn" className="h-4 w-4 mr-2" />
                   ВХОД
                 </Button>
                 <Button
                   onClick={() => navigate('/register')}
                   size="sm"
-                  className="bg-gradient-to-r from-primary to-secondary text-xs h-8"
+                  className="bg-gradient-to-r from-primary via-purple-500 to-secondary hover:shadow-lg hover:shadow-primary/50 hover:scale-105 transition-all duration-300 font-bold text-sm h-9"
                 >
-                  <Icon name="UserPlus" className="h-3 w-3 mr-1.5" />
+                  <Icon name="UserPlus" className="h-4 w-4 mr-2" />
                   РЕГИСТРАЦИЯ
                 </Button>
               </>
@@ -145,28 +145,28 @@ export default function Header() {
                   onClick={() => navigate('/profile')}
                   variant="ghost"
                   size="sm"
-                  className="font-semibold flex items-center gap-1.5 text-xs h-8"
+                  className="font-bold flex items-center gap-2 text-sm h-9 hover:bg-primary/10 hover:scale-105 transition-all duration-300 group"
                 >
-                  <Icon name="User" className="h-3 w-3" />
+                  <Icon name="User" className="h-4 w-4 group-hover:rotate-12 transition-transform" />
                   ПРОФИЛЬ
                 </Button>
                 <NotificationBell />
                 {isAdmin && (
                   <a
                     href="/admin"
-                    className="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 hover:border-primary transition-all duration-300 font-semibold text-[11px] uppercase tracking-wide flex items-center gap-1.5 h-8 whitespace-nowrap"
+                    className="px-4 py-2 bg-primary/10 text-primary hover:bg-gradient-to-r hover:from-primary hover:to-secondary hover:text-primary-foreground border border-primary/30 hover:border-primary hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 font-bold text-sm uppercase tracking-wide flex items-center gap-2 h-9 whitespace-nowrap hover:scale-105 group"
                   >
-                    <Icon name="Shield" className="h-3 w-3" />
-                    Админ
+                    <Icon name="Shield" className="h-4 w-4 group-hover:rotate-12 transition-transform" />
+                    АДМИН
                   </a>
                 )}
                 <Button
                   onClick={handleLogout}
                   variant="ghost"
                   size="sm"
-                  className="font-semibold flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive h-8"
+                  className="font-bold flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-9 hover:scale-105 transition-all duration-300 group"
                 >
-                  <Icon name="LogOut" className="h-3 w-3" />
+                  <Icon name="LogOut" className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   ВЫХОД
                 </Button>
               </>
@@ -178,11 +178,11 @@ export default function Header() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={social.label}
-                className="w-8 h-8 flex items-center justify-center border border-border hover:border-primary bg-card hover:bg-primary/10 transition-all duration-300 group flex-shrink-0"
+                className="w-9 h-9 flex items-center justify-center border border-border hover:border-primary bg-card hover:bg-gradient-to-br hover:from-primary/20 hover:to-secondary/20 transition-all duration-300 group flex-shrink-0 hover:scale-110 hover:shadow-lg hover:shadow-primary/30"
               >
                 <Icon
                   name={social.icon as any}
-                  className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors"
+                  className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all group-hover:scale-110"
                 />
               </a>
             ))}
