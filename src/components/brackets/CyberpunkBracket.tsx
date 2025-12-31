@@ -43,8 +43,8 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
     return `<РАУНД_${round}/>`;
   };
 
-  const getMatchHeight = () => 120;
-  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * getMatchHeight();
+  const MATCH_HEIGHT = 120;
+  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * MATCH_HEIGHT;
 
   return (
     <div className="relative overflow-x-auto bg-black">
@@ -57,7 +57,7 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
           
           return (
             <div key={round} className="relative" style={{ minWidth: '300px' }}>
-              <div className="sticky top-0 z-20 mb-6">
+              <div className="sticky top-0 z-20 mb-8 flex justify-center">
                 <div className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-amber-500 via-green-500 to-blue-500 rounded border-2 border-amber-400 relative overflow-hidden">
                   <Icon name="Cpu" size={20} className="text-black" />
                   <h3 className="text-sm font-black text-black tracking-widest font-mono uppercase">
@@ -148,37 +148,45 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
                   </Card>
 
                   {/* Соединительные линии */}
-                  {round < rounds && (
+                  {round < rounds && idx % 2 === 0 && (
                     <svg 
-                      className="absolute left-full top-1/2 pointer-events-none" 
+                      className="absolute left-full pointer-events-none" 
                       style={{ 
                         width: '80px', 
-                        height: idx % 2 === 0 ? `${spacing / 2 + 60}px` : `${spacing / 2 + 60}px`,
-                        transform: 'translateY(-50%)'
+                        height: `${spacing + MATCH_HEIGHT}px`,
+                        top: `${MATCH_HEIGHT / 2}px`
                       }}
                     >
                       <line 
                         x1="0" 
-                        y1="50%" 
+                        y1="0" 
                         x2="40" 
-                        y2="50%" 
-                        stroke="rgba(245, 158, 11, 0.5)" 
+                        y2="0" 
+                        stroke="rgba(245, 158, 11, 0.6)" 
                         strokeWidth="2"
                       />
                       <line 
                         x1="40" 
-                        y1="50%" 
+                        y1="0" 
                         x2="40" 
-                        y2={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
-                        stroke="rgba(245, 158, 11, 0.5)" 
+                        y2={`${spacing}`} 
+                        stroke="rgba(245, 158, 11, 0.6)" 
+                        strokeWidth="2"
+                      />
+                      <line 
+                        x1="0" 
+                        y1={`${spacing}`} 
+                        x2="40" 
+                        y2={`${spacing}`} 
+                        stroke="rgba(245, 158, 11, 0.6)" 
                         strokeWidth="2"
                       />
                       <line 
                         x1="40" 
-                        y1={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
+                        y1={`${spacing / 2}`} 
                         x2="80" 
-                        y2={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
-                        stroke="rgba(245, 158, 11, 0.5)" 
+                        y2={`${spacing / 2}`} 
+                        stroke="rgba(245, 158, 11, 0.6)" 
                         strokeWidth="2"
                       />
                     </svg>

@@ -43,8 +43,8 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
     return `РАУНД ${round}`;
   };
 
-  const getMatchHeight = () => 120;
-  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * getMatchHeight();
+  const MATCH_HEIGHT = 120;
+  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * MATCH_HEIGHT;
 
   return (
     <div className="relative overflow-x-auto bg-[#0a0e1a]">
@@ -55,7 +55,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
           
           return (
             <div key={round} className="relative" style={{ minWidth: '280px' }}>
-              <div className="sticky top-0 z-20 mb-6">
+              <div className="sticky top-0 z-20 mb-8 flex justify-center">
                 <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 rounded-lg shadow-lg border border-purple-400/30">
                   <Icon name="Trophy" size={16} className="text-white" />
                   <h3 className="text-sm font-bold text-white tracking-wider uppercase">
@@ -143,37 +143,49 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                     </Card>
 
                     {/* Соединительные линии */}
-                    {round < rounds && (
+                    {round < rounds && idx % 2 === 0 && (
                       <svg 
-                        className="absolute left-full top-1/2 pointer-events-none" 
+                        className="absolute left-full pointer-events-none" 
                         style={{ 
                           width: '80px', 
-                          height: idx % 2 === 0 ? `${spacing / 2 + 60}px` : `${spacing / 2 + 60}px`,
-                          transform: 'translateY(-50%)'
+                          height: `${spacing + MATCH_HEIGHT}px`,
+                          top: `${MATCH_HEIGHT / 2}px`
                         }}
                       >
+                        {/* Горизонтальная линия от первого матча */}
                         <line 
                           x1="0" 
-                          y1="50%" 
+                          y1="0" 
                           x2="40" 
-                          y2="50%" 
-                          stroke="rgba(168, 85, 247, 0.4)" 
+                          y2="0" 
+                          stroke="rgba(168, 85, 247, 0.5)" 
                           strokeWidth="2"
                         />
+                        {/* Вертикальная соединительная линия */}
                         <line 
                           x1="40" 
-                          y1="50%" 
+                          y1="0" 
                           x2="40" 
-                          y2={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
-                          stroke="rgba(168, 85, 247, 0.4)" 
+                          y2={`${spacing}`} 
+                          stroke="rgba(168, 85, 247, 0.5)" 
                           strokeWidth="2"
                         />
+                        {/* Горизонтальная линия от второго матча */}
+                        <line 
+                          x1="0" 
+                          y1={`${spacing}`} 
+                          x2="40" 
+                          y2={`${spacing}`} 
+                          stroke="rgba(168, 85, 247, 0.5)" 
+                          strokeWidth="2"
+                        />
+                        {/* Линия к следующему раунду */}
                         <line 
                           x1="40" 
-                          y1={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
+                          y1={`${spacing / 2}`} 
                           x2="80" 
-                          y2={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
-                          stroke="rgba(168, 85, 247, 0.4)" 
+                          y2={`${spacing / 2}`} 
+                          stroke="rgba(168, 85, 247, 0.5)" 
                           strokeWidth="2"
                         />
                       </svg>

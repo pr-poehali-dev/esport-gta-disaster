@@ -43,8 +43,8 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
     return `Раунд ${round}`;
   };
 
-  const getMatchHeight = () => 100;
-  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * getMatchHeight();
+  const MATCH_HEIGHT = 100;
+  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * MATCH_HEIGHT;
 
   return (
     <div className="relative overflow-x-auto bg-[#f8fafc]">
@@ -55,7 +55,7 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
           
           return (
             <div key={round} className="relative" style={{ minWidth: '260px' }}>
-              <div className="sticky top-0 z-20 mb-6 text-center">
+              <div className="sticky top-0 z-20 mb-8 flex justify-center">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 rounded-lg shadow-md">
                   <h3 className="text-xs font-bold text-white uppercase tracking-wider">
                     {getRoundName(round)}
@@ -158,38 +158,46 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
                   </Card>
 
                   {/* Соединительные линии */}
-                  {round < rounds && (
+                  {round < rounds && idx % 2 === 0 && (
                     <svg 
-                      className="absolute left-full top-1/2 pointer-events-none" 
+                      className="absolute left-full pointer-events-none" 
                       style={{ 
                         width: '80px', 
-                        height: idx % 2 === 0 ? `${spacing / 2 + 50}px` : `${spacing / 2 + 50}px`,
-                        transform: 'translateY(-50%)'
+                        height: `${spacing + MATCH_HEIGHT}px`,
+                        top: `${MATCH_HEIGHT / 2}px`
                       }}
                     >
                       <line 
                         x1="0" 
-                        y1="50%" 
+                        y1="0" 
                         x2="40" 
-                        y2="50%" 
-                        stroke="rgba(148, 163, 184, 0.4)" 
-                        strokeWidth="1.5"
+                        y2="0" 
+                        stroke="rgba(99, 102, 241, 0.4)" 
+                        strokeWidth="2"
                       />
                       <line 
                         x1="40" 
-                        y1="50%" 
+                        y1="0" 
                         x2="40" 
-                        y2={idx % 2 === 0 ? `${spacing / 4 + 50}` : `${-spacing / 4}`} 
-                        stroke="rgba(148, 163, 184, 0.4)" 
-                        strokeWidth="1.5"
+                        y2={`${spacing}`} 
+                        stroke="rgba(99, 102, 241, 0.4)" 
+                        strokeWidth="2"
+                      />
+                      <line 
+                        x1="0" 
+                        y1={`${spacing}`} 
+                        x2="40" 
+                        y2={`${spacing}`} 
+                        stroke="rgba(99, 102, 241, 0.4)" 
+                        strokeWidth="2"
                       />
                       <line 
                         x1="40" 
-                        y1={idx % 2 === 0 ? `${spacing / 4 + 50}` : `${-spacing / 4}`} 
+                        y1={`${spacing / 2}`} 
                         x2="80" 
-                        y2={idx % 2 === 0 ? `${spacing / 4 + 50}` : `${-spacing / 4}`} 
-                        stroke="rgba(148, 163, 184, 0.4)" 
-                        strokeWidth="1.5"
+                        y2={`${spacing / 2}`} 
+                        stroke="rgba(99, 102, 241, 0.4)" 
+                        strokeWidth="2"
                       />
                     </svg>
                   )}
