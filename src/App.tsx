@@ -33,6 +33,7 @@ import CMS from "./pages/CMS";
 import PageEditor from "./pages/PageEditor";
 import Achievements from "./pages/Achievements";
 import TournamentBracket from "./pages/TournamentBracket";
+import TournamentBracketFullscreen from "./pages/TournamentBracketFullscreen";
 import CreateTeam from "./pages/CreateTeam";
 import TeamProfile from "./pages/TeamProfile";
 import UserProfile from "./pages/UserProfile";
@@ -82,6 +83,7 @@ const App = () => (
             <Route path="/cms/page-editor" element={<ProtectedRoute requireAdmin><PageEditor /></ProtectedRoute>} />
             <Route path="/tournaments/:id" element={<TournamentDetail />} />
             <Route path="/tournaments/:id/bracket" element={<TournamentBracket />} />
+            <Route path="/tournaments/:id/bracket/fullscreen" element={<TournamentBracketFullscreen />} />
             <Route path="/teams/create" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
             <Route path="/teams/:id" element={<TeamProfile />} />
             <Route path="/user/:id" element={<UserProfile />} />

@@ -302,42 +302,34 @@ export default function TournamentBracket() {
   const rounds = groupByRound(matches);
   const totalRounds = Object.keys(rounds).length;
 
+  const openFullscreen = () => {
+    const url = `/tournaments/${id}/bracket/fullscreen`;
+    window.open(url, '_blank');
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 relative overflow-hidden">
-      {/* Фоновые эффекты */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl"></div>
-      </div>
-      
+    <div className="min-h-screen flex flex-col bg-[#0a0e1a] relative overflow-hidden">
       <Header />
 
-      <main className="flex-1 py-12">
-        <div className="max-w-[95vw] mx-auto px-4">
-          <div className="mb-12 text-center">
-            <Button variant="ghost" onClick={() => navigate('/tournaments')} className="mb-4">
+      <main className="flex-1 py-8">
+        <div className="max-w-[98vw] mx-auto px-4">
+          <div className="mb-6 flex justify-between items-center">
+            <Button variant="outline" onClick={() => navigate(`/tournaments/${id}`)} className="border-white/10 text-white hover:bg-white/5">
               <Icon name="ArrowLeft" className="h-4 w-4 mr-2" />
-              Назад
+              Назад к турниру
             </Button>
-            <div className="relative inline-block">
-              <div className="flex justify-center gap-4 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Icon key={i} name="Star" className="h-6 w-6 text-purple-400/60" />
-                ))}
-              </div>
-              <h1 className="text-6xl font-black mb-2 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-                CHAMPIONSHIP
-              </h1>
-              <p className="text-2xl font-bold text-purple-300 tracking-widest">2024 TOURNAMENT</p>
-            </div>
+            <Button onClick={openFullscreen} className="bg-purple-600 hover:bg-purple-700">
+              <Icon name="Maximize" className="h-4 w-4 mr-2" />
+              На весь экран
+            </Button>
           </div>
 
           {matches.length === 0 ? (
             <div className="text-center py-20">
-              <div className="inline-block p-8 bg-purple-900/30 rounded-xl border-2 border-purple-500/30">
+              <div className="inline-block p-8 bg-[#1a1f2e] rounded-xl border border-white/10">
                 <Icon name="GitBranch" className="h-16 w-16 mx-auto mb-4 text-purple-400" />
-                <h3 className="text-xl font-bold mb-2 text-purple-200">Турнирная сетка не сгенерирована</h3>
-                <p className="text-purple-300/70">Администратор должен сгенерировать сетку в админ-панели</p>
+                <h3 className="text-xl font-bold mb-2 text-white">Турнирная сетка не сгенерирована</h3>
+                <p className="text-gray-400">Администратор должен сгенерировать сетку в админ-панели</p>
               </div>
             </div>
           ) : (

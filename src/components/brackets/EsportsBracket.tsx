@@ -47,7 +47,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
   const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * getMatchHeight();
 
   return (
-    <div className="relative overflow-x-auto bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900">
+    <div className="relative overflow-x-auto bg-[#0a0e1a]">
       <div className="flex min-w-max p-8" style={{ gap: '80px' }}>
         {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
           const roundMatches = getRoundMatches(round);
@@ -56,9 +56,9 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
           return (
             <div key={round} className="relative" style={{ minWidth: '280px' }}>
               <div className="sticky top-0 z-20 mb-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-500 rounded-full shadow-lg">
-                  <Icon name="Zap" size={18} className="text-white" />
-                  <h3 className="text-sm font-black text-white tracking-wider uppercase">
+                <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 rounded-lg shadow-lg border border-purple-400/30">
+                  <Icon name="Trophy" size={16} className="text-white" />
+                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
                     {getRoundName(round)}
                   </h3>
                 </div>
@@ -88,17 +88,17 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                     )}
                     
                     <Card 
-                      className="relative bg-gradient-to-br from-purple-900/50 via-pink-900/40 to-cyan-900/30 border-2 border-purple-500/50 backdrop-blur-xl cursor-pointer hover:border-pink-400 hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-300 overflow-hidden"
+                      className="relative bg-[#1a1f2e] border-2 border-purple-500/30 cursor-pointer hover:border-purple-400 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300 overflow-hidden group"
                       onClick={() => onMatchClick(match)}
                     >
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"></div>
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 opacity-70 group-hover:opacity-100 transition-opacity"></div>
                       
                       <div className="p-3">
                         <div 
                           className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
                             match.winner_id === match.team1?.id 
-                              ? 'bg-gradient-to-r from-purple-600/60 to-pink-600/60 border border-purple-400' 
-                              : 'bg-black/40 border border-purple-500/20'
+                              ? 'bg-purple-600/40 border border-purple-400/60' 
+                              : 'bg-[#0a0e1a]/60 border border-white/5'
                           }`}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -121,8 +121,8 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                         <div 
                           className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
                             match.winner_id === match.team2?.id 
-                              ? 'bg-gradient-to-r from-purple-600/60 to-pink-600/60 border border-purple-400' 
-                              : 'bg-black/40 border border-purple-500/20'
+                              ? 'bg-purple-600/40 border border-purple-400/60' 
+                              : 'bg-[#0a0e1a]/60 border border-white/5'
                           }`}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">

@@ -47,7 +47,7 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
   const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * getMatchHeight();
 
   return (
-    <div className="relative overflow-x-auto bg-white">
+    <div className="relative overflow-x-auto bg-[#f8fafc]">
       <div className="flex min-w-max p-8" style={{ gap: '80px' }}>
         {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
           const roundMatches = getRoundMatches(round);
@@ -56,10 +56,11 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
           return (
             <div key={round} className="relative" style={{ minWidth: '260px' }}>
               <div className="sticky top-0 z-20 mb-6 text-center">
-                <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
-                  {getRoundName(round)}
-                </h3>
-                <div className="h-px w-12 mx-auto mt-2 bg-slate-300"></div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 rounded-lg shadow-md">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                    {getRoundName(round)}
+                  </h3>
+                </div>
               </div>
               
               <div className="relative">
@@ -86,14 +87,14 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
                   )}
                   
                   <Card 
-                    className="bg-white border border-slate-200 cursor-pointer hover:border-slate-400 hover:shadow-lg transition-all duration-200"
+                    className="bg-white border border-slate-200 cursor-pointer hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-100 transition-all duration-200"
                     onClick={() => onMatchClick(match)}
                   >
                     <div className="p-4 space-y-2">
                       <div 
                         className={`flex items-center justify-between py-3 px-4 rounded transition-all ${
                           match.winner_id === match.team1?.id 
-                            ? 'bg-slate-900 text-white' 
+                            ? 'bg-indigo-600 text-white' 
                             : 'bg-slate-50 text-slate-900 hover:bg-slate-100'
                         }`}
                       >
@@ -126,7 +127,7 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
                       <div 
                         className={`flex items-center justify-between py-3 px-4 rounded transition-all ${
                           match.winner_id === match.team2?.id 
-                            ? 'bg-slate-900 text-white' 
+                            ? 'bg-indigo-600 text-white' 
                             : 'bg-slate-50 text-slate-900 hover:bg-slate-100'
                         }`}
                       >

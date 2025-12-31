@@ -90,7 +90,7 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
                     )}
                     
                     <Card 
-                      className="relative bg-black border-2 border-amber-500 cursor-pointer hover:border-green-400 hover:shadow-2xl hover:shadow-amber-500/60 transition-all duration-300 overflow-hidden"
+                      className="relative bg-[#0a0e1a] border-2 border-amber-500/60 cursor-pointer hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/40 transition-all duration-300 overflow-hidden group"
                       onClick={() => onMatchClick(match)}
                     >
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-green-500 to-blue-500"></div>
@@ -102,8 +102,8 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
                       <div 
                         className={`flex items-center justify-between px-3 py-2 border-l-2 transition-all ${
                           match.winner_id === match.team1?.id 
-                            ? 'bg-amber-500/30 border-amber-400' 
-                            : 'bg-gray-900/60 border-amber-500/30'
+                            ? 'bg-amber-500/20 border-amber-400' 
+                            : 'bg-black/40 border-amber-500/20'
                         }`}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -126,8 +126,8 @@ export default function CyberpunkBracket({ matches, canEdit, onMatchClick, onEdi
                       <div 
                         className={`flex items-center justify-between px-3 py-2 border-l-2 transition-all ${
                           match.winner_id === match.team2?.id 
-                            ? 'bg-amber-500/30 border-amber-400' 
-                            : 'bg-gray-900/60 border-amber-500/30'
+                            ? 'bg-amber-500/20 border-amber-400' 
+                            : 'bg-black/40 border-amber-500/20'
                         }`}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
