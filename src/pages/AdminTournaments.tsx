@@ -384,6 +384,32 @@ export default function AdminTournaments() {
           />
         )}
 
+        <div className="space-y-4">
+          {tournaments.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">Турниры не найдены</p>
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                className="mt-4 bg-purple-600 hover:bg-purple-700"
+              >
+                Создать первый турнир
+              </Button>
+            </div>
+          ) : (
+            tournaments.map((tournament) => (
+              <TournamentCard
+                key={tournament.id}
+                tournament={tournament}
+                onUpdateStatus={handleUpdateStatus}
+                onToggleVisibility={handleToggleVisibility}
+                onDelete={handleDeleteTournament}
+                onGenerateBracket={handleGenerateBracket}
+                onNavigate={(id) => navigate(`/tournaments/${id}`)}
+                onManageGroupStage={(id) => navigate(`/admin/tournaments/${id}/group-stage`)}
+              />
+            ))
+          )}
+        </div>
         </div>
 
         {/* Панель логов - всегда видна */}
@@ -431,35 +457,7 @@ export default function AdminTournaments() {
             </div>
           </div>
         </div>
-
-        <div className="space-y-4">
-          {tournaments.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400 text-lg">Турниры не найдены</p>
-              <Button
-                onClick={() => setShowCreateForm(true)}
-                className="mt-4 bg-purple-600 hover:bg-purple-700"
-              >
-                Создать первый турнир
-              </Button>
-            </div>
-          ) : (
-            tournaments.map((tournament) => (
-              <TournamentCard
-                key={tournament.id}
-                tournament={tournament}
-                onUpdateStatus={handleUpdateStatus}
-                onToggleVisibility={handleToggleVisibility}
-                onDelete={handleDeleteTournament}
-                onGenerateBracket={handleGenerateBracket}
-                onNavigate={(id) => navigate(`/tournaments/${id}`)}
-                onManageGroupStage={(id) => navigate(`/admin/tournaments/${id}/group-stage`)}
-              />
-            ))
-          )}
-        </div>
       </div>
-    </div>
     </div>
   );
 }
