@@ -722,6 +722,7 @@ def toggle_tournament_visibility(cur, conn, admin_id, body: dict) -> dict:
 
 def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
     """Архивирует турнир - удаляет из списков, но сохраняет статистику матчей"""
+    import sys
     try:
         tournament_id = body.get('tournament_id')
         
@@ -733,59 +734,78 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
                 'isBase64Encoded': False
             }
         
+        print(f"=== Deleting tournament {tournament_id}", file=sys.stderr, flush=True)
+        
         # ВАЖНО: НЕ удаляем match_history и bracket_matches - это статистика игроков!
         # Удаляем только данные турнира, сохраняя историю матчей для статистики
         
-        # 1. Удаляем регистрации команд (больше не актуальны)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 2. Удаляем exclusions и suspensions (привязаны к турниру)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_exclusions WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_suspensions WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 3. Удаляем group_stage_matches (групповой этап)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.group_stage_matches WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 4. Удаляем bracket_stages (этапы сетки)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.bracket_stages WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 5. Обнуляем tournament_id в новостях (новости остаются)
+        # 1. Обнуляем tournament_id в новостях (новости остаются)
+        print(f"=== Step 1: Updating news", file=sys.stderr, flush=True)
         cur.execute("""
             UPDATE t_p4831367_esport_gta_disaster.news 
             SET tournament_id = NULL 
             WHERE tournament_id = %s
         """, (int(tournament_id),))
         
-        # 6. СОХРАНЯЕМ match_history - это статистика игроков!
-        # 7. СОХРАНЯЕМ bracket_matches - это история матчей для статистики!
-        # 8. СОХРАНЯЕМ tournament_brackets - нужен для связи с матчами
-        
-        # 9. Помечаем турнир как удалённый, но НЕ удаляем физически
+        # 2. Удаляем регистрации команд (больше не актуальны)
+        print(f"=== Step 2: Deleting registrations", file=sys.stderr, flush=True)
         cur.execute("""
-            UPDATE t_p4831367_esport_gta_disaster.tournaments 
-            SET is_hidden = TRUE, 
-                status = 'archived',
-                updated_at = NOW()
-            WHERE id = %s
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE tournament_id = %s
         """, (int(tournament_id),))
         
-        # 10. Удаляем запись турнира из таблицы (bracket_matches останутся)
+        # 3. Удаляем exclusions и suspensions (привязаны к турниру)
+        print(f"=== Step 3: Deleting exclusions", file=sys.stderr, flush=True)
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_exclusions WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        print(f"=== Step 4: Deleting suspensions", file=sys.stderr, flush=True)
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_suspensions WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        # 4. Удаляем group_stage_matches (групповой этап)
+        print(f"=== Step 5: Deleting group matches", file=sys.stderr, flush=True)
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.group_stage_matches WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        # 5. Удаляем matches (обычные матчи)
+        print(f"=== Step 6: Deleting matches", file=sys.stderr, flush=True)
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.matches WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        # 6. Удаляем bracket_stages (этапы сетки)
+        print(f"=== Step 7: Deleting bracket_stages", file=sys.stderr, flush=True)
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.bracket_stages WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        # 7. Обнуляем tournament_id в bracket_matches (сохраняем матчи для статистики)
+        print(f"=== Step 8: Unlinking bracket_matches from tournament", file=sys.stderr, flush=True)
+        cur.execute("""
+            UPDATE t_p4831367_esport_gta_disaster.bracket_matches 
+            SET bracket_id = NULL 
+            WHERE bracket_id IN (
+                SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+            )
+        """, (int(tournament_id),))
+        
+        # 8. Удаляем tournament_brackets (сама структура сетки)
+        print(f"=== Step 9: Deleting tournament_brackets", file=sys.stderr, flush=True)
+        cur.execute("""
+            DELETE FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
+        """, (int(tournament_id),))
+        
+        # 9. Наконец удаляем сам турнир
+        print(f"=== Step 10: Deleting tournament", file=sys.stderr, flush=True)
         cur.execute("""
             DELETE FROM t_p4831367_esport_gta_disaster.tournaments WHERE id = %s
         """, (int(tournament_id),))
         
         conn.commit()
+        print(f"=== Tournament {tournament_id} deleted successfully", file=sys.stderr, flush=True)
         
         return {
             'statusCode': 200,
