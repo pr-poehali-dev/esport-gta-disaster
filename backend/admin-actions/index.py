@@ -1469,8 +1469,13 @@ def update_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
 
 def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     """Удаляет новость"""
+    import sys
+    
+    print(f"=== delete_news called: admin_id={admin_id}, admin_role={admin_role}", file=sys.stderr, flush=True)
+    print(f"=== body: {body}", file=sys.stderr, flush=True)
     
     if admin_role not in ['admin', 'founder']:
+        print(f"=== ROLE CHECK FAILED: {admin_role}", file=sys.stderr, flush=True)
         return {
             'statusCode': 403,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -1479,18 +1484,32 @@ def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
         }
     
     news_id = body.get('news_id')
+    print(f"=== Deleting news_id: {news_id}", file=sys.stderr, flush=True)
     
-    cur.execute(f"""
-        DELETE FROM t_p4831367_esport_gta_disaster.news WHERE id = {int(news_id)}
-    """)
-    conn.commit()
-    
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Новость удалена'}),
-        'isBase64Encoded': False
-    }
+    try:
+        cur.execute(f"""
+            DELETE FROM t_p4831367_esport_gta_disaster.news WHERE id = {int(news_id)}
+        """)
+        conn.commit()
+        print(f"=== News deleted successfully", file=sys.stderr, flush=True)
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Новость удалена'}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        print(f"=== ERROR deleting news: {e}", file=sys.stderr, flush=True)
+        import traceback
+        print(f"=== Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': str(e)}),
+            'isBase64Encoded': False
+        }
 
 def get_news(cur, conn, body: dict) -> dict:
     """Получает новости"""
