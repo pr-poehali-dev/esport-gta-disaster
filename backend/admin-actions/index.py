@@ -722,8 +722,11 @@ def toggle_tournament_visibility(cur, conn, admin_id, body: dict) -> dict:
 
 def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
     """Мягкое удаление турнира - помечает как removed = 1"""
+    import sys
+    
     try:
         tournament_id = body.get('tournament_id')
+        print(f"=== DELETE Tournament ID: {tournament_id}", file=sys.stderr, flush=True)
         
         if not tournament_id:
             return {
@@ -740,6 +743,7 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
         """, (int(tournament_id),))
         
         conn.commit()
+        print(f"=== Tournament {tournament_id} removed successfully", file=sys.stderr, flush=True)
         
         return {
             'statusCode': 200,
@@ -752,6 +756,7 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
         }
         
     except Exception as e:
+        print(f"=== DELETE ERROR: {str(e)}", file=sys.stderr, flush=True)
         conn.rollback()
         return {
             'statusCode': 500,
