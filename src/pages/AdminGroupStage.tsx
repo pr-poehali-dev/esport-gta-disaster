@@ -228,7 +228,7 @@ export default function AdminGroupStage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Button
-              onClick={() => navigate(`/admin-tournaments`)}
+              onClick={() => navigate('/admin/tournaments')}
               className="bg-white/5 hover:bg-white/10 border border-white/10"
             >
               <Icon name="ArrowLeft" className="h-4 w-4 mr-2" />
