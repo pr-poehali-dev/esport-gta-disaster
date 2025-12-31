@@ -167,6 +167,8 @@ def handler(event: dict, context) -> dict:
                 return verify_admin_password(cur, conn, body)
             elif action == 'create_news':
                 return create_news(cur, conn, admin_id, body, admin_role['role'])
+            elif action == 'create_news_with_image':
+                return create_news_with_image(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'update_news':
                 return update_news(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'delete_news':
@@ -213,8 +215,6 @@ def handler(event: dict, context) -> dict:
                 return delete_discussion(cur, conn, body)
             elif action == 'edit_discussion':
                 return edit_discussion(cur, conn, admin_id, body)
-            elif action == 'create_news_with_image':
-                return create_news_with_image(cur, conn, admin_id, body, admin_role['role'])
             elif action == 'delete_tournament':
                 return delete_tournament(cur, conn, admin_id, body)
             elif action == 'hide_tournament':
