@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from './Logo';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -146,6 +147,7 @@ export default function Header() {
                   <Icon name="User" className="h-4 w-4" />
                   ПРОФИЛЬ
                 </Button>
+                <NotificationBell />
                 {isAdmin && (
                   <a
                     href="/admin"

@@ -161,6 +161,35 @@ export default function AdminGroupStage() {
     }
   };
 
+  const handleFinalizeGroupStage = async () => {
+    if (!confirm('Завершить групповую стадию и создать плей-офф? Топ-2 команды из каждой группы пройдут в плей-офф.')) return;
+
+    try {
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString()
+        },
+        body: JSON.stringify({
+          action: 'finalize_group_stage',
+          tournament_id: tournamentId
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showNotification('success', 'Успех', data.message);
+        navigate(`/tournaments/${tournamentId}/bracket`);
+      } else {
+        showNotification('error', 'Ошибка', data.error);
+      }
+    } catch (error: any) {
+      showNotification('error', 'Ошибка', error.message);
+    }
+  };
+
   const handleScoreChange = (matchId: number | undefined, field: 'team1_score' | 'team2_score', value: string) => {
     const score = parseInt(value) || 0;
     setGroupMatches(prev =>
@@ -210,15 +239,25 @@ export default function AdminGroupStage() {
             </h1>
           </div>
 
-          {groupMatches.length === 0 && (
-            <Button
-              onClick={handleCreateGroupStage}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-            >
-              <Icon name="Plus" className="h-4 w-4 mr-2" />
-              Создать групповую стадию
-            </Button>
-          )}
+          <div className="flex gap-3">
+            {groupMatches.length === 0 ? (
+              <Button
+                onClick={handleCreateGroupStage}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                <Icon name="Plus" className="h-4 w-4 mr-2" />
+                Создать групповую стадию
+              </Button>
+            ) : (
+              <Button
+                onClick={handleFinalizeGroupStage}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+              >
+                <Icon name="CheckCircle" className="h-4 w-4 mr-2" />
+                Завершить группы и создать плей-офф
+              </Button>
+            )}
+          </div>
         </div>
 
         {groupMatches.length === 0 ? (

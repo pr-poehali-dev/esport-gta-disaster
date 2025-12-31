@@ -41,7 +41,7 @@ def handler(event: dict, context) -> dict:
             body = json.loads(event.get('body', '{}'))
             action = body.get('action')
             
-            public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament', 'register_team']
+            public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament', 'register_team', 'get_notifications', 'mark_notification_read', 'mark_all_notifications_read']
             
             if action in public_actions:
                 if action == 'get_news':
@@ -56,6 +56,12 @@ def handler(event: dict, context) -> dict:
                     return get_tournament(cur, conn, body)
                 elif action == 'register_team':
                     return register_team(cur, conn, body)
+                elif action == 'get_notifications':
+                    return get_notifications(cur, conn, body)
+                elif action == 'mark_notification_read':
+                    return mark_notification_read(cur, conn, body)
+                elif action == 'mark_all_notifications_read':
+                    return mark_all_notifications_read(cur, conn, body)
         
         admin_id = event.get('headers', {}).get('X-Admin-Id') or event.get('headers', {}).get('x-admin-id')
         
@@ -222,6 +228,8 @@ def handler(event: dict, context) -> dict:
                 return create_group_stage(cur, conn, admin_id, body)
             elif action == 'update_group_match':
                 return update_group_match(cur, conn, admin_id, body)
+            elif action == 'finalize_group_stage':
+                return finalize_group_stage(cur, conn, admin_id, body)
             else:
                 return {
                     'statusCode': 400,
@@ -3154,5 +3162,293 @@ def update_group_match(cur, conn, admin_id: str, body: dict) -> dict:
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({'error': f'Ошибка обновления матча: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+
+def finalize_group_stage(cur, conn, admin_id: str, body: dict) -> dict:
+    """Завершает групповую стадию и переводит топ-2 команды в плей-офф"""
+    tournament_id = body.get('tournament_id')
+    
+    if not tournament_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'tournament_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        # Получаем все матчи групповой стадии
+        cur.execute(f"""
+            SELECT id, group_name, team1_id, team2_id, team1_score, team2_score, played
+            FROM t_p4831367_esport_gta_disaster.group_stage_matches
+            WHERE tournament_id = {tournament_id}
+            ORDER BY group_name, id
+        """)
+        matches = [dict(row) for row in cur.fetchall()]
+        
+        # Получаем команды
+        cur.execute(f"""
+            SELECT tr.team_id, t.name
+            FROM t_p4831367_esport_gta_disaster.tournament_registrations tr
+            JOIN t_p4831367_esport_gta_disaster.teams t ON tr.team_id = t.id
+            WHERE tr.tournament_id = {tournament_id} 
+            AND (tr.status = 'approved' OR tr.status = 'confirmed')
+        """)
+        teams = {row['team_id']: row['name'] for row in cur.fetchall()}
+        
+        # Вычисляем таблицу для каждой группы
+        groups = ['A', 'B', 'C', 'D']
+        qualified_teams = []
+        
+        for group in groups:
+            group_matches = [m for m in matches if m['group_name'] == group]
+            team_stats = {}
+            
+            # Инициализируем статистику
+            for match in group_matches:
+                for team_id in [match['team1_id'], match['team2_id']]:
+                    if team_id not in team_stats:
+                        team_stats[team_id] = {
+                            'team_id': team_id,
+                            'points': 0,
+                            'goal_difference': 0,
+                            'goals_for': 0
+                        }
+            
+            # Считаем статистику
+            for match in group_matches:
+                if match['played']:
+                    team1_id = match['team1_id']
+                    team2_id = match['team2_id']
+                    score1 = match['team1_score']
+                    score2 = match['team2_score']
+                    
+                    team_stats[team1_id]['goals_for'] += score1
+                    team_stats[team1_id]['goal_difference'] += (score1 - score2)
+                    team_stats[team2_id]['goals_for'] += score2
+                    team_stats[team2_id]['goal_difference'] += (score2 - score1)
+                    
+                    if score1 > score2:
+                        team_stats[team1_id]['points'] += 3
+                    elif score2 > score1:
+                        team_stats[team2_id]['points'] += 3
+                    else:
+                        team_stats[team1_id]['points'] += 1
+                        team_stats[team2_id]['points'] += 1
+            
+            # Сортируем и берем топ-2
+            sorted_teams = sorted(
+                team_stats.values(),
+                key=lambda x: (x['points'], x['goal_difference'], x['goals_for']),
+                reverse=True
+            )
+            
+            qualified_teams.extend([t['team_id'] for t in sorted_teams[:2]])
+        
+        if len(qualified_teams) != 8:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': f'Недостаточно данных для формирования плей-офф. Получено {len(qualified_teams)} команд, нужно 8'}),
+                'isBase64Encoded': False
+            }
+        
+        # Проверяем наличие bracket
+        cur.execute(f"""
+            SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets
+            WHERE tournament_id = {tournament_id}
+        """)
+        bracket = cur.fetchone()
+        
+        if not bracket:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Сначала создайте турнирную сетку'}),
+                'isBase64Encoded': False
+            }
+        
+        bracket_id = bracket['id']
+        
+        # Удаляем старые матчи плей-офф
+        cur.execute(f"""
+            DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches
+            WHERE bracket_id = {bracket_id}
+        """)
+        
+        # Создаем матчи 1/4 финала (8 команд -> 4 матча)
+        # Сетка: A1-B2, C1-D2, B1-A2, D1-C2
+        pairs = [
+            (qualified_teams[0], qualified_teams[3]),  # A1 vs B2
+            (qualified_teams[4], qualified_teams[7]),  # C1 vs D2
+            (qualified_teams[2], qualified_teams[1]),  # B1 vs A2
+            (qualified_teams[6], qualified_teams[5])   # D1 vs C2
+        ]
+        
+        for i, (team1_id, team2_id) in enumerate(pairs, 1):
+            cur.execute(f"""
+                INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+                (bracket_id, round, match_number, team1_id, team2_id, status, created_at, updated_at)
+                VALUES ({bracket_id}, 1, {i}, {team1_id}, {team2_id}, 'pending', NOW(), NOW())
+            """)
+        
+        # Создаем пустые матчи для 1/2 финала (2 матча)
+        for i in range(1, 3):
+            cur.execute(f"""
+                INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+                (bracket_id, round, match_number, status, created_at, updated_at)
+                VALUES ({bracket_id}, 2, {i}, 'pending', NOW(), NOW())
+            """)
+        
+        # Создаем финал (1 матч)
+        cur.execute(f"""
+            INSERT INTO t_p4831367_esport_gta_disaster.bracket_matches
+            (bracket_id, round, match_number, status, created_at, updated_at)
+            VALUES ({bracket_id}, 3, 1, 'pending', NOW(), NOW())
+        """)
+        
+        conn.commit()
+        
+        qualified_names = [teams.get(tid, 'Unknown') for tid in qualified_teams]
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'success': True,
+                'message': 'Групповая стадия завершена, команды переведены в плей-офф',
+                'qualified_teams': qualified_names
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка завершения групповой стадии: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+
+def get_notifications(cur, conn, body: dict) -> dict:
+    """Получает список уведомлений пользователя"""
+    user_id = body.get('user_id')
+    limit = body.get('limit', 50)
+    
+    if not user_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'user_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        cur.execute(f"""
+            SELECT id, user_id, type, title, message, link, read, created_at
+            FROM t_p4831367_esport_gta_disaster.notifications
+            WHERE user_id = {user_id}
+            ORDER BY created_at DESC
+            LIMIT {limit}
+        """)
+        notifications = [dict(row) for row in cur.fetchall()]
+        
+        # Подсчитываем непрочитанные
+        cur.execute(f"""
+            SELECT COUNT(*) as count
+            FROM t_p4831367_esport_gta_disaster.notifications
+            WHERE user_id = {user_id} AND read = false
+        """)
+        unread_count = cur.fetchone()['count']
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({
+                'notifications': notifications,
+                'unread_count': unread_count
+            }),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка получения уведомлений: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+
+def mark_notification_read(cur, conn, body: dict) -> dict:
+    """Отмечает уведомление как прочитанное"""
+    notification_id = body.get('notification_id')
+    
+    if not notification_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'notification_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        cur.execute(f"""
+            UPDATE t_p4831367_esport_gta_disaster.notifications
+            SET read = true
+            WHERE id = {notification_id}
+        """)
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Уведомление прочитано'}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка обновления уведомления: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+
+def mark_all_notifications_read(cur, conn, body: dict) -> dict:
+    """Отмечает все уведомления пользователя как прочитанные"""
+    user_id = body.get('user_id')
+    
+    if not user_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'user_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        cur.execute(f"""
+            UPDATE t_p4831367_esport_gta_disaster.notifications
+            SET read = true
+            WHERE user_id = {user_id} AND read = false
+        """)
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Все уведомления прочитаны'}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка обновления уведомлений: {str(e)}'}),
             'isBase64Encoded': False
         }
