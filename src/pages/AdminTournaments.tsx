@@ -32,7 +32,6 @@ export default function AdminTournaments() {
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [logs, setLogs] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -73,8 +72,6 @@ export default function AdminTournaments() {
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
       const userId = user?.id || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id : '');
       
-      console.log('Loading tournaments, user ID:', userId);
-      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -87,18 +84,14 @@ export default function AdminTournaments() {
         })
       });
 
-      console.log('Tournaments response status:', response.status);
       const data = await response.json();
-      console.log('Tournaments data:', data);
       
       if (response.ok && data.tournaments) {
         setTournaments(data.tournaments || []);
       } else {
-        console.error('Failed to load tournaments:', data);
         showNotification('error', 'Ошибка', data.error || 'Не удалось загрузить турниры');
       }
     } catch (error: any) {
-      console.error('Exception loading tournaments:', error);
       showNotification('error', 'Ошибка', error.message);
     } finally {
       setLoading(false);
@@ -231,56 +224,32 @@ export default function AdminTournaments() {
     }
   };
 
-  const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
-    console.log(message);
-  };
-
   const handleDeleteTournament = async (tournamentId: number) => {
     if (!confirm('ВНИМАНИЕ! Удалить турнир? Это действие необратимо! Будут удалены все матчи, регистрации и чаты.')) return;
 
-    setLogs([]);
-
     try {
-      addLog('=== DELETE TOURNAMENT START ===');
-      addLog(`Tournament ID: ${tournamentId}`);
-      addLog(`User ID: ${user.id}`);
-
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
-      const requestBody = {
-        action: 'delete_tournament',
-        tournament_id: tournamentId
-      };
-      
-      addLog(`Request body: ${JSON.stringify(requestBody)}`);
-      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Admin-Id': user.id.toString()
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          action: 'delete_tournament',
+          tournament_id: tournamentId
+        })
       });
 
-      addLog(`Response status: ${response.status}`);
-      addLog(`Response OK: ${response.ok}`);
-
       const data = await response.json();
-      addLog(`Response data: ${JSON.stringify(data, null, 2)}`);
 
       if (response.ok && data.success) {
-        addLog('✅ SUCCESS: Tournament deleted');
-        showNotification('success', 'Успех', data.message);
+        showNotification('success', 'Успех', data.message || 'Турнир удален');
         loadTournaments();
       } else {
-        addLog(`❌ ERROR: Delete failed - ${JSON.stringify(data)}`);
-        showNotification('error', 'Ошибка', data.error || 'Неизвестная ошибка');
+        showNotification('error', 'Ошибка', data.error || 'Не удалось удалить турнир');
       }
     } catch (error: any) {
-      addLog(`❌ EXCEPTION: ${error.message}`);
-      addLog(`Stack: ${error.stack}`);
       showNotification('error', 'Ошибка', error.message);
     }
   };
