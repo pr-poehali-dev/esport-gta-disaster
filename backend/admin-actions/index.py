@@ -49,8 +49,12 @@ def handler(event: dict, context) -> dict:
             public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament', 'register_team', 'get_notifications', 'mark_notification_read', 'mark_all_notifications_read']
             
             if action in public_actions:
+                print(f"=== PUBLIC ACTION: {action}", file=sys.stderr, flush=True)
                 if action == 'get_news':
-                    return get_news(cur, conn, body)
+                    print(f"=== Calling get_news with body: {body}", file=sys.stderr, flush=True)
+                    result = get_news(cur, conn, body)
+                    print(f"=== get_news returned: {str(result)[:200]}", file=sys.stderr, flush=True)
+                    return result
                 elif action == 'get_rules':
                     return get_rules(cur, conn)
                 elif action == 'get_support':
