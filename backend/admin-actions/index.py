@@ -721,8 +721,7 @@ def toggle_tournament_visibility(cur, conn, admin_id, body: dict) -> dict:
         }
 
 def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
-    """Архивирует турнир - удаляет из списков, но сохраняет статистику матчей"""
-    import sys
+    """Мягкое удаление турнира - помечает как removed = 1"""
     try:
         tournament_id = body.get('tournament_id')
         
@@ -734,94 +733,26 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
                 'isBase64Encoded': False
             }
         
-        print(f"=== Deleting tournament {tournament_id}", file=sys.stderr, flush=True)
-        
-        # ВАЖНО: НЕ удаляем match_history и bracket_matches - это статистика игроков!
-        # Удаляем только данные турнира, сохраняя историю матчей для статистики
-        
-        # 1. Обнуляем tournament_id в новостях (новости остаются)
-        print(f"=== Step 1: Updating news", file=sys.stderr, flush=True)
         cur.execute("""
-            UPDATE t_p4831367_esport_gta_disaster.news 
-            SET tournament_id = NULL 
-            WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 2. Удаляем регистрации команд (больше не актуальны)
-        print(f"=== Step 2: Deleting registrations", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 3. Удаляем exclusions и suspensions (привязаны к турниру)
-        print(f"=== Step 3: Deleting exclusions", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_exclusions WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        print(f"=== Step 4: Deleting suspensions", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_suspensions WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 4. Удаляем group_stage_matches (групповой этап)
-        print(f"=== Step 5: Deleting group matches", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.group_stage_matches WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 5. Удаляем matches (обычные матчи)
-        print(f"=== Step 6: Deleting matches", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.matches WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 6. Удаляем bracket_stages (этапы сетки)
-        print(f"=== Step 7: Deleting bracket_stages", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.bracket_stages WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 7. Обнуляем tournament_id в bracket_matches (сохраняем матчи для статистики)
-        print(f"=== Step 8: Unlinking bracket_matches from tournament", file=sys.stderr, flush=True)
-        cur.execute("""
-            UPDATE t_p4831367_esport_gta_disaster.bracket_matches 
-            SET bracket_id = NULL 
-            WHERE bracket_id IN (
-                SELECT id FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
-            )
-        """, (int(tournament_id),))
-        
-        # 8. Удаляем tournament_brackets (сама структура сетки)
-        print(f"=== Step 9: Deleting tournament_brackets", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournament_brackets WHERE tournament_id = %s
-        """, (int(tournament_id),))
-        
-        # 9. Наконец удаляем сам турнир
-        print(f"=== Step 10: Deleting tournament", file=sys.stderr, flush=True)
-        cur.execute("""
-            DELETE FROM t_p4831367_esport_gta_disaster.tournaments WHERE id = %s
+            UPDATE t_p4831367_esport_gta_disaster.tournaments 
+            SET removed = 1 
+            WHERE id = %s
         """, (int(tournament_id),))
         
         conn.commit()
-        print(f"=== Tournament {tournament_id} deleted successfully", file=sys.stderr, flush=True)
         
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({
                 'success': True,
-                'message': 'Турнир удалён из списков, статистика матчей сохранена'
+                'message': 'Турнир удалён из списков'
             }),
             'isBase64Encoded': False
         }
         
     except Exception as e:
         conn.rollback()
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"ERROR deleting tournament: {error_details}", file=sys.stderr, flush=True)
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -839,6 +770,7 @@ def get_tournaments(cur, conn, body: dict = None) -> dict:
             SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
                    rules, format, status, created_by, created_at, registration_open, is_hidden
             FROM t_p4831367_esport_gta_disaster.tournaments
+            WHERE removed = 0 OR removed IS NULL
             ORDER BY start_date DESC
         """)
     else:
@@ -846,7 +778,7 @@ def get_tournaments(cur, conn, body: dict = None) -> dict:
             SELECT id, name, description, game, start_date, end_date, max_teams, prize_pool, 
                    rules, format, status, created_by, created_at, registration_open, is_hidden
             FROM t_p4831367_esport_gta_disaster.tournaments
-            WHERE is_hidden = FALSE OR is_hidden IS NULL
+            WHERE (is_hidden = FALSE OR is_hidden IS NULL) AND (removed = 0 OR removed IS NULL)
             ORDER BY start_date DESC
         """)
     
