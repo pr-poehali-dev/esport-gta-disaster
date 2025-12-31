@@ -36,6 +36,8 @@ export default function SnowEffect() {
       });
     }
 
+    let animationFrameId: number;
+
     function animate() {
       if (!ctx || !canvas) return;
       
@@ -62,7 +64,7 @@ export default function SnowEffect() {
         }
       });
 
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
     }
 
     animate();
@@ -76,6 +78,7 @@ export default function SnowEffect() {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
