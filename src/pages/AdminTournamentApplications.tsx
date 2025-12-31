@@ -10,8 +10,8 @@ interface Application {
   team_id: number;
   team_name: string;
   team_tag: string;
-  logo_url: string;
-  members_count: number;
+  team_logo: string;
+  team_rating: number;
   registered_at: string;
   status: string;
 }
@@ -140,9 +140,9 @@ export default function AdminTournamentApplications() {
               <Card key={app.id} className="bg-[#1a1f2e]/50 border-white/10 p-6">
                 <div className="flex items-center gap-6">
                   <div className="flex-shrink-0">
-                    {app.logo_url ? (
+                    {app.team_logo ? (
                       <img 
-                        src={app.logo_url} 
+                        src={app.team_logo} 
                         alt={app.team_name} 
                         className="w-16 h-16 rounded-lg object-cover border-2 border-white/10"
                       />
@@ -170,10 +170,10 @@ export default function AdminTournamentApplications() {
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-400">
-                      {app.members_count && (
+                      {app.team_rating && (
                         <span className="flex items-center gap-1">
-                          <Icon name="Users" size={14} />
-                          Участников: {app.members_count}
+                          <Icon name="Star" size={14} />
+                          Рейтинг: {app.team_rating}
                         </span>
                       )}
                       <span className="flex items-center gap-1">

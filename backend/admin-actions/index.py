@@ -877,7 +877,12 @@ def get_tournament(cur, conn, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'tournament': tournament}),
+        'body': json.dumps({
+            'tournament': tournament,
+            'id': tournament['id'],
+            'name': tournament['name'],
+            'registrations': registered_teams
+        }),
         'isBase64Encoded': False
     }
 
