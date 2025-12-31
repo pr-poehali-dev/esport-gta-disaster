@@ -38,118 +38,152 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
     const roundsLeft = rounds - round + 1;
     if (roundsLeft === 1) return 'ФИНАЛ';
     if (roundsLeft === 2) return 'ПОЛУФИНАЛ';
-    if (roundsLeft === 3) return 'ЧЕТВЕРТЬФИНАЛ';
-    return `1/${Math.pow(2, roundsLeft)} ФИНАЛА`;
+    if (roundsLeft === 3) return '1/4 ФИНАЛА';
+    if (roundsLeft === 4) return '1/8 ФИНАЛА';
+    return `РАУНД ${round}`;
   };
 
+  const getMatchHeight = () => 120;
+  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * getMatchHeight();
+
   return (
-    <div className="relative overflow-x-auto">
-      <div className="flex gap-8 min-w-max p-8">
-        {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => (
-          <div key={round} className="flex flex-col gap-8" style={{ minWidth: '320px' }}>
-            <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-500 rounded-full">
-                <Icon name="Zap" size={20} className="text-white" />
-                <h3 className="text-xl font-black text-white tracking-wider uppercase">
-                  {getRoundName(round)}
-                </h3>
+    <div className="relative overflow-x-auto bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900">
+      <div className="flex min-w-max p-8" style={{ gap: '80px' }}>
+        {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
+          const roundMatches = getRoundMatches(round);
+          const spacing = getMatchSpacing(round);
+          
+          return (
+            <div key={round} className="relative" style={{ minWidth: '280px' }}>
+              <div className="sticky top-0 z-20 mb-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-500 rounded-full shadow-lg">
+                  <Icon name="Zap" size={18} className="text-white" />
+                  <h3 className="text-sm font-black text-white tracking-wider uppercase">
+                    {getRoundName(round)}
+                  </h3>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex flex-col gap-6">
-              {getRoundMatches(round).map((match) => (
-                <div key={match.id} className="relative group">
-                  {canEdit && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-purple-600/90 hover:bg-purple-500"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditMatch(match);
-                      }}
-                    >
-                      <Icon name="Edit" className="h-4 w-4 text-white" />
-                    </Button>
-                  )}
-                  
-                  <Card 
-                    className="bg-gradient-to-br from-purple-900/50 via-pink-900/40 to-cyan-900/30 border-2 border-purple-500/50 backdrop-blur-xl cursor-pointer hover:border-pink-400 hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-300 hover:scale-105 overflow-hidden"
-                    onClick={() => onMatchClick(match)}
+              
+              <div className="relative">
+                {roundMatches.map((match, idx) => (
+                  <div 
+                    key={match.id} 
+                    className="relative"
+                    style={{ 
+                      marginTop: idx === 0 ? `${spacing / 4}px` : `${spacing / 2}px`
+                    }}
                   >
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"></div>
-                    
-                    <div className="p-4 space-y-3">
-                      <div 
-                        className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                          match.winner_id === match.team1?.id 
-                            ? 'bg-gradient-to-r from-purple-600/60 to-pink-600/60 border-2 border-purple-400 shadow-lg shadow-purple-500/50' 
-                            : 'bg-black/40 border border-purple-500/30'
-                        }`}
+                    {canEdit && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute -top-2 -right-2 opacity-0 hover:opacity-100 transition-opacity z-10 bg-purple-600/90 hover:bg-purple-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditMatch(match);
+                        }}
                       >
-                        <div className="flex items-center gap-3 flex-1">
-                          {match.team1?.logo_url && (
-                            <div className="relative">
-                              <div className="absolute inset-0 bg-purple-500 blur-md rounded-full"></div>
-                              <img src={match.team1.logo_url} alt="" className="relative w-10 h-10 rounded-full border-2 border-purple-400" />
-                            </div>
-                          )}
-                          <span className={`font-bold ${
-                            match.winner_id === match.team1?.id ? 'text-white' : 'text-gray-300'
-                          }`}>
-                            {match.team1?.name || 'TBD'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {match.winner_id === match.team1?.id && (
-                            <Icon name="Trophy" size={16} className="text-yellow-400" />
-                          )}
-                          <span className="text-2xl font-black text-white min-w-[40px] text-right bg-purple-900/50 px-3 py-1 rounded-lg">
+                        <Icon name="Edit" className="h-4 w-4 text-white" />
+                      </Button>
+                    )}
+                    
+                    <Card 
+                      className="relative bg-gradient-to-br from-purple-900/50 via-pink-900/40 to-cyan-900/30 border-2 border-purple-500/50 backdrop-blur-xl cursor-pointer hover:border-pink-400 hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-300 overflow-hidden"
+                      onClick={() => onMatchClick(match)}
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"></div>
+                      
+                      <div className="p-3">
+                        <div 
+                          className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
+                            match.winner_id === match.team1?.id 
+                              ? 'bg-gradient-to-r from-purple-600/60 to-pink-600/60 border border-purple-400' 
+                              : 'bg-black/40 border border-purple-500/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {match.team1?.logo_url && (
+                              <img src={match.team1.logo_url} alt="" className="w-6 h-6 rounded-full border border-purple-400 flex-shrink-0" />
+                            )}
+                            <span className={`text-sm font-semibold truncate ${
+                              match.winner_id === match.team1?.id ? 'text-white' : 'text-gray-300'
+                            }`}>
+                              {match.team1?.name || 'TBD'}
+                            </span>
+                          </div>
+                          <span className="text-lg font-bold text-white ml-2 min-w-[30px] text-right">
                             {match.score_team1}
                           </span>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-center">
-                        <div className="h-[2px] w-full bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"></div>
-                      </div>
+                        <div className="h-px my-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
 
-                      <div 
-                        className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                          match.winner_id === match.team2?.id 
-                            ? 'bg-gradient-to-r from-purple-600/60 to-pink-600/60 border-2 border-purple-400 shadow-lg shadow-purple-500/50' 
-                            : 'bg-black/40 border border-purple-500/30'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          {match.team2?.logo_url && (
-                            <div className="relative">
-                              <div className="absolute inset-0 bg-purple-500 blur-md rounded-full"></div>
-                              <img src={match.team2.logo_url} alt="" className="relative w-10 h-10 rounded-full border-2 border-purple-400" />
-                            </div>
-                          )}
-                          <span className={`font-bold ${
-                            match.winner_id === match.team2?.id ? 'text-white' : 'text-gray-300'
-                          }`}>
-                            {match.team2?.name || 'TBD'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {match.winner_id === match.team2?.id && (
-                            <Icon name="Trophy" size={16} className="text-yellow-400" />
-                          )}
-                          <span className="text-2xl font-black text-white min-w-[40px] text-right bg-purple-900/50 px-3 py-1 rounded-lg">
+                        <div 
+                          className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
+                            match.winner_id === match.team2?.id 
+                              ? 'bg-gradient-to-r from-purple-600/60 to-pink-600/60 border border-purple-400' 
+                              : 'bg-black/40 border border-purple-500/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {match.team2?.logo_url && (
+                              <img src={match.team2.logo_url} alt="" className="w-6 h-6 rounded-full border border-purple-400 flex-shrink-0" />
+                            )}
+                            <span className={`text-sm font-semibold truncate ${
+                              match.winner_id === match.team2?.id ? 'text-white' : 'text-gray-300'
+                            }`}>
+                              {match.team2?.name || 'TBD'}
+                            </span>
+                          </div>
+                          <span className="text-lg font-bold text-white ml-2 min-w-[30px] text-right">
                             {match.score_team2}
                           </span>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                </div>
-              ))}
+                    </Card>
+
+                    {/* Соединительные линии */}
+                    {round < rounds && (
+                      <svg 
+                        className="absolute left-full top-1/2 pointer-events-none" 
+                        style={{ 
+                          width: '80px', 
+                          height: idx % 2 === 0 ? `${spacing / 2 + 60}px` : `${spacing / 2 + 60}px`,
+                          transform: 'translateY(-50%)'
+                        }}
+                      >
+                        <line 
+                          x1="0" 
+                          y1="50%" 
+                          x2="40" 
+                          y2="50%" 
+                          stroke="rgba(168, 85, 247, 0.4)" 
+                          strokeWidth="2"
+                        />
+                        <line 
+                          x1="40" 
+                          y1="50%" 
+                          x2="40" 
+                          y2={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
+                          stroke="rgba(168, 85, 247, 0.4)" 
+                          strokeWidth="2"
+                        />
+                        <line 
+                          x1="40" 
+                          y1={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
+                          x2="80" 
+                          y2={idx % 2 === 0 ? `${spacing / 4 + 60}` : `${-spacing / 4}`} 
+                          stroke="rgba(168, 85, 247, 0.4)" 
+                          strokeWidth="2"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -38,25 +38,39 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
     const roundsLeft = rounds - round + 1;
     if (roundsLeft === 1) return 'Финал';
     if (roundsLeft === 2) return 'Полуфинал';
-    if (roundsLeft === 3) return 'Четвертьфинал';
+    if (roundsLeft === 3) return '1/4 финала';
+    if (roundsLeft === 4) return '1/8 финала';
     return `Раунд ${round}`;
   };
 
+  const getMatchHeight = () => 100;
+  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * getMatchHeight();
+
   return (
     <div className="relative overflow-x-auto bg-white">
-      <div className="flex gap-12 min-w-max p-8">
-        {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => (
-          <div key={round} className="flex flex-col gap-8" style={{ minWidth: '300px' }}>
-            <div className="text-center mb-4">
-              <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                {getRoundName(round)}
-              </h3>
-              <div className="h-px w-12 mx-auto mt-2 bg-slate-300"></div>
-            </div>
-            
-            <div className="flex flex-col gap-8">
-              {getRoundMatches(round).map((match) => (
-                <div key={match.id} className="relative group">
+      <div className="flex min-w-max p-8" style={{ gap: '80px' }}>
+        {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
+          const roundMatches = getRoundMatches(round);
+          const spacing = getMatchSpacing(round);
+          
+          return (
+            <div key={round} className="relative" style={{ minWidth: '260px' }}>
+              <div className="sticky top-0 z-20 mb-6 text-center">
+                <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
+                  {getRoundName(round)}
+                </h3>
+                <div className="h-px w-12 mx-auto mt-2 bg-slate-300"></div>
+              </div>
+              
+              <div className="relative">
+                {roundMatches.map((match, idx) => (
+                  <div 
+                    key={match.id} 
+                    className="relative"
+                    style={{ 
+                      marginTop: idx === 0 ? `${spacing / 4}px` : `${spacing / 2}px`
+                    }}
+                  >
                   {canEdit && (
                     <Button
                       size="sm"
@@ -141,11 +155,49 @@ export default function MinimalBracket({ matches, canEdit, onMatchClick, onEditM
                       </div>
                     </div>
                   </Card>
+
+                  {/* Соединительные линии */}
+                  {round < rounds && (
+                    <svg 
+                      className="absolute left-full top-1/2 pointer-events-none" 
+                      style={{ 
+                        width: '80px', 
+                        height: idx % 2 === 0 ? `${spacing / 2 + 50}px` : `${spacing / 2 + 50}px`,
+                        transform: 'translateY(-50%)'
+                      }}
+                    >
+                      <line 
+                        x1="0" 
+                        y1="50%" 
+                        x2="40" 
+                        y2="50%" 
+                        stroke="rgba(148, 163, 184, 0.4)" 
+                        strokeWidth="1.5"
+                      />
+                      <line 
+                        x1="40" 
+                        y1="50%" 
+                        x2="40" 
+                        y2={idx % 2 === 0 ? `${spacing / 4 + 50}` : `${-spacing / 4}`} 
+                        stroke="rgba(148, 163, 184, 0.4)" 
+                        strokeWidth="1.5"
+                      />
+                      <line 
+                        x1="40" 
+                        y1={idx % 2 === 0 ? `${spacing / 4 + 50}` : `${-spacing / 4}`} 
+                        x2="80" 
+                        y2={idx % 2 === 0 ? `${spacing / 4 + 50}` : `${-spacing / 4}`} 
+                        stroke="rgba(148, 163, 184, 0.4)" 
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                  )}
                 </div>
               ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
