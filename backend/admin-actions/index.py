@@ -216,8 +216,6 @@ def handler(event: dict, context) -> dict:
                 return delete_discussion(cur, conn, body)
             elif action == 'edit_discussion':
                 return edit_discussion(cur, conn, admin_id, body)
-            elif action == 'delete_tournament':
-                return delete_tournament(cur, conn, admin_id, body)
             elif action == 'hide_tournament':
                 return hide_tournament(cur, conn, admin_id, body)
             elif action == 'start_tournament':
