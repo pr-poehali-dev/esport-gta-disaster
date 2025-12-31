@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+import { useNavigate } from 'react-router-dom';
 
 interface AdminSidebarProps {
   activeSection: string;
@@ -8,6 +9,8 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ activeSection, setActiveSection, onLogout }: AdminSidebarProps) {
+  const navigate = useNavigate();
+
   return (
     <aside className="w-64 bg-card border-r border-border p-4 space-y-2">
       <h2 className="text-xl font-bold mb-6 px-4">Навигация</h2>
@@ -60,17 +63,9 @@ export default function AdminSidebar({ activeSection, setActiveSection, onLogout
       <div className="pt-4">
         <p className="text-xs text-muted-foreground px-4 mb-2">КОНТЕНТ</p>
         <Button
-          variant={activeSection === 'content' ? 'default' : 'ghost'}
+          variant="ghost"
           className="w-full justify-start"
-          onClick={() => setActiveSection('content')}
-        >
-          <Icon name="FileText" size={20} className="mr-2" />
-          Контент
-        </Button>
-        <Button
-          variant={activeSection === 'tournaments' ? 'default' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => setActiveSection('tournaments')}
+          onClick={() => navigate('/admin/tournaments')}
         >
           <Icon name="Trophy" size={20} className="mr-2" />
           Турниры

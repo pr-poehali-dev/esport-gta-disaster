@@ -11,8 +11,6 @@ import {
   BansSection,
   MutesSection,
   SuspensionsSection,
-  ContentSection,
-  TournamentsSection,
   NewsSection,
   ModerationSection,
   SupportSection,
@@ -145,8 +143,6 @@ export default function Admin() {
           {activeSection === 'bans' && <BansSection />}
           {activeSection === 'mutes' && <MutesSection />}
           {activeSection === 'suspensions' && <SuspensionsSection />}
-          {activeSection === 'content' && <ContentSection />}
-          {activeSection === 'tournaments' && <TournamentsSection />}
           {activeSection === 'news' && <NewsSection />}
           {activeSection === 'roles' && <RolesSection />}
           {activeSection === 'discussions' && <DiscussionsSection />}
