@@ -32,7 +32,6 @@ export default function AdminTournaments() {
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [logs, setLogs] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -231,56 +230,32 @@ export default function AdminTournaments() {
     }
   };
 
-  const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
-    console.log(message);
-  };
-
   const handleDeleteTournament = async (tournamentId: number) => {
     if (!confirm('ВНИМАНИЕ! Удалить турнир? Это действие необратимо! Будут удалены все матчи, регистрации и чаты.')) return;
 
-    setLogs([]);
-
     try {
-      addLog('=== DELETE TOURNAMENT START ===');
-      addLog(`Tournament ID: ${tournamentId}`);
-      addLog(`User ID: ${user.id}`);
-
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
-      const requestBody = {
-        action: 'delete_tournament',
-        tournament_id: tournamentId
-      };
-      
-      addLog(`Request body: ${JSON.stringify(requestBody)}`);
-      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Admin-Id': user.id.toString()
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          action: 'delete_tournament',
+          tournament_id: tournamentId
+        })
       });
 
-      addLog(`Response status: ${response.status}`);
-      addLog(`Response OK: ${response.ok}`);
-
       const data = await response.json();
-      addLog(`Response data: ${JSON.stringify(data, null, 2)}`);
 
       if (response.ok && data.message) {
-        addLog('✅ SUCCESS: Tournament deleted');
         showNotification('success', 'Успех', data.message);
         loadTournaments();
       } else {
-        addLog(`❌ ERROR: Delete failed - ${JSON.stringify(data)}`);
         showNotification('error', 'Ошибка', data.error || 'Неизвестная ошибка');
       }
     } catch (error: any) {
-      addLog(`❌ EXCEPTION: ${error.message}`);
-      addLog(`Stack: ${error.stack}`);
       showNotification('error', 'Ошибка', error.message);
     }
   };
@@ -337,9 +312,7 @@ export default function AdminTournaments() {
 
   return (
     <div className="min-h-screen bg-[#0a0e1a] py-8 px-4">
-      <div className="container mx-auto max-w-7xl flex gap-6">
-        {/* Основной контент */}
-        <div className="flex-1">
+      <div className="container mx-auto max-w-7xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-white">Управление турнирами</h1>
           <div className="flex gap-3">
@@ -409,53 +382,6 @@ export default function AdminTournaments() {
               />
             ))
           )}
-        </div>
-        </div>
-
-        {/* Панель логов - всегда видна */}
-        <div className="w-[400px] flex-shrink-0">
-          <div className="sticky top-8 bg-[#1a1f2e]/80 backdrop-blur border border-purple-500/30 rounded-lg shadow-2xl">
-            <div className="flex items-center justify-between p-3 border-b border-purple-500/30">
-              <h3 className="text-white font-semibold flex items-center gap-2">
-                <Icon name="Terminal" size={16} />
-                Живые логи
-              </h3>
-              {logs.length > 0 && (
-                <Button
-                  onClick={() => setLogs([])}
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-400 hover:text-white"
-                >
-                  <Icon name="Trash2" size={14} />
-                </Button>
-              )}
-            </div>
-            <div className="p-3 overflow-y-auto h-[calc(100vh-200px)] font-mono text-xs">
-              {logs.length === 0 ? (
-                <div className="text-center py-8">
-                  <Icon name="Terminal" size={48} className="mx-auto text-gray-600 mb-3" />
-                  <p className="text-gray-500">Логи появятся здесь...</p>
-                  <p className="text-gray-600 text-xs mt-2">Попробуйте удалить турнир</p>
-                </div>
-              ) : (
-                logs.map((log, index) => (
-                  <div
-                    key={index}
-                    className={`mb-1 ${
-                      log.includes('ERROR') || log.includes('❌')
-                        ? 'text-red-400'
-                        : log.includes('SUCCESS') || log.includes('✅')
-                        ? 'text-green-400'
-                        : 'text-gray-300'
-                    }`}
-                  >
-                    {log}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
