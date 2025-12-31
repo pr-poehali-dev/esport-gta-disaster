@@ -127,6 +127,8 @@ def handler(event: dict, context) -> dict:
             body = json.loads(event.get('body', '{}'))
             action = body.get('action')
             
+            print(f"=== ACTION: {action}", file=sys.stderr, flush=True)
+            
             if action == 'send_verification_code':
                 return send_verification_code(cur, conn, admin_id, body)
             elif action == 'verify_and_execute':
