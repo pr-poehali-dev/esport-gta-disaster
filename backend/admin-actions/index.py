@@ -1490,30 +1490,48 @@ def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
 
 def get_news(cur, conn, body: dict) -> dict:
     """Получает новости"""
+    import sys
     
     limit = int(body.get('limit', 50))
     offset = int(body.get('offset', 0))
     include_unpublished = body.get('include_unpublished', False)
     
-    if include_unpublished:
-        cur.execute(f"""
-            SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name, 
-                   n.published, n.pinned, n.created_at, n.updated_at
-            FROM t_p4831367_esport_gta_disaster.news n
-            LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
-            ORDER BY n.pinned DESC, n.created_at DESC
-            LIMIT {limit} OFFSET {offset}
-        """)
-    else:
-        cur.execute(f"""
-            SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name,
-                   n.published, n.pinned, n.created_at, n.updated_at
-            FROM t_p4831367_esport_gta_disaster.news n
-            LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
-            WHERE n.published = TRUE
-            ORDER BY n.pinned DESC, n.created_at DESC
-            LIMIT {limit} OFFSET {offset}
-        """)
+    print(f"=== get_news: limit={limit}, offset={offset}, include_unpublished={include_unpublished}", file=sys.stderr, flush=True)
+    
+    try:
+        if include_unpublished:
+            query = f"""
+                SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name, 
+                       n.published, n.pinned, n.created_at, n.updated_at
+                FROM t_p4831367_esport_gta_disaster.news n
+                LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
+                ORDER BY n.pinned DESC, n.created_at DESC
+                LIMIT {limit} OFFSET {offset}
+            """
+        else:
+            query = f"""
+                SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name,
+                       n.published, n.pinned, n.created_at, n.updated_at
+                FROM t_p4831367_esport_gta_disaster.news n
+                LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
+                WHERE n.published = TRUE
+                ORDER BY n.pinned DESC, n.created_at DESC
+                LIMIT {limit} OFFSET {offset}
+            """
+        
+        print(f"=== Executing query: {query[:200]}...", file=sys.stderr, flush=True)
+        cur.execute(query)
+        print(f"=== Query executed successfully", file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"=== ERROR executing query: {e}", file=sys.stderr, flush=True)
+        import traceback
+        print(f"=== Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': str(e)}),
+            'isBase64Encoded': False
+        }
     
     news_list = []
     for row in cur.fetchall():
