@@ -226,28 +226,44 @@ export default function AdminTournaments() {
     if (!confirm('ВНИМАНИЕ! Удалить турнир? Это действие необратимо! Будут удалены все матчи, регистрации и чаты.')) return;
 
     try {
+      console.log('=== DELETE TOURNAMENT START ===');
+      console.log('Tournament ID:', tournamentId);
+      console.log('User ID:', user.id);
+
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      const requestBody = {
+        action: 'delete_tournament',
+        tournament_id: tournamentId
+      };
+      
+      console.log('Request body:', requestBody);
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Admin-Id': user.id.toString()
         },
-        body: JSON.stringify({
-          action: 'delete_tournament',
-          tournament_id: tournamentId
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response OK:', response.ok);
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok && data.success) {
+        console.log('SUCCESS: Tournament deleted');
         showNotification('success', 'Успех', data.message);
         loadTournaments();
       } else {
-        showNotification('error', 'Ошибка', data.error);
+        console.error('ERROR: Delete failed', data);
+        showNotification('error', 'Ошибка', data.error || 'Неизвестная ошибка');
       }
     } catch (error: any) {
+      console.error('EXCEPTION in handleDeleteTournament:', error);
+      console.error('Error stack:', error.stack);
       showNotification('error', 'Ошибка', error.message);
     }
   };
