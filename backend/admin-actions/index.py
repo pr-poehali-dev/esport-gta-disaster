@@ -2795,10 +2795,13 @@ def get_admin_tournaments(cur, conn) -> dict:
 def approve_registration(cur, conn, admin_id: str, body: dict) -> dict:
     """Одобряет регистрацию команды на турнир"""
     
-    registration_id = body.get('registration_id')
+    registration_id = body.get('registration_id') or body.get('application_id')
     approved = body.get('approved', True)
     
-    status = 'approved' if approved else 'rejected'
+    if approved is None or approved == 'pending':
+        status = 'pending'
+    else:
+        status = 'approved' if approved else 'rejected'
     
     # Получаем информацию о регистрации
     cur.execute(f"""
@@ -2830,14 +2833,14 @@ def approve_registration(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': f'Регистрация {status}'}),
+        'body': json.dumps({'success': True, 'message': f'Регистрация {status}'}),
         'isBase64Encoded': False
     }
 
 def reject_registration(cur, conn, admin_id: str, body: dict) -> dict:
     """Отклоняет регистрацию команды на турнир"""
     
-    registration_id = body.get('registration_id')
+    registration_id = body.get('registration_id') or body.get('application_id')
     
     # Получаем информацию о регистрации
     cur.execute(f"""
@@ -2869,7 +2872,7 @@ def reject_registration(cur, conn, admin_id: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Регистрация отклонена'}),
+        'body': json.dumps({'success': True, 'message': 'Регистрация отклонена'}),
         'isBase64Encoded': False
     }
 

@@ -65,9 +65,17 @@ export default function AdminTournamentApplications() {
     }
   };
 
-  const handleUpdateStatus = async (teamId: number, newStatus: string) => {
+  const handleUpdateStatus = async (applicationId: number, newStatus: string) => {
     try {
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
+      
+      let action = 'reject_registration';
+      if (newStatus === 'approved') {
+        action = 'approve_registration';
+      } else if (newStatus === 'pending') {
+        action = 'approve_registration';
+      }
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -75,10 +83,9 @@ export default function AdminTournamentApplications() {
           'X-Admin-Id': user.id.toString()
         },
         body: JSON.stringify({
-          action: 'update_application_status',
-          tournament_id: parseInt(id || '0'),
-          team_id: teamId,
-          status: newStatus
+          action,
+          application_id: applicationId,
+          approved: newStatus === 'approved'
         })
       });
 
@@ -178,7 +185,7 @@ export default function AdminTournamentApplications() {
                     {app.status === 'pending' && (
                       <>
                         <Button
-                          onClick={() => handleUpdateStatus(app.team_id, 'approved')}
+                          onClick={() => handleUpdateStatus(app.id, 'approved')}
                           size="sm"
                           className="bg-green-600 hover:bg-green-700"
                         >
@@ -186,7 +193,7 @@ export default function AdminTournamentApplications() {
                           Одобрить
                         </Button>
                         <Button
-                          onClick={() => handleUpdateStatus(app.team_id, 'rejected')}
+                          onClick={() => handleUpdateStatus(app.id, 'rejected')}
                           size="sm"
                           variant="outline"
                           className="border-red-500/50 text-red-400 hover:bg-red-500/20"
@@ -198,7 +205,7 @@ export default function AdminTournamentApplications() {
                     )}
                     {app.status === 'approved' && (
                       <Button
-                        onClick={() => handleUpdateStatus(app.team_id, 'pending')}
+                        onClick={() => handleUpdateStatus(app.id, 'pending')}
                         size="sm"
                         variant="outline"
                         className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
