@@ -1491,29 +1491,29 @@ def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
 def get_news(cur, conn, body: dict) -> dict:
     """Получает новости"""
     
-    limit = body.get('limit', 50)
-    offset = body.get('offset', 0)
+    limit = int(body.get('limit', 50))
+    offset = int(body.get('offset', 0))
     include_unpublished = body.get('include_unpublished', False)
     
     if include_unpublished:
-        cur.execute("""
+        cur.execute(f"""
             SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name, 
                    n.published, n.pinned, n.created_at, n.updated_at
             FROM t_p4831367_esport_gta_disaster.news n
             LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
             ORDER BY n.pinned DESC, n.created_at DESC
-            LIMIT %s OFFSET %s
-        """, (int(limit), int(offset)))
+            LIMIT {limit} OFFSET {offset}
+        """)
     else:
-        cur.execute("""
+        cur.execute(f"""
             SELECT n.id, n.title, n.content, n.image_url, n.author_id, u.username as author_name,
                    n.published, n.pinned, n.created_at, n.updated_at
             FROM t_p4831367_esport_gta_disaster.news n
             LEFT JOIN t_p4831367_esport_gta_disaster.users u ON n.author_id = u.id
             WHERE n.published = TRUE
             ORDER BY n.pinned DESC, n.created_at DESC
-            LIMIT %s OFFSET %s
-        """, (int(limit), int(offset)))
+            LIMIT {limit} OFFSET {offset}
+        """)
     
     news_list = []
     for row in cur.fetchall():
