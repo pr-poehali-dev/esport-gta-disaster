@@ -74,6 +74,8 @@ export default function AdminTournaments() {
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
       const userId = user?.id || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').id : '');
       
+      console.log('Loading tournaments, user ID:', userId);
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -86,12 +88,18 @@ export default function AdminTournaments() {
         })
       });
 
+      console.log('Tournaments response status:', response.status);
       const data = await response.json();
+      console.log('Tournaments data:', data);
       
-      if (response.ok) {
+      if (response.ok && data.tournaments) {
         setTournaments(data.tournaments || []);
+      } else {
+        console.error('Failed to load tournaments:', data);
+        showNotification('error', 'Ошибка', data.error || 'Не удалось загрузить турниры');
       }
     } catch (error: any) {
+      console.error('Exception loading tournaments:', error);
       showNotification('error', 'Ошибка', error.message);
     } finally {
       setLoading(false);
