@@ -1566,6 +1566,85 @@ def get_news(cur, conn, body: dict) -> dict:
         'isBase64Encoded': False
     }
 
+def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
+    """Создает новость с загрузкой изображения в S3"""
+    
+    if admin_role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав для создания новостей'}),
+            'isBase64Encoded': False
+        }
+    
+    title = body.get('title')
+    content = body.get('content')
+    image_base64 = body.get('image')
+    published = body.get('published', False)
+    
+    if not title or not content:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Заполните заголовок и содержание'}),
+            'isBase64Encoded': False
+        }
+    
+    try:
+        import boto3
+        import base64
+        import hashlib
+        from datetime import datetime
+        
+        image_url = None
+        
+        if image_base64:
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+            )
+            
+            image_data = base64.b64decode(image_base64)
+            file_hash = hashlib.md5(image_data).hexdigest()
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            file_key = f'news/{timestamp}_{file_hash}.jpg'
+            
+            s3.put_object(
+                Bucket='files',
+                Key=file_key,
+                Body=image_data,
+                ContentType='image/jpeg'
+            )
+            
+            image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
+        
+        cur.execute("""
+            INSERT INTO t_p4831367_esport_gta_disaster.news 
+            (title, content, image_url, author_id, published, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+            RETURNING id
+        """, (title, content, image_url, int(admin_id), published))
+        
+        result = cur.fetchone()
+        news_id = result['id'] if result else None
+        conn.commit()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': 'Новость создана', 'news_id': news_id}),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка создания новости: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
 def create_rule(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     """Создает правило"""
     
