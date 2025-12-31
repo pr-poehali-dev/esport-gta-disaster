@@ -1071,9 +1071,12 @@ def update_tournament_status(cur, conn, admin_id: str, body: dict) -> dict:
     tournament_id = body.get('tournament_id')
     status = body.get('status')
     
+    # Если турнир становится активным или завершенным, закрываем регистрацию
+    registration_open = True if status == 'upcoming' else False
+    
     cur.execute(f"""
         UPDATE tournaments
-        SET status = '{escape_sql(status)}'
+        SET status = '{escape_sql(status)}', registration_open = {registration_open}
         WHERE id = {int(tournament_id)}
     """)
     conn.commit()
