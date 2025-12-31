@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import EsportsBracket from '@/components/brackets/EsportsBracket';
 import CyberpunkBracket from '@/components/brackets/CyberpunkBracket';
 import MinimalBracket from '@/components/brackets/MinimalBracket';
+import ChampionshipBracket from '@/components/brackets/ChampionshipBracket';
 
 const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
@@ -315,6 +316,8 @@ export default function TournamentBracket() {
         return 'bg-black';
       case 'minimal':
         return 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50';
+      case 'championship':
+        return 'bg-[#0a0e1a]';
       default:
         return 'bg-[#0a0e1a]';
     }
@@ -330,6 +333,11 @@ export default function TournamentBracket() {
       return {
         outline: 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10',
         primary: 'bg-amber-500 hover:bg-amber-600 text-black font-bold'
+      };
+    } else if (bracketStyle === 'championship') {
+      return {
+        outline: 'border-white/10 text-white hover:bg-white/5',
+        primary: 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white'
       };
     }
     return {
@@ -397,6 +405,14 @@ export default function TournamentBracket() {
               )}
               {bracketStyle === 'minimal' && (
                 <MinimalBracket
+                  matches={matches}
+                  canEdit={canEdit}
+                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onEditMatch={setEditMatch}
+                />
+              )}
+              {bracketStyle === 'championship' && (
+                <ChampionshipBracket
                   matches={matches}
                   canEdit={canEdit}
                   onMatchClick={(match) => navigate(`/matches/${match.id}`)}

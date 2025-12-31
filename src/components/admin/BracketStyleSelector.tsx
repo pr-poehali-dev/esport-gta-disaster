@@ -52,6 +52,17 @@ const bracketStyles: BracketStyle[] = [
       secondary: '#64748b',
       accent: '#94a3b8'
     }
+  },
+  {
+    id: 'championship',
+    name: 'Championship',
+    description: 'Групповая стадия + плей-офф, премиум стиль',
+    preview: '🏆',
+    colors: {
+      primary: '#8b5cf6',
+      secondary: '#1a1f2e',
+      accent: '#ec4899'
+    }
   }
 ];
 
@@ -71,7 +82,7 @@ export default function BracketStyleSelector({ onSelect, onCancel }: BracketStyl
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {bracketStyles.map((style) => (
             <Card
               key={style.id}
