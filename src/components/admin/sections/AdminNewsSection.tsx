@@ -25,6 +25,7 @@ export function AdminNewsSection() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNews, setEditingNews] = useState<News | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -36,38 +37,60 @@ export function AdminNewsSection() {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString('ru-RU');
+    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  };
+
   useEffect(() => {
     loadNews();
   }, []);
 
   const loadNews = async () => {
+    addLog('=== НАЧАЛО ЗАГРУЗКИ НОВОСТЕЙ ===');
+    addLog(`User ID: ${user.id}`);
+    
     try {
+      const requestBody = { 
+        action: 'get_news',
+        include_unpublished: true,
+        limit: 100
+      };
+      
+      addLog(`Request body: ${JSON.stringify(requestBody)}`);
+      addLog(`Fetching: ${API_URL}`);
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Admin-Id': user.id?.toString() || '0'
         },
-        body: JSON.stringify({ 
-          action: 'get_news',
-          include_unpublished: true,
-          limit: 100
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      addLog(`Response status: ${response.status} ${response.statusText}`);
+      addLog(`Response ok: ${response.ok}`);
+      
       const data = await response.json();
+      addLog(`Response data: ${JSON.stringify(data).substring(0, 200)}...`);
       
       if (response.ok && data.news) {
+        addLog(`✅ Успешно загружено ${data.news.length} новостей`);
         setNews(data.news);
       } else {
+        addLog(`❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`);
         console.error('Failed to load news:', data);
         showNotification('error', 'Ошибка', data.error || 'Не удалось загрузить новости');
       }
     } catch (error: any) {
+      addLog(`❌ Exception: ${error.message}`);
+      addLog(`Stack: ${error.stack}`);
       console.error('Exception loading news:', error);
       showNotification('error', 'Ошибка', error.message);
     } finally {
       setLoading(false);
+      addLog('=== КОНЕЦ ЗАГРУЗКИ ===');
     }
   };
 
@@ -194,6 +217,24 @@ export function AdminNewsSection() {
           {showCreateForm ? 'Отменить' : 'Создать новость'}
         </Button>
       </div>
+
+      <Card className="p-4 bg-black/50">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-bold text-green-400">Логи загрузки</h3>
+          <Button size="sm" variant="outline" onClick={() => setLogs([])}>
+            Очистить
+          </Button>
+        </div>
+        <div className="bg-black/80 p-3 rounded font-mono text-xs text-green-400 max-h-[300px] overflow-y-auto">
+          {logs.length === 0 ? (
+            <div className="text-gray-500">Логи появятся здесь...</div>
+          ) : (
+            logs.map((log, i) => (
+              <div key={i} className="mb-1">{log}</div>
+            ))
+          )}
+        </div>
+      </Card>
 
       {showCreateForm && (
         <Card className="p-6">
