@@ -32,6 +32,8 @@ export default function AdminTournaments() {
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -222,13 +224,22 @@ export default function AdminTournaments() {
     }
   };
 
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+    console.log(message);
+  };
+
   const handleDeleteTournament = async (tournamentId: number) => {
     if (!confirm('ВНИМАНИЕ! Удалить турнир? Это действие необратимо! Будут удалены все матчи, регистрации и чаты.')) return;
 
+    setLogs([]);
+    setShowLogs(true);
+
     try {
-      console.log('=== DELETE TOURNAMENT START ===');
-      console.log('Tournament ID:', tournamentId);
-      console.log('User ID:', user.id);
+      addLog('=== DELETE TOURNAMENT START ===');
+      addLog(`Tournament ID: ${tournamentId}`);
+      addLog(`User ID: ${user.id}`);
 
       const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
       const requestBody = {
@@ -236,7 +247,7 @@ export default function AdminTournaments() {
         tournament_id: tournamentId
       };
       
-      console.log('Request body:', requestBody);
+      addLog(`Request body: ${JSON.stringify(requestBody)}`);
       
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -247,23 +258,23 @@ export default function AdminTournaments() {
         body: JSON.stringify(requestBody)
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response OK:', response.ok);
+      addLog(`Response status: ${response.status}`);
+      addLog(`Response OK: ${response.ok}`);
 
       const data = await response.json();
-      console.log('Response data:', data);
+      addLog(`Response data: ${JSON.stringify(data, null, 2)}`);
 
       if (response.ok && data.success) {
-        console.log('SUCCESS: Tournament deleted');
+        addLog('✅ SUCCESS: Tournament deleted');
         showNotification('success', 'Успех', data.message);
         loadTournaments();
       } else {
-        console.error('ERROR: Delete failed', data);
+        addLog(`❌ ERROR: Delete failed - ${JSON.stringify(data)}`);
         showNotification('error', 'Ошибка', data.error || 'Неизвестная ошибка');
       }
     } catch (error: any) {
-      console.error('EXCEPTION in handleDeleteTournament:', error);
-      console.error('Error stack:', error.stack);
+      addLog(`❌ EXCEPTION: ${error.message}`);
+      addLog(`Stack: ${error.stack}`);
       showNotification('error', 'Ошибка', error.message);
     }
   };
@@ -363,6 +374,45 @@ export default function AdminTournaments() {
               setSelectedTournamentId(null);
             }}
           />
+        )}
+
+        {showLogs && (
+          <div className="fixed bottom-4 right-4 w-[600px] max-h-[400px] bg-black/95 border border-purple-500/30 rounded-lg shadow-2xl z-50">
+            <div className="flex items-center justify-between p-3 border-b border-purple-500/30">
+              <h3 className="text-white font-semibold flex items-center gap-2">
+                <Icon name="Terminal" size={16} />
+                Логи удаления турнира
+              </h3>
+              <Button
+                onClick={() => setShowLogs(false)}
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white"
+              >
+                <Icon name="X" size={16} />
+              </Button>
+            </div>
+            <div className="p-3 overflow-y-auto max-h-[320px] font-mono text-xs">
+              {logs.length === 0 ? (
+                <p className="text-gray-500">Логи появятся здесь...</p>
+              ) : (
+                logs.map((log, index) => (
+                  <div
+                    key={index}
+                    className={`mb-1 ${
+                      log.includes('ERROR') || log.includes('❌')
+                        ? 'text-red-400'
+                        : log.includes('SUCCESS') || log.includes('✅')
+                        ? 'text-green-400'
+                        : 'text-gray-300'
+                    }`}
+                  >
+                    {log}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         )}
 
         <div className="space-y-4">
