@@ -32,7 +32,6 @@ export default function AdminTournaments() {
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [showLogs, setShowLogs] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
@@ -242,7 +241,6 @@ export default function AdminTournaments() {
     if (!confirm('ВНИМАНИЕ! Удалить турнир? Это действие необратимо! Будут удалены все матчи, регистрации и чаты.')) return;
 
     setLogs([]);
-    setShowLogs(true);
 
     try {
       addLog('=== DELETE TOURNAMENT START ===');
@@ -339,7 +337,9 @@ export default function AdminTournaments() {
 
   return (
     <div className="min-h-screen bg-[#0a0e1a] py-8 px-4">
-      <div className="container mx-auto max-w-7xl">
+      <div className="container mx-auto max-w-7xl flex gap-6">
+        {/* Основной контент */}
+        <div className="flex-1">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-white">Управление турнирами</h1>
           <div className="flex gap-3">
@@ -384,25 +384,34 @@ export default function AdminTournaments() {
           />
         )}
 
-        {showLogs && (
-          <div className="fixed bottom-4 right-4 w-[600px] max-h-[400px] bg-black/95 border border-purple-500/30 rounded-lg shadow-2xl z-50">
+        </div>
+
+        {/* Панель логов - всегда видна */}
+        <div className="w-[400px] flex-shrink-0">
+          <div className="sticky top-8 bg-[#1a1f2e]/80 backdrop-blur border border-purple-500/30 rounded-lg shadow-2xl">
             <div className="flex items-center justify-between p-3 border-b border-purple-500/30">
               <h3 className="text-white font-semibold flex items-center gap-2">
                 <Icon name="Terminal" size={16} />
-                Логи удаления турнира
+                Живые логи
               </h3>
-              <Button
-                onClick={() => setShowLogs(false)}
-                variant="ghost"
-                size="sm"
-                className="text-gray-400 hover:text-white"
-              >
-                <Icon name="X" size={16} />
-              </Button>
+              {logs.length > 0 && (
+                <Button
+                  onClick={() => setLogs([])}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white"
+                >
+                  <Icon name="Trash2" size={14} />
+                </Button>
+              )}
             </div>
-            <div className="p-3 overflow-y-auto max-h-[320px] font-mono text-xs">
+            <div className="p-3 overflow-y-auto h-[calc(100vh-200px)] font-mono text-xs">
               {logs.length === 0 ? (
-                <p className="text-gray-500">Логи появятся здесь...</p>
+                <div className="text-center py-8">
+                  <Icon name="Terminal" size={48} className="mx-auto text-gray-600 mb-3" />
+                  <p className="text-gray-500">Логи появятся здесь...</p>
+                  <p className="text-gray-600 text-xs mt-2">Попробуйте удалить турнир</p>
+                </div>
               ) : (
                 logs.map((log, index) => (
                   <div
@@ -421,7 +430,7 @@ export default function AdminTournaments() {
               )}
             </div>
           </div>
-        )}
+        </div>
 
         <div className="space-y-4">
           {tournaments.length === 0 ? (
@@ -450,6 +459,7 @@ export default function AdminTournaments() {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
