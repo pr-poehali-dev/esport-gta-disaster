@@ -722,10 +722,18 @@ def toggle_tournament_visibility(cur, conn, admin_id, body: dict) -> dict:
 
 def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
     """Мягкое удаление турнира - помечает как removed = 1"""
+    import sys
+    import traceback
+    
     try:
+        print(f"=== DELETE_TOURNAMENT called", file=sys.stderr, flush=True)
+        print(f"=== Body: {body}", file=sys.stderr, flush=True)
+        
         tournament_id = body.get('tournament_id')
+        print(f"=== Tournament ID: {tournament_id}", file=sys.stderr, flush=True)
         
         if not tournament_id:
+            print(f"=== ERROR: No tournament_id", file=sys.stderr, flush=True)
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -733,13 +741,16 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
                 'isBase64Encoded': False
             }
         
+        print(f"=== Executing UPDATE query...", file=sys.stderr, flush=True)
         cur.execute("""
             UPDATE t_p4831367_esport_gta_disaster.tournaments 
             SET removed = 1 
             WHERE id = %s
         """, (int(tournament_id),))
         
+        print(f"=== Committing transaction...", file=sys.stderr, flush=True)
         conn.commit()
+        print(f"=== SUCCESS: Tournament {tournament_id} marked as removed", file=sys.stderr, flush=True)
         
         return {
             'statusCode': 200,
@@ -752,11 +763,15 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
         }
         
     except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"=== EXCEPTION in delete_tournament:", file=sys.stderr, flush=True)
+        print(f"=== Error: {str(e)}", file=sys.stderr, flush=True)
+        print(f"=== Traceback: {error_trace}", file=sys.stderr, flush=True)
         conn.rollback()
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'Ошибка удаления турнира: {str(e)}'}),
+            'body': json.dumps({'error': f'Ошибка удаления турнира: {str(e)}', 'traceback': error_trace}),
             'isBase64Encoded': False
         }
 
