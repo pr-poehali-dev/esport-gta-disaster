@@ -387,8 +387,8 @@ export default function TournamentDetail() {
                               <span>{team.wins}W / {team.losses}L</span>
                               {team.is_captain && (
                                 <>
-                                  <span>•</span>
-                                  <span className="text-yellow-500 flex items-center gap-1">
+                                  <span key="dot">•</span>
+                                  <span key="captain" className="text-yellow-500 flex items-center gap-1">
                                     <Icon name="Crown" size={12} />
                                     Вы капитан
                                   </span>
