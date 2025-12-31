@@ -174,9 +174,12 @@ export default function TournamentDetail() {
     );
   }
 
-  const isRegistered = tournament.registered_teams?.some(t => 
+  const userRegistration = tournament.registered_teams?.find(t => 
     userTeams.some(ut => ut.id === t.team_id)
   );
+  
+  const isRegistered = !!userRegistration;
+  const registrationStatus = userRegistration?.status || null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -343,8 +346,25 @@ export default function TournamentDetail() {
                   </div>
                 ) : isRegistered ? (
                   <div className="text-center space-y-4">
-                    <Icon name="CheckCircle" size={48} className="mx-auto text-green-500" />
-                    <p className="text-sm text-muted-foreground">Вы уже зарегистрированы в этом турнире</p>
+                    {registrationStatus === 'approved' ? (
+                      <>
+                        <Icon name="CheckCircle" size={48} className="mx-auto text-green-500" />
+                        <p className="text-sm font-semibold text-green-500">Заявка одобрена</p>
+                        <p className="text-xs text-muted-foreground">Ваша команда допущена к участию</p>
+                      </>
+                    ) : registrationStatus === 'rejected' ? (
+                      <>
+                        <Icon name="XCircle" size={48} className="mx-auto text-red-500" />
+                        <p className="text-sm font-semibold text-red-500">Заявка отклонена</p>
+                        <p className="text-xs text-muted-foreground">К сожалению, ваша команда не прошла отбор</p>
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="Clock" size={48} className="mx-auto text-yellow-500" />
+                        <p className="text-sm font-semibold text-yellow-500">Заявка на рассмотрении</p>
+                        <p className="text-xs text-muted-foreground">Ожидайте решения администрации</p>
+                      </>
+                    )}
                   </div>
                 ) : !tournament.registration_open ? (
                   <div className="text-center space-y-4">
