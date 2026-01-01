@@ -15,6 +15,24 @@ interface Stats {
   total_teams: number;
 }
 
+interface Match {
+  id: number;
+  tournament_name: string;
+  round: number;
+  team1_name?: string;
+  team2_name?: string;
+  status: string;
+  scheduled_at?: string;
+}
+
+interface AdminLog {
+  id: number;
+  admin_name: string;
+  action: string;
+  timestamp: string;
+  details?: string;
+}
+
 export function AdminDashboardSection() {
   const [stats, setStats] = useState<Stats>({
     total_users: 0,
@@ -24,11 +42,15 @@ export function AdminDashboardSection() {
     active_mutes: 0,
     total_teams: 0,
   });
+  const [activeMatches, setActiveMatches] = useState<Match[]>([]);
+  const [recentLogs, setRecentLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     loadStats();
+    loadActiveMatches();
+    loadRecentLogs();
   }, []);
 
   const loadStats = async () => {
@@ -67,6 +89,52 @@ export function AdminDashboardSection() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadActiveMatches = async () => {
+    const adminId = getAdminId();
+    if (!adminId) return;
+
+    try {
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': adminId,
+        },
+        body: JSON.stringify({ action: 'get_active_matches', limit: 5 }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.matches) {
+        setActiveMatches(data.matches);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки матчей:', error);
+    }
+  };
+
+  const loadRecentLogs = async () => {
+    const adminId = getAdminId();
+    if (!adminId) return;
+
+    try {
+      const response = await fetch(ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': adminId,
+        },
+        body: JSON.stringify({ action: 'get_admin_logs', limit: 5 }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.logs) {
+        setRecentLogs(data.logs);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки логов:', error);
     }
   };
 
@@ -126,13 +194,53 @@ export function AdminDashboardSection() {
             </Card>
           </div>
 
-          <Card className="p-6 mt-6">
-            <h3 className="text-xl font-bold mb-4">Последние действия</h3>
-            <div className="space-y-1 text-sm text-muted-foreground">
-              <p>• Статистика обновлена</p>
-              <p>• Все системы работают в штатном режиме</p>
-            </div>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <Card className="p-6">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Icon name="Swords" size={24} className="text-primary" />
+                Активные матчи
+              </h3>
+              {activeMatches.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Нет активных матчей</p>
+              ) : (
+                <div className="space-y-3">
+                  {activeMatches.slice(0, 5).map((match) => (
+                    <div key={match.id} className="border-l-2 border-primary pl-3 py-1">
+                      <div className="text-sm font-medium">{match.tournament_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {match.team1_name || 'TBD'} vs {match.team2_name || 'TBD'}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Раунд {match.round} • {match.status === 'in_progress' ? 'Идёт сейчас' : 'Ожидает начала'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Icon name="Activity" size={24} className="text-secondary" />
+                Последние действия
+              </h3>
+              {recentLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Нет записей</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentLogs.slice(0, 5).map((log) => (
+                    <div key={log.id} className="border-l-2 border-secondary pl-3 py-1">
+                      <div className="text-sm font-medium">{log.admin_name}</div>
+                      <div className="text-xs text-muted-foreground">{log.action}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {new Date(log.timestamp).toLocaleString('ru-RU')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         </>
       )}
     </div>

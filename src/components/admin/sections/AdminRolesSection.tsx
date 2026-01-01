@@ -235,16 +235,75 @@ export default function AdminRolesSection() {
     );
   }
 
+  // Подсчёт администраторов по ролям
+  const roleStats = {
+    founder: staff.filter(s => s.role === 'founder').length,
+    admin: staff.filter(s => s.role === 'admin').length,
+    organizer: staff.filter(s => s.role === 'organizer').length,
+    referee: staff.filter(s => s.role === 'referee').length,
+  };
+
   return (
     <div className="space-y-6">
+      {/* Статистика ролей */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4 hover:shadow-lg transition-all border-purple-600/30 bg-purple-600/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+              <Icon name="Crown" size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{roleStats.founder}</p>
+              <p className="text-xs text-muted-foreground">Основатель</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 hover:shadow-lg transition-all border-red-600/30 bg-red-600/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
+              <Icon name="Shield" size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{roleStats.admin}</p>
+              <p className="text-xs text-muted-foreground">Администраторы</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 hover:shadow-lg transition-all border-blue-600/30 bg-blue-600/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+              <Icon name="Briefcase" size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{roleStats.organizer}</p>
+              <p className="text-xs text-muted-foreground">Организаторы</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 hover:shadow-lg transition-all border-cyan-600/30 bg-cyan-600/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-cyan-600 flex items-center justify-center">
+              <Icon name="Gavel" size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{roleStats.referee}</p>
+              <p className="text-xs text-muted-foreground">Судьи</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Icon name="Crown" size={24} />
+            <Icon name="UserPlus" size={24} />
             Управление ролями
           </CardTitle>
           <CardDescription>
-            Назначайте роли администраторов и модераторов
+            Назначайте роли администраторов, организаторов и судей
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -290,88 +349,147 @@ export default function AdminRolesSection() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Текущие администраторы</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Текущие администраторы</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              Всего: {staff.length}
+            </span>
+          </CardTitle>
+          <CardDescription>
+            Список всех пользователей с административными правами
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Пользователь</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Роль</TableHead>
-                <TableHead>Последняя активность</TableHead>
-                <TableHead>Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {staff.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="flex items-center gap-2">
-                    {member.avatar_url && (
-                      <img
-                        src={member.avatar_url}
-                        alt={member.nickname}
-                        className="w-8 h-8 rounded-full"
-                      />
-                    )}
-                    {member.nickname}
-                  </TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>{getRoleBadge(member.role)}</TableCell>
-                  <TableCell>
-                    {member.last_activity_at
-                      ? new Date(member.last_activity_at).toLocaleDateString('ru-RU')
-                      : 'Никогда'}
-                  </TableCell>
-                  <TableCell>
-                    {member.role !== 'founder' && (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRevokeRole(member.id)}
-                        disabled={loading}
-                      >
-                        <Icon name="UserMinus" size={16} className="mr-1" />
-                        Снять роль
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {staff.length === 0 ? (
+            <div className="text-center py-12">
+              <Icon name="UserX" className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Нет администраторов</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Пользователь</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Роль</TableHead>
+                    <TableHead>Дата назначения</TableHead>
+                    <TableHead className="text-right">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staff.map((member) => (
+                    <TableRow key={member.id} className="hover:bg-muted/20">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {member.avatar_url && (
+                            <img
+                              src={member.avatar_url}
+                              alt={member.nickname}
+                              className="w-8 h-8 rounded-full"
+                            />
+                          )}
+                          {member.nickname}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                      <TableCell>{getRoleBadge(member.role)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {member.created_at
+                          ? new Date(member.created_at).toLocaleDateString('ru-RU', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {member.role !== 'founder' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleRevokeRole(member.id)}
+                            disabled={loading}
+                          >
+                            <Icon name="UserMinus" size={16} className="mr-1" />
+                            Снять роль
+                          </Button>
+                        )}
+                        {member.role === 'founder' && (
+                          <span className="text-xs text-muted-foreground italic">
+                            Нельзя изменить
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Последние действия</CardTitle>
-          <CardDescription className="text-xs">История изменения ролей</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Icon name="History" size={24} />
+            Последние действия
+          </CardTitle>
+          <CardDescription>История изменения ролей и административных действий</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm">
-            {history.map((item) => (
-              <div key={item.id} className="flex justify-between items-center p-2 border-b">
-                <div className="flex-1">
-                  <span className="font-medium">{item.admin_name}</span>
-                  <span className="text-muted-foreground"> изменил роль </span>
-                  <span className="font-medium">{item.target_name}</span>
-                  <span className="text-muted-foreground"> с </span>
-                  <span className="text-xs">{getRoleBadge(item.old_role)}</span>
-                  <span className="text-muted-foreground"> на </span>
-                  <span className="text-xs">{getRoleBadge(item.new_role)}</span>
+          {history.length === 0 ? (
+            <div className="text-center py-12">
+              <Icon name="FileText" className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Нет записей</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {history.map((item, index) => (
+                <div 
+                  key={item.id} 
+                  className="flex gap-4 p-4 border-l-2 border-primary/30 hover:border-primary bg-card hover:bg-muted/20 transition-all"
+                >
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Icon name="UserCog" size={16} className="text-primary" />
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">{item.admin_name}</span>
+                      {item.admin_role && (
+                        <span className="text-xs">{getRoleBadge(item.admin_role)}</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {item.old_role && item.new_role ? (
+                        <>
+                          изменил роль <span className="font-medium text-foreground">{item.target_name}</span> с{' '}
+                          <span className="inline-block mx-1">{getRoleBadge(item.old_role)}</span> на{' '}
+                          <span className="inline-block mx-1">{getRoleBadge(item.new_role)}</span>
+                        </>
+                      ) : (
+                        <span>{item.action || 'Выполнил действие'}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Icon name="Clock" size={12} />
+                      {new Date(item.created_at).toLocaleString('ru-RU', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(item.created_at).toLocaleString('ru-RU', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

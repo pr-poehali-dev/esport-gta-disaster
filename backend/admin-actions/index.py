@@ -16,6 +16,20 @@ def escape_sql(value):
         return 'NULL'
     return str(value).replace("'", "''")
 
+def log_admin_action(cur, conn, admin_id: str, action_type: str, description: str, target_type: str = None, target_id: int = None):
+    """Логирование действий администраторов"""
+    try:
+        cur.execute(f"""
+            INSERT INTO t_p4831367_esport_gta_disaster.admin_action_logs
+            (admin_id, action_type, action_description, target_type, target_id, created_at)
+            VALUES ({int(admin_id)}, '{escape_sql(action_type)}', '{escape_sql(description)}', 
+                    {'NULL' if not target_type else f"'{escape_sql(target_type)}'"}, 
+                    {'NULL' if not target_id else int(target_id)}, NOW())
+        """)
+        conn.commit()
+    except Exception as e:
+        print(f"ERROR logging admin action: {e}", flush=True)
+
 def handler(event: dict, context) -> dict:
     """API для административных действий: бан, мут, отстранение от турниров"""
     
@@ -262,6 +276,10 @@ def handler(event: dict, context) -> dict:
                 return update_group_match(cur, conn, admin_id, body)
             elif action == 'finalize_group_stage':
                 return finalize_group_stage(cur, conn, admin_id, body)
+            elif action == 'get_active_matches':
+                return get_active_matches(cur, conn, body)
+            elif action == 'get_admin_logs':
+                return get_admin_logs(cur, conn, body)
             else:
                 print(f"=== UNKNOWN ACTION: {action}", file=sys.stderr, flush=True)
                 return {
@@ -2354,6 +2372,11 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
+    # Получаем информацию о пользователе
+    cur.execute(f"SELECT nickname FROM t_p4831367_esport_gta_disaster.users WHERE id = {int(user_id)}")
+    target_user = cur.fetchone()
+    target_nickname = target_user['nickname'] if target_user else 'Unknown'
+    
     cur.execute(f"""
         UPDATE users
         SET role = '{escape_sql(role)}'
@@ -2364,6 +2387,12 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
         INSERT INTO t_p4831367_esport_gta_disaster.role_history (user_id, assigned_by, role, action)
         VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(role)}', 'assigned')
     """)
+    
+    # Логируем действие
+    role_names = {'admin': 'Администратор', 'organizer': 'Организатор', 'referee': 'Судья', 'user': 'Пользователь'}
+    log_admin_action(cur, conn, admin_id, 'role_change', 
+                     f"Назначил роль '{role_names.get(role, role)}' пользователю {target_nickname}", 
+                     'user', int(user_id))
     
     conn.commit()
     
@@ -3914,6 +3943,117 @@ def get_all_users(cur, conn) -> dict:
         import sys, traceback
         error_msg = traceback.format_exc()
         print(f"ERROR in get_all_users: {error_msg}", file=sys.stderr, flush=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': str(e), 'traceback': error_msg}),
+            'isBase64Encoded': False
+        }
+
+def get_active_matches(cur, conn, body: dict) -> dict:
+    """Получить активные матчи для отображения на главной панели"""
+    try:
+        limit = body.get('limit', 10)
+        
+        cur.execute(f"""
+            SELECT 
+                bm.id,
+                t.name as tournament_name,
+                bm.round,
+                bm.match_number,
+                t1.name as team1_name,
+                t2.name as team2_name,
+                bm.team1_score,
+                bm.team2_score,
+                bm.status,
+                bm.scheduled_at
+            FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+            JOIN t_p4831367_esport_gta_disaster.tournament_brackets tb ON bm.bracket_id = tb.id
+            JOIN t_p4831367_esport_gta_disaster.tournaments t ON tb.tournament_id = t.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+            WHERE bm.status IN ('pending', 'in_progress')
+            AND (t.removed = 0 OR t.removed IS NULL)
+            ORDER BY bm.scheduled_at ASC NULLS LAST, bm.id DESC
+            LIMIT {limit}
+        """)
+        
+        matches = [dict(row) for row in cur.fetchall()]
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'matches': matches}, default=str),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        import sys, traceback
+        error_msg = traceback.format_exc()
+        print(f"ERROR in get_active_matches: {error_msg}", file=sys.stderr, flush=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': str(e), 'traceback': error_msg}),
+            'isBase64Encoded': False
+        }
+
+def get_admin_logs(cur, conn, body: dict) -> dict:
+    """Получить последние действия администраторов и судей"""
+    try:
+        limit = body.get('limit', 20)
+        
+        # Пробуем получить логи из admin_action_logs
+        cur.execute(f"""
+            SELECT 
+                al.id,
+                u.nickname as admin_name,
+                u.role as admin_role,
+                al.action_description as action,
+                al.created_at as timestamp,
+                al.action_type,
+                al.target_type
+            FROM t_p4831367_esport_gta_disaster.admin_action_logs al
+            JOIN t_p4831367_esport_gta_disaster.users u ON al.admin_id = u.id
+            WHERE u.role IN ('admin', 'founder', 'organizer', 'referee')
+            ORDER BY al.created_at DESC
+            LIMIT {limit}
+        """)
+        
+        logs_from_table = [dict(row) for row in cur.fetchall()]
+        
+        # Если таблица пустая, получаем логи из истории ролей как fallback
+        if not logs_from_table:
+            cur.execute(f"""
+                SELECT 
+                    rh.id,
+                    u_admin.nickname as admin_name,
+                    u_admin.role as admin_role,
+                    CASE 
+                        WHEN rh.action = 'assigned' THEN CONCAT('Назначил роль ', rh.role)
+                        WHEN rh.action = 'revoked' THEN 'Снял роль с пользователя'
+                        ELSE rh.action
+                    END as action,
+                    rh.created_at as timestamp
+                FROM t_p4831367_esport_gta_disaster.role_history rh
+                JOIN t_p4831367_esport_gta_disaster.users u_admin ON rh.assigned_by = u_admin.id
+                WHERE u_admin.role IN ('admin', 'founder', 'organizer', 'referee')
+                ORDER BY rh.created_at DESC
+                LIMIT {limit}
+            """)
+            logs = [dict(row) for row in cur.fetchall()]
+        else:
+            logs = logs_from_table
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'logs': logs}, default=str),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        import sys, traceback
+        error_msg = traceback.format_exc()
+        print(f"ERROR in get_admin_logs: {error_msg}", file=sys.stderr, flush=True)
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
