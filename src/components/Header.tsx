@@ -85,8 +85,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-r from-background via-background/98 to-background backdrop-blur-xl border-b border-primary/20 shadow-lg shadow-primary/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-6">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center h-16 gap-4">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {!isHomePage && (
               <Button
                 variant="ghost"
@@ -103,7 +103,9 @@ export default function Header() {
             </div>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-6 flex-1 justify-center">
+          <div className="flex-1" />
+
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
             {navLinks.map((link) => (
               <a
                 key={link.label}
@@ -118,7 +120,7 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-2 xl:gap-3 flex-shrink-0">
             {!isAuthenticated ? (
               <>
                 <Button
