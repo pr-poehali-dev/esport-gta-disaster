@@ -9,3 +9,4 @@ export { AdminSupportSection as SupportSection } from './sections/AdminSupportSe
 export { AdminSettingsSection as SettingsSection } from './sections/AdminSettingsSection';
 export { default as RolesSection } from './sections/AdminRolesSection';
 export { default as DiscussionsSection } from './sections/AdminDiscussionsSection';
+export { default as MatchesSection } from './sections/AdminMatchesSection';

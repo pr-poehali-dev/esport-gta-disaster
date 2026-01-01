@@ -202,6 +202,7 @@ export default function AdminRolesSection() {
       founder: 'bg-purple-600 text-white',
       organizer: 'bg-blue-600 text-white',
       admin: 'bg-red-600 text-white',
+      referee: 'bg-cyan-600 text-white',
       user: 'bg-gray-600 text-white',
     };
 
@@ -209,6 +210,7 @@ export default function AdminRolesSection() {
       founder: 'Основатель',
       organizer: 'Организатор',
       admin: 'Администратор',
+      referee: 'Судья',
       user: 'Пользователь',
     };
 
@@ -272,6 +274,7 @@ export default function AdminRolesSection() {
                 <SelectContent>
                   <SelectItem value="admin">Администратор</SelectItem>
                   <SelectItem value="organizer">Организатор</SelectItem>
+                  <SelectItem value="referee">Судья</SelectItem>
                   <SelectItem value="user">Пользователь</SelectItem>
                 </SelectContent>
               </Select>

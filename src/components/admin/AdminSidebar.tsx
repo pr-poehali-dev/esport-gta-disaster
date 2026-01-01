@@ -71,6 +71,14 @@ export default function AdminSidebar({ activeSection, setActiveSection, onLogout
           Турниры
         </Button>
         <Button
+          variant={activeSection === 'matches' ? 'default' : 'ghost'}
+          className="w-full justify-start"
+          onClick={() => setActiveSection('matches')}
+        >
+          <Icon name="Swords" size={20} className="mr-2" />
+          Матчи
+        </Button>
+        <Button
           variant={activeSection === 'news' ? 'default' : 'ghost'}
           className="w-full justify-start"
           onClick={() => setActiveSection('news')}

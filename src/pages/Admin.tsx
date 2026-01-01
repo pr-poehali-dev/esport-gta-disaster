@@ -17,6 +17,7 @@ import {
   SettingsSection,
   RolesSection,
   DiscussionsSection,
+  MatchesSection,
 } from '@/components/admin/AdminSections';
 
 export default function Admin() {
@@ -33,7 +34,7 @@ export default function Admin() {
       const userData = JSON.parse(savedUser);
       setUser(userData);
       
-      if (!['admin', 'founder', 'moderator'].includes(userData.role)) {
+      if (!['admin', 'founder', 'organizer', 'referee'].includes(userData.role)) {
         toast({
           title: 'Доступ запрещен',
           description: 'У вас нет прав администратора',
@@ -146,6 +147,7 @@ export default function Admin() {
           {activeSection === 'news' && <NewsSection />}
           {activeSection === 'roles' && <RolesSection />}
           {activeSection === 'discussions' && <DiscussionsSection />}
+          {activeSection === 'matches' && <MatchesSection />}
           {activeSection === 'moderation' && <ModerationSection />}
           {activeSection === 'support' && <SupportSection />}
           {activeSection === 'settings' && <SettingsSection />}

@@ -117,7 +117,7 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        if not admin_role or admin_role['role'] not in ['admin', 'founder', 'organizer']:
+        if not admin_role or admin_role['role'] not in ['admin', 'founder', 'organizer', 'referee']:
             cur.close()
             conn.close()
             return {
@@ -2346,7 +2346,7 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     user_id = body.get('user_id')
     role = body.get('role')
     
-    if role not in ['admin', 'organizer', 'user']:
+    if role not in ['admin', 'organizer', 'referee', 'user']:
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},

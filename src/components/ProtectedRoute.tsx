@@ -36,7 +36,8 @@ export default function ProtectedRoute({
         if (requireAdmin) {
           const isAdmin = userData.role === 'admin' || 
                          userData.role === 'founder' || 
-                         userData.role === 'organizer';
+                         userData.role === 'organizer' ||
+                         userData.role === 'referee';
           
           if (!isAdmin) {
             navigate('/');

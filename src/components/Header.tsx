@@ -26,7 +26,7 @@ export default function Header() {
     }
   }, []);
 
-  const isAdmin = userRole === 'admin' || userRole === 'founder' || userRole === 'organizer';
+  const isAdmin = userRole === 'admin' || userRole === 'founder' || userRole === 'organizer' || userRole === 'referee';
 
   const isHomePage = location.pathname === '/';
   const canGoBack = window.history.length > 1 && !isHomePage;
