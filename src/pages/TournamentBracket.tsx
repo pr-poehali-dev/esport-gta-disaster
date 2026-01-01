@@ -16,6 +16,7 @@ import EsportsBracket from '@/components/brackets/EsportsBracket';
 import CyberpunkBracket from '@/components/brackets/CyberpunkBracket';
 import MinimalBracket from '@/components/brackets/MinimalBracket';
 import ChampionshipBracket from '@/components/brackets/ChampionshipBracket';
+import MatchManagementDialog from '@/components/match/MatchManagementDialog';
 
 const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
@@ -43,6 +44,7 @@ export default function TournamentBracket() {
   const [editMatch, setEditMatch] = useState<Match | null>(null);
   const [format, setFormat] = useState<string>('single-elimination');
   const [bracketStyle, setBracketStyle] = useState<string>('esports');
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -211,7 +213,7 @@ export default function TournamentBracket() {
       
       <div 
         className="bg-gradient-to-br from-purple-900/40 via-purple-800/30 to-purple-900/40 backdrop-blur-sm rounded-xl border-2 border-purple-500/30 p-4 cursor-pointer hover:border-purple-400/60 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:scale-105 hover:-translate-y-1"
-        onClick={() => navigate(`/matches/${match.id}`)}
+        onClick={() => setSelectedMatchId(match.id)}
       >
         <div className="space-y-2">
           <div 
@@ -391,7 +393,7 @@ export default function TournamentBracket() {
                 <EsportsBracket
                   matches={matches}
                   canEdit={canEdit}
-                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onMatchClick={(match) => setSelectedMatchId(match.id)}
                   onEditMatch={setEditMatch}
                 />
               )}
@@ -399,7 +401,7 @@ export default function TournamentBracket() {
                 <CyberpunkBracket
                   matches={matches}
                   canEdit={canEdit}
-                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onMatchClick={(match) => setSelectedMatchId(match.id)}
                   onEditMatch={setEditMatch}
                 />
               )}
@@ -407,7 +409,7 @@ export default function TournamentBracket() {
                 <MinimalBracket
                   matches={matches}
                   canEdit={canEdit}
-                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onMatchClick={(match) => setSelectedMatchId(match.id)}
                   onEditMatch={setEditMatch}
                 />
               )}
@@ -415,7 +417,7 @@ export default function TournamentBracket() {
                 <ChampionshipBracket
                   matches={matches}
                   canEdit={canEdit}
-                  onMatchClick={(match) => navigate(`/matches/${match.id}`)}
+                  onMatchClick={(match) => setSelectedMatchId(match.id)}
                   onEditMatch={setEditMatch}
                 />
               )}
@@ -423,6 +425,12 @@ export default function TournamentBracket() {
           )}
         </div>
       </main>
+
+      <MatchManagementDialog
+        matchId={selectedMatchId}
+        onClose={() => setSelectedMatchId(null)}
+        onUpdate={loadBracket}
+      />
 
       {editMatch && (
         <Dialog open={!!editMatch} onOpenChange={() => setEditMatch(null)}>

@@ -14,6 +14,7 @@ import EsportsBracket from '@/components/brackets/EsportsBracket';
 import CyberpunkBracket from '@/components/brackets/CyberpunkBracket';
 import MinimalBracket from '@/components/brackets/MinimalBracket';
 import ChampionshipBracket from '@/components/brackets/ChampionshipBracket';
+import MatchManagementDialog from '@/components/match/MatchManagementDialog';
 
 const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
 
@@ -39,6 +40,7 @@ export default function TournamentBracketFullscreen() {
   const [userRole, setUserRole] = useState<string>('');
   const [editMatch, setEditMatch] = useState<Match | null>(null);
   const [bracketStyle, setBracketStyle] = useState<string>('esports');
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -249,7 +251,7 @@ export default function TournamentBracketFullscreen() {
               <EsportsBracket
                 matches={matches}
                 canEdit={canEdit}
-                onMatchClick={() => {}}
+                onMatchClick={(match) => setSelectedMatchId(match.id)}
                 onEditMatch={setEditMatch}
               />
             )}
@@ -257,7 +259,7 @@ export default function TournamentBracketFullscreen() {
               <CyberpunkBracket
                 matches={matches}
                 canEdit={canEdit}
-                onMatchClick={() => {}}
+                onMatchClick={(match) => setSelectedMatchId(match.id)}
                 onEditMatch={setEditMatch}
               />
             )}
@@ -265,7 +267,7 @@ export default function TournamentBracketFullscreen() {
               <MinimalBracket
                 matches={matches}
                 canEdit={canEdit}
-                onMatchClick={() => {}}
+                onMatchClick={(match) => setSelectedMatchId(match.id)}
                 onEditMatch={setEditMatch}
               />
             )}
@@ -273,13 +275,19 @@ export default function TournamentBracketFullscreen() {
               <ChampionshipBracket
                 matches={matches}
                 canEdit={canEdit}
-                onMatchClick={() => {}}
+                onMatchClick={(match) => setSelectedMatchId(match.id)}
                 onEditMatch={setEditMatch}
               />
             )}
           </>
         )}
       </main>
+
+      <MatchManagementDialog
+        matchId={selectedMatchId}
+        onClose={() => setSelectedMatchId(null)}
+        onUpdate={loadBracket}
+      />
 
       {editMatch && (
         <Dialog open={!!editMatch} onOpenChange={() => setEditMatch(null)}>

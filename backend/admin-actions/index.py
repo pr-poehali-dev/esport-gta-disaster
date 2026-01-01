@@ -284,6 +284,14 @@ def handler(event: dict, context) -> dict:
                 return get_active_matches(cur, conn, body)
             elif action == 'get_admin_logs':
                 return get_admin_logs(cur, conn, body)
+            elif action == 'get_match_details':
+                return get_match_details(cur, conn, body)
+            elif action == 'submit_match_score':
+                return submit_match_score(cur, conn, body)
+            elif action == 'reset_match_score':
+                return reset_match_score(cur, conn, admin_id, body)
+            elif action == 'confirm_match':
+                return confirm_match(cur, conn, admin_id, body)
             else:
                 print(f"=== UNKNOWN ACTION: {action}", file=sys.stderr, flush=True)
                 return {
@@ -2698,6 +2706,314 @@ def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'success': True, 'message': 'Комментарий добавлен', 'comment_id': comment_id}),
+        'isBase64Encoded': False
+    }
+
+def get_match_details(cur, conn, body: dict) -> dict:
+    """Получает подробную информацию о матче"""
+    match_id = body.get('match_id')
+    user_id = body.get('user_id')
+    
+    if not match_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'match_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute(f"""
+        SELECT bm.id, bm.round, bm.match_number, bm.team1_id, bm.team2_id, 
+               bm.team1_score, bm.team2_score, bm.winner_id, bm.status,
+               bm.team1_reported_score, bm.team2_reported_score,
+               bm.moderator_verified, bm.scheduled_at, bm.map_name,
+               t1.name as team1_name, t1.logo_url as team1_logo, t1.captain_id as team1_captain,
+               t2.name as team2_name, t2.logo_url as team2_logo, t2.captain_id as team2_captain,
+               tour.name as tournament_name, tour.id as tournament_id
+        FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.tournament_brackets tb ON bm.bracket_id = tb.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.tournaments tour ON tb.tournament_id = tour.id
+        WHERE bm.id = {int(match_id)}
+    """)
+    
+    match_data = cur.fetchone()
+    
+    if not match_data:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Матч не найден'}),
+            'isBase64Encoded': False
+        }
+    
+    is_captain = False
+    captain_team_id = None
+    if user_id:
+        if match_data['team1_captain'] == int(user_id):
+            is_captain = True
+            captain_team_id = match_data['team1_id']
+        elif match_data['team2_captain'] == int(user_id):
+            is_captain = True
+            captain_team_id = match_data['team2_id']
+    
+    result = {
+        'id': match_data['id'],
+        'round': match_data['round'],
+        'match_number': match_data['match_number'],
+        'team1': {
+            'id': match_data['team1_id'],
+            'name': match_data['team1_name'],
+            'logo_url': match_data['team1_logo'],
+            'captain_id': match_data['team1_captain']
+        } if match_data['team1_id'] else None,
+        'team2': {
+            'id': match_data['team2_id'],
+            'name': match_data['team2_name'],
+            'logo_url': match_data['team2_logo'],
+            'captain_id': match_data['team2_captain']
+        } if match_data['team2_id'] else None,
+        'score_team1': match_data['team1_score'],
+        'score_team2': match_data['team2_score'],
+        'reported_team1': match_data['team1_reported_score'],
+        'reported_team2': match_data['team2_reported_score'],
+        'winner_id': match_data['winner_id'],
+        'status': match_data['status'],
+        'moderator_verified': match_data['moderator_verified'],
+        'scheduled_at': match_data['scheduled_at'].isoformat() if match_data['scheduled_at'] else None,
+        'map_name': match_data['map_name'],
+        'tournament_name': match_data['tournament_name'],
+        'tournament_id': match_data['tournament_id'],
+        'is_captain': is_captain,
+        'captain_team_id': captain_team_id
+    }
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'match': result}),
+        'isBase64Encoded': False
+    }
+
+def submit_match_score(cur, conn, body: dict) -> dict:
+    """Капитан команды отправляет результат матча"""
+    match_id = body.get('match_id')
+    user_id = body.get('user_id')
+    team_score = body.get('team_score')
+    opponent_score = body.get('opponent_score')
+    
+    if not all([match_id, user_id, team_score is not None, opponent_score is not None]):
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Все поля обязательны'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute(f"""
+        SELECT bm.team1_id, bm.team2_id, t1.captain_id as team1_captain, t2.captain_id as team2_captain
+        FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+        LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+        WHERE bm.id = {int(match_id)}
+    """)
+    
+    match_data = cur.fetchone()
+    
+    if not match_data:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Матч не найден'}),
+            'isBase64Encoded': False
+        }
+    
+    is_team1_captain = match_data['team1_captain'] == int(user_id)
+    is_team2_captain = match_data['team2_captain'] == int(user_id)
+    
+    if not is_team1_captain and not is_team2_captain:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Только капитан команды может отправлять результат'}),
+            'isBase64Encoded': False
+        }
+    
+    if is_team1_captain:
+        cur.execute(f"""
+            UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+            SET team1_reported_score = {int(team_score)},
+                team2_reported_score = {int(opponent_score)},
+                updated_at = NOW()
+            WHERE id = {int(match_id)}
+        """)
+    else:
+        cur.execute(f"""
+            UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+            SET team1_reported_score = {int(opponent_score)},
+                team2_reported_score = {int(team_score)},
+                updated_at = NOW()
+            WHERE id = {int(match_id)}
+        """)
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Результат отправлен на проверку'}),
+        'isBase64Encoded': False
+    }
+
+def reset_match_score(cur, conn, admin_id: str, body: dict) -> dict:
+    """Судья сбрасывает счет матча"""
+    match_id = body.get('match_id')
+    
+    if not match_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'match_id обязателен'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+        SET team1_score = NULL,
+            team2_score = NULL,
+            team1_reported_score = NULL,
+            team2_reported_score = NULL,
+            winner_id = NULL,
+            moderator_verified = FALSE,
+            status = 'pending',
+            updated_at = NOW()
+        WHERE id = {int(match_id)}
+    """)
+    
+    conn.commit()
+    
+    log_admin_action(cur, conn, admin_id, 'reset_match', f'Сбросил счет матча #{match_id}', 'match', int(match_id))
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Счет матча сброшен'}),
+        'isBase64Encoded': False
+    }
+
+def confirm_match(cur, conn, admin_id: str, body: dict) -> dict:
+    """Судья подтверждает результат матча и продвигает победителя"""
+    match_id = body.get('match_id')
+    team1_score = body.get('team1_score')
+    team2_score = body.get('team2_score')
+    
+    if not all([match_id, team1_score is not None, team2_score is not None]):
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Все поля обязательны'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute(f"""
+        SELECT bracket_id, round, match_number, team1_id, team2_id
+        FROM t_p4831367_esport_gta_disaster.bracket_matches
+        WHERE id = {int(match_id)}
+    """)
+    
+    match_data = cur.fetchone()
+    
+    if not match_data:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Матч не найден'}),
+            'isBase64Encoded': False
+        }
+    
+    winner_id = match_data['team1_id'] if int(team1_score) > int(team2_score) else match_data['team2_id']
+    
+    if int(team1_score) == int(team2_score):
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Счет не может быть равным'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+        SET team1_score = {int(team1_score)},
+            team2_score = {int(team2_score)},
+            winner_id = {winner_id},
+            moderator_verified = TRUE,
+            status = 'completed',
+            completed_at = NOW(),
+            updated_at = NOW()
+        WHERE id = {int(match_id)}
+    """)
+    
+    next_round = match_data['round'] + 1
+    next_match_number = (match_data['match_number'] + 1) // 2
+    is_team1 = (match_data['match_number'] % 2 == 1)
+    team_column = 'team1_id' if is_team1 else 'team2_id'
+    
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.bracket_matches
+        SET {team_column} = {winner_id}, updated_at = NOW()
+        WHERE bracket_id = {match_data['bracket_id']} 
+        AND round = {next_round} 
+        AND match_number = {next_match_number}
+    """)
+    
+    conn.commit()
+    
+    log_admin_action(cur, conn, admin_id, 'confirm_match', f'Подтвердил результат матча #{match_id}', 'match', int(match_id))
+    
+    try:
+        cur.execute(f"""
+            SELECT t1.name as team1_name, t2.name as team2_name, tw.name as winner_name,
+                   tour.name as tournament_name, tour.id as tournament_id
+            FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams tw ON bm.winner_id = tw.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.tournament_brackets tb ON bm.bracket_id = tb.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.tournaments tour ON tb.tournament_id = tour.id
+            WHERE bm.id = {int(match_id)}
+        """)
+        match_info = cur.fetchone()
+        
+        if match_info and match_data['team1_id'] and match_data['team2_id']:
+            all_members = []
+            cur.execute(f"SELECT user_id FROM t_p4831367_esport_gta_disaster.team_members WHERE team_id = {match_data['team1_id']} AND status = 'active'")
+            all_members.extend([row['user_id'] for row in cur.fetchall()])
+            cur.execute(f"SELECT user_id FROM t_p4831367_esport_gta_disaster.team_members WHERE team_id = {match_data['team2_id']} AND status = 'active'")
+            all_members.extend([row['user_id'] for row in cur.fetchall()])
+            
+            for user_id in all_members:
+                cur.execute(f"""
+                    INSERT INTO t_p4831367_esport_gta_disaster.notifications 
+                    (user_id, type, title, message, link, read, created_at)
+                    VALUES (
+                        {user_id},
+                        'match_result',
+                        'Матч завершен',
+                        'Матч в турнире "{escape_sql(match_info['tournament_name'])}" завершен. Победитель: {escape_sql(match_info['winner_name'])}',
+                        '/tournaments/{match_info['tournament_id']}/bracket',
+                        false,
+                        NOW()
+                    )
+                """)
+            conn.commit()
+    except Exception as e:
+        print(f"Warning: Failed to send notifications: {str(e)}")
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Матч подтвержден, победитель продвинут'}),
         'isBase64Encoded': False
     }
 
