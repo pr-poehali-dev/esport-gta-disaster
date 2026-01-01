@@ -105,14 +105,14 @@ export default function Header() {
 
           <div className="flex-1" />
 
-          <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
+          <nav className="hidden lg:flex items-center gap-3">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-sm font-bold text-muted-foreground hover:text-primary transition-all duration-300 uppercase tracking-wider relative group whitespace-nowrap hover:scale-105"
+                className="text-xs font-bold text-muted-foreground hover:text-primary transition-all duration-300 uppercase tracking-wide relative group whitespace-nowrap hover:scale-105"
               >
                 {link.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary group-hover:w-full transition-all duration-300" />
@@ -120,7 +120,7 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center gap-2 xl:gap-3 flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
             {!isAuthenticated ? (
               <>
                 <Button
