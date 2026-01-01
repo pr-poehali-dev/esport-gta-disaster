@@ -215,6 +215,90 @@ export default function Discussions() {
     }
   };
 
+  const handleTogglePin = async (discussionId: number, currentPinned: boolean) => {
+    setLoading(true);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          action: currentPinned ? 'unpin_discussion' : 'pin_discussion',
+          discussion_id: discussionId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно',
+          description: currentPinned ? 'Обсуждение откреплено' : 'Обсуждение закреплено',
+        });
+        loadDiscussion(discussionId);
+        loadDiscussions();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось изменить статус',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleLock = async (discussionId: number, currentLocked: boolean) => {
+    setLoading(true);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          action: currentLocked ? 'unlock_discussion' : 'lock_discussion',
+          discussion_id: discussionId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно',
+          description: currentLocked ? 'Обсуждение разблокировано' : 'Обсуждение заблокировано',
+        });
+        loadDiscussion(discussionId);
+        loadDiscussions();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось изменить статус',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredDiscussions = discussions.filter(
     (d) =>
       d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -325,17 +409,41 @@ export default function Discussions() {
               <Card>
                 <CardHeader className="border-b">
                   <div className="space-y-3">
-                    <div className="flex items-start gap-2">
-                      {selectedDiscussion.is_pinned && (
-                        <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                          <Icon name="Pin" className="h-3.5 w-3.5" />
-                          Закреплено
-                        </div>
-                      )}
-                      {selectedDiscussion.is_locked && (
-                        <div className="flex items-center gap-1.5 px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">
-                          <Icon name="Lock" className="h-3.5 w-3.5" />
-                          Закрыто
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 flex-wrap">
+                        {selectedDiscussion.is_pinned && (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                            <Icon name="Pin" className="h-3.5 w-3.5" />
+                            Закреплено
+                          </div>
+                        )}
+                        {selectedDiscussion.is_locked && (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">
+                            <Icon name="Lock" className="h-3.5 w-3.5" />
+                            Закрыто
+                          </div>
+                        )}
+                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTogglePin(selectedDiscussion.id, selectedDiscussion.is_pinned)}
+                            disabled={loading}
+                          >
+                            <Icon name={selectedDiscussion.is_pinned ? "PinOff" : "Pin"} size={14} className="mr-1" />
+                            {selectedDiscussion.is_pinned ? 'Открепить' : 'Закрепить'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleToggleLock(selectedDiscussion.id, selectedDiscussion.is_locked)}
+                            disabled={loading}
+                          >
+                            <Icon name={selectedDiscussion.is_locked ? "Unlock" : "Lock"} size={14} className="mr-1" />
+                            {selectedDiscussion.is_locked ? 'Разблокировать' : 'Заблокировать'}
+                          </Button>
                         </div>
                       )}
                     </div>

@@ -228,8 +228,12 @@ def handler(event: dict, context) -> dict:
                 return get_discussion(cur, conn, body)
             elif action == 'lock_discussion':
                 return lock_discussion(cur, conn, body)
+            elif action == 'unlock_discussion':
+                return unlock_discussion(cur, conn, body)
             elif action == 'pin_discussion':
                 return pin_discussion(cur, conn, body)
+            elif action == 'unpin_discussion':
+                return unpin_discussion(cur, conn, body)
             elif action == 'delete_discussion':
                 return delete_discussion(cur, conn, body)
             elif action == 'edit_discussion':
@@ -2937,7 +2941,7 @@ def lock_discussion(cur, conn, body: dict) -> dict:
     discussion_id = body.get('discussion_id')
     
     cur.execute(f"""
-        UPDATE discussions
+        UPDATE t_p4831367_esport_gta_disaster.discussions
         SET locked = TRUE
         WHERE id = {int(discussion_id)}
     """)
@@ -2950,13 +2954,32 @@ def lock_discussion(cur, conn, body: dict) -> dict:
         'isBase64Encoded': False
     }
 
+def unlock_discussion(cur, conn, body: dict) -> dict:
+    """Разблокирует обсуждение"""
+    
+    discussion_id = body.get('discussion_id')
+    
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.discussions
+        SET locked = FALSE
+        WHERE id = {int(discussion_id)}
+    """)
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Обсуждение разблокировано'}),
+        'isBase64Encoded': False
+    }
+
 def pin_discussion(cur, conn, body: dict) -> dict:
     """Закрепляет обсуждение"""
     
     discussion_id = body.get('discussion_id')
     
     cur.execute(f"""
-        UPDATE discussions
+        UPDATE t_p4831367_esport_gta_disaster.discussions
         SET pinned = TRUE
         WHERE id = {int(discussion_id)}
     """)
@@ -2966,6 +2989,25 @@ def pin_discussion(cur, conn, body: dict) -> dict:
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'message': 'Обсуждение закреплено'}),
+        'isBase64Encoded': False
+    }
+
+def unpin_discussion(cur, conn, body: dict) -> dict:
+    """Открепляет обсуждение"""
+    
+    discussion_id = body.get('discussion_id')
+    
+    cur.execute(f"""
+        UPDATE t_p4831367_esport_gta_disaster.discussions
+        SET pinned = FALSE
+        WHERE id = {int(discussion_id)}
+    """)
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'message': 'Обсуждение откреплено'}),
         'isBase64Encoded': False
     }
 

@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
-import SnowEffect from "./components/SnowEffect";
 import NotificationSystem from "./components/NotificationSystem";
 import AchievementSystem from "./components/AchievementSystem";
 import ServerLimitNotification from "./components/ServerLimitNotification";
@@ -54,7 +53,6 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SnowEffect />
         <NotificationSystem />
         <AchievementSystem />
         <ServerLimitNotification />
