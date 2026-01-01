@@ -2476,18 +2476,21 @@ def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     user_id = body.get('user_id')
     
     cur.execute(f"""
-        SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(user_id)}'
+        SELECT role, nickname FROM t_p4831367_esport_gta_disaster.users WHERE id = '{escape_sql(user_id)}'
     """)
     
-    current_role = cur.fetchone()
+    current_user = cur.fetchone()
     
-    if not current_role:
+    if not current_user:
         return {
             'statusCode': 404,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({'error': 'Пользователь не найден'}),
             'isBase64Encoded': False
         }
+    
+    old_role = current_user['role']
+    user_nickname = current_user['nickname']
     
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.users
@@ -2497,15 +2500,21 @@ def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     
     cur.execute(f"""
         INSERT INTO t_p4831367_esport_gta_disaster.role_history (user_id, assigned_by, role, action)
-        VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(current_role['role'])}', 'revoked')
+        VALUES ('{escape_sql(user_id)}', '{escape_sql(admin_id)}', '{escape_sql(old_role)}', 'revoked')
     """)
+    
+    # Логируем снятие роли
+    role_names = {'admin': 'Администратор', 'organizer': 'Организатор', 'referee': 'Судья', 'manager': 'Руководитель'}
+    log_admin_action(cur, conn, admin_id, 'role_change', 
+                     f"Снял роль '{role_names.get(old_role, old_role)}' у пользователя {user_nickname}", 
+                     'user', int(user_id))
     
     conn.commit()
     
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Роль отозвана'}),
+        'body': json.dumps({'success': True, 'message': 'Роль отозвана'}),
         'isBase64Encoded': False
     }
 
