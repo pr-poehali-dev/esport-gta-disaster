@@ -98,12 +98,11 @@ export default function Header() {
                 <Icon name="ArrowLeft" className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
               </Button>
             )}
-            <div className="flex-shrink-0">
-              <Logo showText={true} animated={true} />
-            </div>
           </div>
 
-          <div className="flex-1" />
+          <div className="flex-1 flex justify-center">
+            <Logo showText={true} animated={true} />
+          </div>
 
           <nav className="hidden lg:flex items-center gap-3">
             {navLinks.map((link) => (
