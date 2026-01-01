@@ -61,85 +61,113 @@ export default function DiscussionList({
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
+        <CardContent className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
           {filteredDiscussions.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">Обсуждения не найдены</p>
+            <div className="text-center py-8">
+              <Icon name="Search" className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">Обсуждения не найдены</p>
+            </div>
           ) : (
             filteredDiscussions.map((discussion) => (
               <div
                 key={discussion.id}
-                className={`p-3 rounded-lg border cursor-pointer hover:bg-accent transition-colors ${
-                  selectedDiscussion?.id === discussion.id ? 'bg-accent border-primary' : ''
+                className={`p-4 rounded-lg border cursor-pointer hover:shadow-md transition-all ${
+                  selectedDiscussion?.id === discussion.id 
+                    ? 'bg-accent border-primary shadow-sm' 
+                    : 'hover:bg-accent/50'
                 }`}
                 onClick={() => onSelectDiscussion(discussion.id)}
               >
-                <div className="flex items-start justify-between mb-1">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {discussion.is_pinned && (
-                        <Icon name="Pin" className="h-3 w-3 text-primary" />
-                      )}
-                      {discussion.is_locked && (
-                        <Icon name="Lock" className="h-3 w-3 text-muted-foreground" />
-                      )}
-                      <h4 className="font-semibold text-sm">{discussion.title}</h4>
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        {discussion.is_pinned && (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                            <Icon name="Pin" className="h-3 w-3" />
+                            Закреплено
+                          </div>
+                        )}
+                        {discussion.is_locked && (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-muted text-muted-foreground rounded-full text-xs font-medium">
+                            <Icon name="Lock" className="h-3 w-3" />
+                            Закрыто
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="font-semibold text-sm mb-1 line-clamp-2">{discussion.title}</h4>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Icon name="User" className="h-3 w-3" />
+                          {discussion.author_nickname}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Icon name="MessageSquare" className="h-3 w-3" />
+                          {discussion.comments_count}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Автор: {discussion.author_nickname} • {discussion.comments_count} комментариев
-                    </p>
-                  </div>
-                  {canModerate && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTogglePin(discussion.id, discussion.is_pinned);
-                        }}
-                      >
-                        <Icon
-                          name={discussion.is_pinned ? 'Pin' : 'PinOff'}
-                          className="h-4 w-4"
-                        />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleLock(discussion.id, discussion.is_locked);
-                        }}
-                      >
-                        <Icon
-                          name={discussion.is_locked ? 'Lock' : 'LockOpen'}
-                          className="h-4 w-4"
-                        />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditDiscussion(discussion);
-                        }}
-                      >
-                        <Icon name="Edit" className="h-4 w-4" />
-                      </Button>
-                      {['admin', 'founder', 'organizer'].includes(userRole) && (
+                    {canModerate && (
+                      <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onDeleteDiscussion(discussion.id);
+                            onTogglePin(discussion.id, discussion.is_pinned);
                           }}
+                          title={discussion.is_pinned ? 'Открепить' : 'Закрепить'}
                         >
-                          <Icon name="Trash2" className="h-4 w-4 text-destructive" />
+                          <Icon
+                            name={discussion.is_pinned ? 'Pin' : 'PinOff'}
+                            className="h-4 w-4"
+                          />
                         </Button>
-                      )}
-                    </div>
-                  )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleLock(discussion.id, discussion.is_locked);
+                          }}
+                          title={discussion.is_locked ? 'Открыть' : 'Закрыть'}
+                        >
+                          <Icon
+                            name={discussion.is_locked ? 'LockOpen' : 'Lock'}
+                            className="h-4 w-4"
+                          />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditDiscussion(discussion);
+                          }}
+                          title="Редактировать"
+                        >
+                          <Icon name="Edit" className="h-4 w-4" />
+                        </Button>
+                        {['admin', 'founder', 'organizer'].includes(userRole) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteDiscussion(discussion.id);
+                            }}
+                            title="Удалить"
+                          >
+                            <Icon name="Trash2" className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
