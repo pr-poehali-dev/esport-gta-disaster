@@ -2423,7 +2423,7 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     user_id = body.get('user_id')
     role = body.get('role')
     
-    if role not in ['admin', 'organizer', 'referee', 'user']:
+    if role not in ['admin', 'organizer', 'referee', 'manager', 'user']:
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -2437,7 +2437,7 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     target_nickname = target_user['nickname'] if target_user else 'Unknown'
     
     cur.execute(f"""
-        UPDATE users
+        UPDATE t_p4831367_esport_gta_disaster.users
         SET role = '{escape_sql(role)}'
         WHERE id = '{escape_sql(user_id)}'
     """)
@@ -2448,7 +2448,7 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     """)
     
     # Логируем действие
-    role_names = {'admin': 'Администратор', 'organizer': 'Организатор', 'referee': 'Судья', 'user': 'Пользователь'}
+    role_names = {'admin': 'Администратор', 'organizer': 'Организатор', 'referee': 'Судья', 'manager': 'Руководитель', 'user': 'Пользователь'}
     log_admin_action(cur, conn, admin_id, 'role_change', 
                      f"Назначил роль '{role_names.get(role, role)}' пользователю {target_nickname}", 
                      'user', int(user_id))
@@ -2458,7 +2458,7 @@ def assign_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Роль назначена'}),
+        'body': json.dumps({'success': True, 'message': 'Роль назначена'}),
         'isBase64Encoded': False
     }
 
@@ -2490,7 +2490,7 @@ def revoke_role(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
         }
     
     cur.execute(f"""
-        UPDATE users
+        UPDATE t_p4831367_esport_gta_disaster.users
         SET role = 'user'
         WHERE id = '{escape_sql(user_id)}'
     """)

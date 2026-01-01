@@ -32,8 +32,24 @@ export default function AdminRolesSection() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isFounder = user.role === 'founder';
+  const getUserFromStorage = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      const user = JSON.parse(userStr);
+      if (!user.id) {
+        console.error('User ID not found in localStorage');
+        return null;
+      }
+      return user;
+    } catch (e) {
+      console.error('Failed to parse user from localStorage:', e);
+      return null;
+    }
+  };
+
+  const user = getUserFromStorage();
+  const isFounder = user?.role === 'founder';
 
   useEffect(() => {
     loadStaff();
@@ -42,6 +58,8 @@ export default function AdminRolesSection() {
   }, []);
 
   const loadStaff = async () => {
+    if (!user || !user.id) return;
+    
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -62,6 +80,8 @@ export default function AdminRolesSection() {
   };
 
   const loadAllUsers = async () => {
+    if (!user || !user.id) return;
+    
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -82,6 +102,8 @@ export default function AdminRolesSection() {
   };
 
   const loadHistory = async () => {
+    if (!user || !user.id) return;
+    
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -102,6 +124,15 @@ export default function AdminRolesSection() {
   };
 
   const handleAssignRole = async () => {
+    if (!user || !user.id) {
+      toast({
+        title: 'Ошибка',
+        description: 'Ошибка авторизации. Перезайдите в аккаунт',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!selectedUserId || !selectedRole) {
       toast({
         title: 'Ошибка',
@@ -156,6 +187,15 @@ export default function AdminRolesSection() {
   };
 
   const handleRevokeRole = async (userId: number) => {
+    if (!user || !user.id) {
+      toast({
+        title: 'Ошибка',
+        description: 'Ошибка авторизации. Перезайдите в аккаунт',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       const response = await fetch(API_URL, {
@@ -203,6 +243,7 @@ export default function AdminRolesSection() {
       organizer: 'bg-blue-600 text-white',
       admin: 'bg-red-600 text-white',
       referee: 'bg-cyan-600 text-white',
+      manager: 'bg-green-600 text-white',
       user: 'bg-gray-600 text-white',
     };
 
@@ -211,6 +252,7 @@ export default function AdminRolesSection() {
       organizer: 'Организатор',
       admin: 'Администратор',
       referee: 'Судья',
+      manager: 'Руководитель',
       user: 'Пользователь',
     };
 
@@ -220,6 +262,20 @@ export default function AdminRolesSection() {
       </span>
     );
   };
+
+  if (!user) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Ошибка авторизации</CardTitle>
+          <CardDescription>Не удалось загрузить данные пользователя</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Пожалуйста, перезайдите в аккаунт</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!isFounder) {
     return (
@@ -241,12 +297,13 @@ export default function AdminRolesSection() {
     admin: staff.filter(s => s.role === 'admin').length,
     organizer: staff.filter(s => s.role === 'organizer').length,
     referee: staff.filter(s => s.role === 'referee').length,
+    manager: staff.filter(s => s.role === 'manager').length,
   };
 
   return (
     <div className="space-y-6">
       {/* Статистика ролей */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4 hover:shadow-lg transition-all border-purple-600/30 bg-purple-600/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
@@ -294,6 +351,18 @@ export default function AdminRolesSection() {
             </div>
           </div>
         </Card>
+
+        <Card className="p-4 hover:shadow-lg transition-all border-green-600/30 bg-green-600/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
+              <Icon name="UserCog" size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{roleStats.manager}</p>
+              <p className="text-xs text-muted-foreground">Руководители</p>
+            </div>
+          </div>
+        </Card>
       </div>
 
       <Card>
@@ -334,6 +403,7 @@ export default function AdminRolesSection() {
                   <SelectItem value="admin">Администратор</SelectItem>
                   <SelectItem value="organizer">Организатор</SelectItem>
                   <SelectItem value="referee">Судья</SelectItem>
+                  <SelectItem value="manager">Руководитель</SelectItem>
                   <SelectItem value="user">Пользователь</SelectItem>
                 </SelectContent>
               </Select>
