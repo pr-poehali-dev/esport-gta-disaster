@@ -1165,7 +1165,8 @@ def get_match_chat(cur, conn, body: dict) -> dict:
     match_id = body.get('match_id')
     
     cur.execute(f"""
-        SELECT mc.id, mc.user_id, u.username, mc.message, mc.created_at, mc.message_type
+        SELECT mc.id, mc.user_id, u.nickname as username, u.avatar_url, mc.message, mc.created_at, mc.message_type,
+               u.role
         FROM t_p4831367_esport_gta_disaster.match_chat mc
         JOIN t_p4831367_esport_gta_disaster.users u ON mc.user_id = u.id
         WHERE mc.match_id = {int(match_id)}
@@ -1174,13 +1175,16 @@ def get_match_chat(cur, conn, body: dict) -> dict:
     
     messages = []
     for row in cur.fetchall():
+        is_referee = row['role'] in ['admin', 'founder', 'organizer', 'referee']
         messages.append({
             'id': row['id'],
             'user_id': row['user_id'],
             'username': row['username'],
+            'avatar_url': row['avatar_url'],
             'message': row['message'],
             'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-            'message_type': row['message_type']
+            'message_type': row['message_type'],
+            'is_referee': is_referee
         })
     
     return {
@@ -2758,6 +2762,42 @@ def get_match_details(cur, conn, body: dict) -> dict:
             is_captain = True
             captain_team_id = match_data['team2_id']
     
+    # Получаем членов команды 1
+    team1_members = []
+    if match_data['team1_id']:
+        cur.execute(f"""
+            SELECT tm.user_id, u.nickname, u.avatar_url
+            FROM t_p4831367_esport_gta_disaster.team_members tm
+            JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
+            WHERE tm.team_id = {int(match_data['team1_id'])}
+        """)
+        for member in cur.fetchall():
+            team1_members.append({
+                'id': member['user_id'],
+                'nickname': member['nickname'],
+                'avatar_url': member['avatar_url'],
+                'role': 'Player',
+                'status': 'offline'
+            })
+    
+    # Получаем членов команды 2
+    team2_members = []
+    if match_data['team2_id']:
+        cur.execute(f"""
+            SELECT tm.user_id, u.nickname, u.avatar_url
+            FROM t_p4831367_esport_gta_disaster.team_members tm
+            JOIN t_p4831367_esport_gta_disaster.users u ON tm.user_id = u.id
+            WHERE tm.team_id = {int(match_data['team2_id'])}
+        """)
+        for member in cur.fetchall():
+            team2_members.append({
+                'id': member['user_id'],
+                'nickname': member['nickname'],
+                'avatar_url': member['avatar_url'],
+                'role': 'Player',
+                'status': 'offline'
+            })
+    
     result = {
         'id': match_data['id'],
         'round': match_data['round'],
@@ -2766,16 +2806,18 @@ def get_match_details(cur, conn, body: dict) -> dict:
             'id': match_data['team1_id'],
             'name': match_data['team1_name'],
             'logo_url': match_data['team1_logo'],
-            'captain_id': match_data['team1_captain']
+            'captain_id': match_data['team1_captain'],
+            'members': team1_members
         } if match_data['team1_id'] else None,
         'team2': {
             'id': match_data['team2_id'],
             'name': match_data['team2_name'],
             'logo_url': match_data['team2_logo'],
-            'captain_id': match_data['team2_captain']
+            'captain_id': match_data['team2_captain'],
+            'members': team2_members
         } if match_data['team2_id'] else None,
-        'score_team1': match_data['team1_score'],
-        'score_team2': match_data['team2_score'],
+        'team1_score': match_data['team1_score'] or 0,
+        'team2_score': match_data['team2_score'] or 0,
         'reported_team1': match_data['team1_reported_score'],
         'reported_team2': match_data['team2_reported_score'],
         'winner_id': match_data['winner_id'],
@@ -2786,7 +2828,9 @@ def get_match_details(cur, conn, body: dict) -> dict:
         'tournament_name': match_data['tournament_name'],
         'tournament_id': match_data['tournament_id'],
         'is_captain': is_captain,
-        'captain_team_id': captain_team_id
+        'captain_team_id': captain_team_id,
+        'map_scores': [],
+        'referee': None
     }
     
     return {

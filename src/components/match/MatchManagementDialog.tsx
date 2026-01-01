@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ interface MatchManagementDialogProps {
 }
 
 export default function MatchManagementDialog({ matchId, onClose, onUpdate }: MatchManagementDialogProps) {
+  const navigate = useNavigate();
   const [match, setMatch] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [team1Score, setTeam1Score] = useState<number>(0);
@@ -25,9 +27,9 @@ export default function MatchManagementDialog({ matchId, onClose, onUpdate }: Ma
 
   useEffect(() => {
     if (matchId) {
-      loadMatchDetails();
+      navigate(`/matches/${matchId}`);
     }
-  }, [matchId]);
+  }, [matchId, navigate]);
 
   const loadMatchDetails = async () => {
     try {
