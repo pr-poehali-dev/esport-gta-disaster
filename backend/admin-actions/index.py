@@ -4106,7 +4106,7 @@ def get_admin_logs(cur, conn, body: dict) -> dict:
                     u_admin.nickname as admin_name,
                     u_admin.role as admin_role,
                     CASE 
-                        WHEN rh.action = 'assigned' THEN CONCAT('Назначил роль ', rh.role)
+                        WHEN rh.action = 'assigned' THEN 'Назначил роль ' || rh.role
                         WHEN rh.action = 'revoked' THEN 'Снял роль с пользователя'
                         ELSE rh.action
                     END as action,
