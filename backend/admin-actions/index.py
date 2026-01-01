@@ -416,6 +416,11 @@ def execute_ban(cur, conn, admin_id: str, data: dict) -> dict:
     reason = data.get('reason')
     duration_days = data.get('duration_days')
     
+    # Получаем имя пользователя для логирования
+    cur.execute(f"SELECT nickname FROM t_p4831367_esport_gta_disaster.users WHERE id = {int(user_id)}")
+    user_row = cur.fetchone()
+    user_name = user_row['nickname'] if user_row else 'Unknown'
+    
     if duration_days:
         expires_at = datetime.now() + timedelta(days=duration_days)
         cur.execute(f"""
@@ -429,6 +434,11 @@ def execute_ban(cur, conn, admin_id: str, data: dict) -> dict:
         """)
     
     conn.commit()
+    
+    # Логируем бан
+    duration_text = f" на {duration_days} дней" if duration_days else " навсегда"
+    log_admin_action(cur, conn, admin_id, 'user_ban', 
+                     f"Забанил пользователя {user_name}{duration_text}. Причина: {reason}", 'user', int(user_id))
     
     return {
         'statusCode': 200,
@@ -444,6 +454,11 @@ def execute_mute(cur, conn, admin_id: str, data: dict) -> dict:
     reason = data.get('reason')
     duration_days = data.get('duration_days')
     
+    # Получаем имя пользователя для логирования
+    cur.execute(f"SELECT nickname FROM t_p4831367_esport_gta_disaster.users WHERE id = {int(user_id)}")
+    user_row = cur.fetchone()
+    user_name = user_row['nickname'] if user_row else 'Unknown'
+    
     if duration_days:
         expires_at = datetime.now() + timedelta(days=duration_days)
         cur.execute(f"""
@@ -457,6 +472,11 @@ def execute_mute(cur, conn, admin_id: str, data: dict) -> dict:
         """)
     
     conn.commit()
+    
+    # Логируем мут
+    duration_text = f" на {duration_days} дней" if duration_days else " навсегда"
+    log_admin_action(cur, conn, admin_id, 'user_mute', 
+                     f"Замутил пользователя {user_name}{duration_text}. Причина: {reason}", 'user', int(user_id))
     
     return {
         'statusCode': 200,
@@ -666,6 +686,10 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
         tournament_id = cur.fetchone()['id']
         conn.commit()
         
+        # Логируем создание турнира
+        log_admin_action(cur, conn, admin_id, 'tournament_create', 
+                         f"Создал турнир '{name}'", 'tournament', tournament_id)
+        
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -721,6 +745,10 @@ def toggle_tournament_visibility(cur, conn, admin_id, body: dict) -> dict:
         
         action_text = 'скрыт' if is_hidden else 'показан'
         
+        # Логируем изменение видимости
+        log_admin_action(cur, conn, admin_id, 'tournament_visibility', 
+                         f"{'Скрыл' if is_hidden else 'Показал'} турнир", 'tournament', int(tournament_id))
+        
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -756,6 +784,11 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
                 'isBase64Encoded': False
             }
         
+        # Получаем название турнира для логирования
+        cur.execute("SELECT name FROM t_p4831367_esport_gta_disaster.tournaments WHERE id = %s", (int(tournament_id),))
+        tournament_name_row = cur.fetchone()
+        tournament_name = tournament_name_row['name'] if tournament_name_row else 'Unknown'
+        
         cur.execute("""
             UPDATE t_p4831367_esport_gta_disaster.tournaments 
             SET removed = 1 
@@ -764,6 +797,10 @@ def delete_tournament(cur, conn, admin_id, body: dict) -> dict:
         
         conn.commit()
         print(f"=== Tournament {tournament_id} removed successfully", file=sys.stderr, flush=True)
+        
+        # Логируем удаление турнира
+        log_admin_action(cur, conn, admin_id, 'tournament_delete', 
+                         f"Удалил турнир '{tournament_name}'", 'tournament', int(tournament_id))
         
         return {
             'statusCode': 200,
@@ -1471,12 +1508,21 @@ def update_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     update_fields.append("updated_at = NOW()")
     params.append(int(news_id))
     
+    # Получаем заголовок новости для логирования
+    cur.execute("SELECT title FROM t_p4831367_esport_gta_disaster.news WHERE id = %s", (int(news_id),))
+    news_title_row = cur.fetchone()
+    news_title = news_title_row['title'] if news_title_row else 'Unknown'
+    
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.news
         SET {', '.join(update_fields)}
         WHERE id = %s
     """, tuple(params))
     conn.commit()
+    
+    # Логируем обновление новости
+    log_admin_action(cur, conn, admin_id, 'news_update', 
+                     f"Обновил новость '{news_title}'", 'news', int(news_id))
     
     return {
         'statusCode': 200,
@@ -1505,10 +1551,19 @@ def delete_news(cur, conn, admin_id: str, body: dict, admin_role: str) -> dict:
     print(f"=== Deleting news_id: {news_id}", file=sys.stderr, flush=True)
     
     try:
+        # Получаем заголовок новости для логирования
+        cur.execute(f"SELECT title FROM t_p4831367_esport_gta_disaster.news WHERE id = {int(news_id)}")
+        news_title_row = cur.fetchone()
+        news_title = news_title_row['title'] if news_title_row else 'Unknown'
+        
         cur.execute(f"""
             DELETE FROM t_p4831367_esport_gta_disaster.news WHERE id = {int(news_id)}
         """)
         conn.commit()
+        
+        # Логируем удаление новости
+        log_admin_action(cur, conn, admin_id, 'news_delete', 
+                         f"Удалил новость '{news_title}'", 'news', int(news_id))
         print(f"=== News deleted successfully", file=sys.stderr, flush=True)
         
         return {
@@ -1663,6 +1718,10 @@ def create_news_with_image(cur, conn, admin_id: str, body: dict, admin_role: str
         result = cur.fetchone()
         news_id = result['id'] if result else None
         conn.commit()
+        
+        # Логируем создание новости с изображением
+        log_admin_action(cur, conn, admin_id, 'news_create', 
+                         f"Создал новость '{title}' с изображением", 'news', news_id)
         
         return {
             'statusCode': 200,
