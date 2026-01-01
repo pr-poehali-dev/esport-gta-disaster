@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import NewsCard from './NewsCard';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
@@ -17,7 +16,6 @@ interface NewsItem {
 }
 
 export default function NewsFeed() {
-  const headerAnimation = useScrollAnimation();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,12 +87,7 @@ export default function NewsFeed() {
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div
-          ref={headerAnimation.ref}
-          className={`text-center mb-16 transition-all duration-700 ${
-            headerAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-        >
+        <div className="text-center mb-16">
           <div className="mb-8">
             <h1 className="text-2xl font-light tracking-[0.3em] text-muted-foreground/60 mb-2">
               DISASTER ESPORTS
