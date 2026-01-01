@@ -202,14 +202,14 @@ export default function AdminRolesSection() {
       founder: 'bg-purple-600 text-white',
       organizer: 'bg-blue-600 text-white',
       admin: 'bg-red-600 text-white',
-      moderator: 'bg-green-600 text-white',
+      user: 'bg-gray-600 text-white',
     };
 
     const roleNames: Record<string, string> = {
       founder: 'Основатель',
-      organizer: 'Руководитель',
+      organizer: 'Организатор',
       admin: 'Администратор',
-      moderator: 'Модератор',
+      user: 'Пользователь',
     };
 
     return (
@@ -270,9 +270,9 @@ export default function AdminRolesSection() {
                   <SelectValue placeholder="Выберите роль" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="moderator">Модератор</SelectItem>
                   <SelectItem value="admin">Администратор</SelectItem>
-                  <SelectItem value="organizer">Руководитель</SelectItem>
+                  <SelectItem value="organizer">Организатор</SelectItem>
+                  <SelectItem value="user">Пользователь</SelectItem>
                 </SelectContent>
               </Select>
             </div>
