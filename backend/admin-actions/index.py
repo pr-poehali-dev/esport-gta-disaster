@@ -2714,7 +2714,6 @@ def create_discussion(cur, conn, admin_id: str, admin_role: str, body: dict) -> 
     
     title = body.get('title', '').strip()
     content = body.get('content', '').strip()
-    category = body.get('category', 'general').strip()
     
     if not title or not content:
         return {
@@ -2726,8 +2725,8 @@ def create_discussion(cur, conn, admin_id: str, admin_role: str, body: dict) -> 
     
     cur.execute(f"""
         INSERT INTO t_p4831367_esport_gta_disaster.discussions 
-        (title, content, category, author_id, created_at, locked, pinned)
-        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', {int(admin_id)}, NOW(), FALSE, FALSE)
+        (title, content, author_id, created_at, is_locked, is_pinned)
+        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', {int(admin_id)}, NOW(), FALSE, FALSE)
         RETURNING id
     """)
     
@@ -2769,7 +2768,7 @@ def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     
     # Проверяем, не заблокировано ли обсуждение
     cur.execute(f"""
-        SELECT locked FROM t_p4831367_esport_gta_disaster.discussions 
+        SELECT is_locked FROM t_p4831367_esport_gta_disaster.discussions 
         WHERE id = {int(discussion_id)}
     """)
     
@@ -2844,11 +2843,11 @@ def get_discussions(cur, conn) -> dict:
     """Получает список обсуждений"""
     
     cur.execute("""
-        SELECT d.id, d.title, d.content, d.category, d.author_id, u.nickname, d.locked, d.pinned, d.created_at,
+        SELECT d.id, d.title, d.content, d.author_id, u.nickname, d.is_locked, d.is_pinned, d.created_at,
             (SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.discussion_comments dc WHERE dc.discussion_id = d.id) as comments_count
         FROM t_p4831367_esport_gta_disaster.discussions d
         JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
-        ORDER BY d.pinned DESC, d.created_at DESC
+        ORDER BY d.is_pinned DESC, d.created_at DESC
     """)
     
     discussions = []
@@ -2857,13 +2856,12 @@ def get_discussions(cur, conn) -> dict:
             'id': row[0],
             'title': row[1],
             'content': row[2],
-            'category': row[3],
-            'author_id': row[4],
-            'author_nickname': row[5],
-            'is_locked': row[6],
-            'is_pinned': row[7],
-            'created_at': row[8].isoformat() if row[8] else None,
-            'comments_count': row[9]
+            'author_id': row[3],
+            'author_nickname': row[4],
+            'is_locked': row[5],
+            'is_pinned': row[6],
+            'created_at': row[7].isoformat() if row[7] else None,
+            'comments_count': row[8]
         })
     
     return {
@@ -2879,7 +2877,7 @@ def get_discussion(cur, conn, body: dict) -> dict:
     discussion_id = body.get('discussion_id')
     
     cur.execute(f"""
-        SELECT d.id, d.title, d.content, d.category, d.author_id, u.nickname, d.locked, d.pinned, d.created_at
+        SELECT d.id, d.title, d.content, d.author_id, u.nickname, d.is_locked, d.is_pinned, d.created_at
         FROM t_p4831367_esport_gta_disaster.discussions d
         JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
         WHERE d.id = {int(discussion_id)}
@@ -2899,12 +2897,11 @@ def get_discussion(cur, conn, body: dict) -> dict:
         'id': row[0],
         'title': row[1],
         'content': row[2],
-        'category': row[3],
-        'author_id': row[4],
-        'author_nickname': row[5],
-        'is_locked': row[6],
-        'is_pinned': row[7],
-        'created_at': row[8].isoformat() if row[8] else None
+        'author_id': row[3],
+        'author_nickname': row[4],
+        'is_locked': row[5],
+        'is_pinned': row[6],
+        'created_at': row[7].isoformat() if row[7] else None
     }
     
     cur.execute(f"""
@@ -2942,7 +2939,7 @@ def lock_discussion(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.discussions
-        SET locked = TRUE
+        SET is_locked = TRUE
         WHERE id = {int(discussion_id)}
     """)
     conn.commit()
@@ -2961,7 +2958,7 @@ def unlock_discussion(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.discussions
-        SET locked = FALSE
+        SET is_locked = FALSE
         WHERE id = {int(discussion_id)}
     """)
     conn.commit()
@@ -2980,7 +2977,7 @@ def pin_discussion(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.discussions
-        SET pinned = TRUE
+        SET is_pinned = TRUE
         WHERE id = {int(discussion_id)}
     """)
     conn.commit()
@@ -2999,7 +2996,7 @@ def unpin_discussion(cur, conn, body: dict) -> dict:
     
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.discussions
-        SET pinned = FALSE
+        SET is_pinned = FALSE
         WHERE id = {int(discussion_id)}
     """)
     conn.commit()

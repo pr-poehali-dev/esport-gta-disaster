@@ -22,7 +22,6 @@ export default function Discussions() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newDiscussionTitle, setNewDiscussionTitle] = useState('');
   const [newDiscussionContent, setNewDiscussionContent] = useState('');
-  const [newDiscussionCategory, setNewDiscussionCategory] = useState('general');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -181,7 +180,6 @@ export default function Discussions() {
           action: 'create_discussion',
           title: newDiscussionTitle,
           content: newDiscussionContent,
-          category: newDiscussionCategory,
         }),
       });
 
@@ -195,7 +193,6 @@ export default function Discussions() {
         setShowCreateDialog(false);
         setNewDiscussionTitle('');
         setNewDiscussionContent('');
-        setNewDiscussionCategory('general');
         loadDiscussions();
       } else {
         toast({
@@ -609,21 +606,6 @@ export default function Discussions() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Категория</label>
-                <select
-                  className="w-full px-3 py-2 border rounded-md bg-background"
-                  value={newDiscussionCategory}
-                  onChange={(e) => setNewDiscussionCategory(e.target.value)}
-                >
-                  <option value="general">Общее</option>
-                  <option value="tournaments">Турниры</option>
-                  <option value="teams">Команды</option>
-                  <option value="rules">Правила</option>
-                  <option value="announcements">Объявления</option>
-                </select>
-              </div>
-
-              <div>
                 <label className="text-sm font-medium mb-2 block">Содержание</label>
                 <Textarea
                   placeholder="Опишите тему обсуждения..."
@@ -640,7 +622,6 @@ export default function Discussions() {
                     setShowCreateDialog(false);
                     setNewDiscussionTitle('');
                     setNewDiscussionContent('');
-                    setNewDiscussionCategory('general');
                   }}
                   disabled={loading}
                 >
