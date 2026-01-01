@@ -2613,9 +2613,14 @@ def create_discussion(cur, conn, admin_id: str, admin_role: str, body: dict) -> 
 
 def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     """Добавляет комментарий к обсуждению"""
+    import boto3
+    import base64
+    import uuid
     
     discussion_id = body.get('discussion_id')
     content = body.get('content')
+    image_base64 = body.get('image_base64')
+    image_filename = body.get('image_filename')
     
     cur.execute(f"""
         SELECT locked FROM t_p4831367_esport_gta_disaster.discussions WHERE id = {int(discussion_id)}
@@ -2639,9 +2644,46 @@ def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
+    image_url = None
+    if image_base64 and image_filename:
+        try:
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+            )
+            
+            image_data = base64.b64decode(image_base64)
+            file_ext = image_filename.split('.')[-1] if '.' in image_filename else 'jpg'
+            key = f'discussions/comments/{uuid.uuid4()}.{file_ext}'
+            
+            content_type = 'image/jpeg'
+            if file_ext.lower() in ['png']:
+                content_type = 'image/png'
+            elif file_ext.lower() in ['gif']:
+                content_type = 'image/gif'
+            elif file_ext.lower() in ['webp']:
+                content_type = 'image/webp'
+            
+            s3.put_object(
+                Bucket='files',
+                Key=key,
+                Body=image_data,
+                ContentType=content_type
+            )
+            
+            image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
+        except Exception as e:
+            return {
+                'statusCode': 500,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': f'Ошибка загрузки изображения: {str(e)}'}),
+                'isBase64Encoded': False
+            }
+    
     cur.execute(f"""
-        INSERT INTO t_p4831367_esport_gta_disaster.discussion_comments (discussion_id, author_id, content)
-        VALUES ({int(discussion_id)}, '{escape_sql(admin_id)}', '{escape_sql(content)}')
+        INSERT INTO t_p4831367_esport_gta_disaster.discussion_comments (discussion_id, author_id, content, image_url)
+        VALUES ({int(discussion_id)}, '{escape_sql(admin_id)}', '{escape_sql(content)}', {'NULL' if not image_url else f"'{escape_sql(image_url)}'"})
         RETURNING id
     """)
     
@@ -2651,7 +2693,7 @@ def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'message': 'Комментарий добавлен', 'comment_id': comment_id}),
+        'body': json.dumps({'success': True, 'message': 'Комментарий добавлен', 'comment_id': comment_id}),
         'isBase64Encoded': False
     }
 
@@ -2659,7 +2701,8 @@ def get_discussions(cur, conn) -> dict:
     """Получает список обсуждений"""
     
     cur.execute("""
-        SELECT d.id, d.title, d.content, d.category, d.author_id, u.username, d.locked, d.pinned, d.created_at
+        SELECT d.id, d.title, d.content, d.category, d.author_id, u.nickname, d.locked, d.pinned, d.created_at,
+            (SELECT COUNT(*) FROM t_p4831367_esport_gta_disaster.discussion_comments dc WHERE dc.discussion_id = d.id) as comments_count
         FROM t_p4831367_esport_gta_disaster.discussions d
         JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
         ORDER BY d.pinned DESC, d.created_at DESC
@@ -2673,10 +2716,11 @@ def get_discussions(cur, conn) -> dict:
             'content': row[2],
             'category': row[3],
             'author_id': row[4],
-            'author_username': row[5],
-            'locked': row[6],
-            'pinned': row[7],
-            'created_at': row[8].isoformat() if row[8] else None
+            'author_nickname': row[5],
+            'is_locked': row[6],
+            'is_pinned': row[7],
+            'created_at': row[8].isoformat() if row[8] else None,
+            'comments_count': row[9]
         })
     
     return {
@@ -2692,7 +2736,7 @@ def get_discussion(cur, conn, body: dict) -> dict:
     discussion_id = body.get('discussion_id')
     
     cur.execute(f"""
-        SELECT d.id, d.title, d.content, d.category, d.author_id, u.username, d.locked, d.pinned, d.created_at
+        SELECT d.id, d.title, d.content, d.category, d.author_id, u.nickname, d.locked, d.pinned, d.created_at
         FROM t_p4831367_esport_gta_disaster.discussions d
         JOIN t_p4831367_esport_gta_disaster.users u ON d.author_id = u.id
         WHERE d.id = {int(discussion_id)}
@@ -2714,14 +2758,14 @@ def get_discussion(cur, conn, body: dict) -> dict:
         'content': row[2],
         'category': row[3],
         'author_id': row[4],
-        'author_username': row[5],
-        'locked': row[6],
-        'pinned': row[7],
+        'author_nickname': row[5],
+        'is_locked': row[6],
+        'is_pinned': row[7],
         'created_at': row[8].isoformat() if row[8] else None
     }
     
     cur.execute(f"""
-        SELECT dc.id, dc.author_id, u.username, dc.content, dc.created_at
+        SELECT dc.id, dc.author_id, u.nickname, dc.content, dc.created_at, dc.image_url
         FROM t_p4831367_esport_gta_disaster.discussion_comments dc
         JOIN t_p4831367_esport_gta_disaster.users u ON dc.author_id = u.id
         WHERE dc.discussion_id = {int(discussion_id)}
@@ -2733,9 +2777,10 @@ def get_discussion(cur, conn, body: dict) -> dict:
         comments.append({
             'id': row[0],
             'author_id': row[1],
-            'author_username': row[2],
+            'author_nickname': row[2],
             'content': row[3],
-            'created_at': row[4].isoformat() if row[4] else None
+            'created_at': row[4].isoformat() if row[4] else None,
+            'image_url': row[5]
         })
     
     discussion['comments'] = comments

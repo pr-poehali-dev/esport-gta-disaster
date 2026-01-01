@@ -70,7 +70,8 @@ export default function Header() {
 
   const navLinks = [
     { label: 'Новости', href: '/news', external: false },
-    { label: 'Обсуждения', href: '/forum', external: false },
+    { label: 'Форум', href: '/forum', external: false },
+    { label: 'Обсуждения', href: '/discussions', external: false },
     { label: 'Команды', href: '/teams', external: false },
     { label: 'Турниры', href: '/tournaments', external: false },
     { label: 'Рейтинг', href: '/rating', external: false },

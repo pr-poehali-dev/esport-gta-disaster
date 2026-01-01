@@ -2,12 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
+import { useState } from 'react';
 
 interface DiscussionDetailProps {
   selectedDiscussion: any;
   commentText: string;
   setCommentText: (text: string) => void;
-  onAddComment: () => void;
+  onAddComment: (imageFile?: File | null) => void;
   loading: boolean;
   canModerate: boolean;
 }
@@ -20,6 +21,26 @@ export default function DiscussionDetail({
   loading,
   canModerate,
 }: DiscussionDetailProps) {
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = () => {
+    onAddComment(selectedImage);
+    setSelectedImage(null);
+    setImagePreview('');
+  };
   if (!selectedDiscussion) {
     return (
       <div className="md:col-span-2">
@@ -106,6 +127,16 @@ export default function DiscussionDetail({
                       </p>
                     </div>
                     <p className="text-sm whitespace-pre-wrap leading-relaxed pl-10">{comment.content}</p>
+                    {comment.image_url && (
+                      <div className="mt-3 pl-10">
+                        <img 
+                          src={comment.image_url} 
+                          alt="Прикрепленное изображение" 
+                          className="rounded-lg max-w-md max-h-96 object-contain border"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -124,8 +155,47 @@ export default function DiscussionDetail({
                   rows={4}
                   className="resize-none"
                 />
-                <div className="flex justify-end">
-                  <Button onClick={onAddComment} disabled={loading || !commentText.trim()}>
+                
+                {imagePreview && (
+                  <div className="relative inline-block">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="rounded-lg max-h-32 object-contain border"
+                    />
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={() => {
+                        setSelectedImage(null);
+                        setImagePreview('');
+                      }}
+                    >
+                      <Icon name="X" className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center">
+                  <div>
+                    <input
+                      type="file"
+                      id="admin-image-upload"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageSelect}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('admin-image-upload')?.click()}
+                    >
+                      <Icon name="Image" className="h-4 w-4 mr-2" />
+                      Прикрепить фото
+                    </Button>
+                  </div>
+                  <Button onClick={handleSubmit} disabled={loading || !commentText.trim()}>
                     <Icon name="Send" className="h-4 w-4 mr-2" />
                     Отправить
                   </Button>

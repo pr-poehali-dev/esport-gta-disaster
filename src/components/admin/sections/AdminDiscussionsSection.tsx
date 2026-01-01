@@ -122,11 +122,26 @@ export default function AdminDiscussionsSection() {
     }
   };
 
-  const handleAddComment = async () => {
+  const handleAddComment = async (imageFile?: File | null) => {
     if (!commentText.trim() || !selectedDiscussion) return;
 
     setLoading(true);
     try {
+      let imageBase64 = null;
+      let imageFilename = null;
+      
+      if (imageFile) {
+        const reader = new FileReader();
+        imageBase64 = await new Promise<string>((resolve) => {
+          reader.onloadend = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            resolve(base64);
+          };
+          reader.readAsDataURL(imageFile);
+        });
+        imageFilename = imageFile.name;
+      }
+
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -137,6 +152,8 @@ export default function AdminDiscussionsSection() {
           action: 'add_comment',
           discussion_id: selectedDiscussion.id,
           content: commentText,
+          image_base64: imageBase64,
+          image_filename: imageFilename,
         }),
       });
 
@@ -149,6 +166,7 @@ export default function AdminDiscussionsSection() {
         });
         setCommentText('');
         loadDiscussion(selectedDiscussion.id);
+        loadDiscussions();
       } else {
         toast({
           title: 'Ошибка',
