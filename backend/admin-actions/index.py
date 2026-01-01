@@ -3888,3 +3888,35 @@ def notify_tournament_registration(cur, conn, tournament_id: int, team_id: int, 
     except Exception as e:
         conn.rollback()
         return {'success': False, 'error': str(e)}
+
+def get_all_users(cur, conn) -> dict:
+    """Получить всех пользователей для выбора в админке"""
+    try:
+        cur.execute("""
+            SELECT 
+                id,
+                nickname,
+                email,
+                role,
+                created_at
+            FROM t_p4831367_esport_gta_disaster.users
+            ORDER BY created_at DESC
+        """)
+        users = [dict(row) for row in cur.fetchall()]
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'users': users}, default=str),
+            'isBase64Encoded': False
+        }
+    except Exception as e:
+        import sys, traceback
+        error_msg = traceback.format_exc()
+        print(f"ERROR in get_all_users: {error_msg}", file=sys.stderr, flush=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': str(e), 'traceback': error_msg}),
+            'isBase64Encoded': False
+        }
