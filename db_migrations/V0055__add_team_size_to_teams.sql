@@ -1,0 +1,2 @@
+ALTER TABLE t_p4831367_esport_gta_disaster.teams 
+ADD COLUMN IF NOT EXISTS team_size INTEGER DEFAULT 4;

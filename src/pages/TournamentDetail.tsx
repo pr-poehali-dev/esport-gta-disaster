@@ -174,6 +174,15 @@ export default function TournamentDetail() {
     );
   }
 
+  const getTournamentSize = (format: string): number => {
+    const match = format?.match(/(\d+)v\d+/);
+    return match ? parseInt(match[1]) : 4;
+  };
+
+  const tournamentSize = getTournamentSize(tournament.format);
+  
+  const eligibleTeams = userTeams.filter(team => team.team_size === tournamentSize);
+  
   const userRegistration = tournament.registered_teams?.find(t => 
     userTeams.some(ut => ut.id === t.team_id)
   );
@@ -385,9 +394,24 @@ export default function TournamentDetail() {
                       Создать команду
                     </Button>
                   </div>
+                ) : eligibleTeams.length === 0 ? (
+                  <div className="text-center space-y-4">
+                    <Icon name="AlertCircle" size={48} className="mx-auto text-amber-500" />
+                    <p className="text-sm font-semibold">Нет подходящих команд</p>
+                    <p className="text-xs text-muted-foreground">
+                      Для турнира {tournament.format} нужна команда из {tournamentSize} игроков
+                    </p>
+                    <Button onClick={() => navigate('/teams/create')} className="w-full">
+                      <Icon name="Plus" size={18} className="mr-2" />
+                      Создать подходящую команду
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {userTeams.map((team) => (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Доступные команды для формата {tournament.format}:
+                    </p>
+                    {eligibleTeams.map((team) => (
                       <Button
                         key={team.id}
                         onClick={() => handleRegister(team.id)}

@@ -109,7 +109,7 @@ def get_team_by_id(cur, conn, body) -> dict:
         cur.execute("""
             SELECT 
                 id, name, tag, logo_url, captain_id, wins, losses, draws,
-                rating, verified, description, created_at, level, points, team_color
+                rating, verified, description, created_at, level, points, team_color, team_size
             FROM t_p4831367_esport_gta_disaster.teams
             WHERE id = %s
         """, (team_id,))
@@ -138,6 +138,7 @@ def get_team_by_id(cur, conn, body) -> dict:
             'level': row.get('level') or 2,
             'points': row.get('points') or 200,
             'team_color': row.get('team_color') or '#FFFFFF',
+            'team_size': row.get('team_size') or 4,
             'win_rate': win_rate
         }
         
@@ -1246,8 +1247,20 @@ def create_team(cur, conn, body: dict, event: dict) -> dict:
     if not name:
         return error_response('Название команды обязательно', 400)
     
-    if len(players) > 7:
-        return error_response('Максимум 7 игроков (5 основных + 2 запасных)', 400)
+    if len(name) < 4:
+        return error_response('Название команды должно содержать минимум 4 символа', 400)
+    
+    if len(name) > 10:
+        return error_response('Название команды должно содержать максимум 10 символов', 400)
+    
+    if len(players) > 3:
+        return error_response('Максимум 3 дополнительных игрока (кроме капитана)', 400)
+    
+    main_players = [p for p in players if p.get('role') == 'main']
+    team_size = len(main_players) + 1
+    
+    if team_size < 1 or team_size > 4:
+        return error_response('Команда может содержать от 1 до 4 основных игроков (включая капитана)', 400)
     
     cur.execute("SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE name = %s", (name,))
     if cur.fetchone():
@@ -1255,10 +1268,10 @@ def create_team(cur, conn, body: dict, event: dict) -> dict:
     
     cur.execute("""
         INSERT INTO t_p4831367_esport_gta_disaster.teams 
-        (name, tag, description, captain_id, rating, wins, losses, draws, verified, created_at)
-        VALUES (%s, %s, %s, %s, 1000, 0, 0, 0, TRUE, NOW())
+        (name, tag, description, captain_id, rating, wins, losses, draws, verified, team_size, created_at)
+        VALUES (%s, %s, %s, %s, 1000, 0, 0, 0, TRUE, %s, NOW())
         RETURNING id
-    """, (name, tag, description, user_id))
+    """, (name, tag, description, user_id, team_size))
     
     team_result = cur.fetchone()
     team_id = team_result['id']
@@ -1473,6 +1486,7 @@ def get_user_teams(cur, conn, event: dict) -> dict:
             t.wins,
             t.losses,
             t.draws,
+            t.team_size,
             tm.is_captain,
             tm.player_role
         FROM t_p4831367_esport_gta_disaster.team_members tm
@@ -1492,6 +1506,7 @@ def get_user_teams(cur, conn, event: dict) -> dict:
             'wins': row['wins'],
             'losses': row['losses'],
             'draws': row['draws'],
+            'team_size': row['team_size'] or 4,
             'is_captain': row['is_captain'],
             'player_role': row['player_role']
         })

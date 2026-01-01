@@ -48,8 +48,8 @@ export default function CreateTeam() {
   };
 
   const addPlayer = (player: any, role: 'main' | 'reserve') => {
-    if (selectedPlayers.length >= 6) {
-      toast({ title: 'Ошибка', description: 'Максимум 6 дополнительных игроков', variant: 'destructive' });
+    if (selectedPlayers.length >= 3) {
+      toast({ title: 'Ошибка', description: 'Максимум 3 дополнительных игрока (кроме капитана)', variant: 'destructive' });
       return;
     }
     
@@ -73,11 +73,22 @@ export default function CreateTeam() {
       return;
     }
 
+    if (teamName.length < 4) {
+      toast({ title: 'Ошибка', description: 'Название команды должно содержать минимум 4 символа', variant: 'destructive' });
+      return;
+    }
+
+    if (teamName.length > 10) {
+      toast({ title: 'Ошибка', description: 'Название команды должно содержать максимум 10 символов', variant: 'destructive' });
+      return;
+    }
+
     const mainPlayers = selectedPlayers.filter(p => p.role === 'main');
     const reservePlayers = selectedPlayers.filter(p => p.role === 'reserve');
 
-    if (mainPlayers.length + 1 < 5) {
-      toast({ title: 'Ошибка', description: 'Минимум 5 основных игроков (включая капитана)', variant: 'destructive' });
+    const totalPlayers = mainPlayers.length + 1;
+    if (totalPlayers < 1 || totalPlayers > 4) {
+      toast({ title: 'Ошибка', description: 'Команда может содержать от 1 до 4 основных игроков (включая капитана)', variant: 'destructive' });
       return;
     }
 
@@ -124,19 +135,21 @@ export default function CreateTeam() {
               Создание команды
             </CardTitle>
             <CardDescription>
-              Заполните данные и пригласите до 6 игроков (4 основных + 2 запасных)
+              Команда может состоять из 1-4 участников. Название: 4-10 символов.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <div>
-                <Label>Название команды *</Label>
+                <Label>Название команды * (4-10 символов)</Label>
                 <Input
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
                   placeholder="Введите название..."
-                  maxLength={50}
+                  minLength={4}
+                  maxLength={10}
                 />
+                <p className="text-xs text-muted-foreground mt-1">{teamName.length}/10 символов</p>
               </div>
 
               <div>
