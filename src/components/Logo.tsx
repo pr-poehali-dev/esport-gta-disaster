@@ -32,19 +32,19 @@ export default function Logo({ className = "", showText = true, animated = true 
   return (
     <a 
       href="/"
-      className={`flex items-center gap-3 ${className} group cursor-pointer`}
+      className={`flex items-center gap-2 ${className} group cursor-pointer`}
       onMouseEnter={() => animated && setGlitchActive(true)}
       onMouseLeave={() => animated && setGlitchActive(false)}
     >
       <div 
-        className={`relative ${glitchActive ? 'logo-glitch' : ''} ${shatterActive ? 'logo-shatter' : ''}`}
+        className={`relative flex-shrink-0 ${glitchActive ? 'logo-glitch' : ''} ${shatterActive ? 'logo-shatter' : ''}`}
         style={{ 
           filter: 'drop-shadow(0 0 8px rgba(13, 148, 231, 0.4))'
         } as React.CSSProperties}
       >
         <svg
-          width="48"
-          height="48"
+          width="36"
+          height="36"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -126,9 +126,9 @@ export default function Logo({ className = "", showText = true, animated = true 
       </div>
       
       {showText && (
-        <div className="flex flex-col leading-none">
+        <div className="flex flex-col leading-none overflow-hidden">
           <span 
-            className={`text-2xl font-black tracking-tight bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent relative ${glitchActive ? 'text-glitch' : ''}`}
+            className={`text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent relative whitespace-nowrap ${glitchActive ? 'text-glitch' : ''}`}
             style={{ 
               filter: glitchActive ? 'none' : 'drop-shadow(0 0 4px rgba(13, 148, 231, 0.3))',
               transition: 'filter 0.3s ease'

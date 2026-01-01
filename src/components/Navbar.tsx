@@ -41,15 +41,17 @@ export default function Navbar() {
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <Logo showText={true} animated={true} />
+          <div className="flex items-center justify-between h-16">
+            <div className="flex-shrink-0">
+              <Logo showText={true} animated={true} />
+            </div>
 
             <button
-              className="p-2 text-foreground hover:text-primary transition-colors z-50 relative group"
+              className="p-2 text-foreground hover:text-primary transition-colors z-50 relative group flex-shrink-0"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="Toggle menu"
             >
-              <div className="w-8 h-6 flex flex-col justify-between relative">
+              <div className="w-7 h-5 flex flex-col justify-between relative">
                 <span
                   className={`w-full h-0.5 bg-current transition-all duration-300 ${
                     isMenuOpen ? 'rotate-45 translate-y-2.5' : ''
