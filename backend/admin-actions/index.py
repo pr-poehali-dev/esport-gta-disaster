@@ -2697,6 +2697,145 @@ def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
         'isBase64Encoded': False
     }
 
+def create_discussion(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
+    """Создаёт новое обсуждение (только администраторы)"""
+    
+    if admin_role not in ['admin', 'founder', 'organizer']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Недостаточно прав для создания обсуждений'}),
+            'isBase64Encoded': False
+        }
+    
+    title = body.get('title', '').strip()
+    content = body.get('content', '').strip()
+    category = body.get('category', 'general').strip()
+    
+    if not title or not content:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Укажите название и содержание обсуждения'}),
+            'isBase64Encoded': False
+        }
+    
+    cur.execute(f"""
+        INSERT INTO t_p4831367_esport_gta_disaster.discussions 
+        (title, content, category, author_id, created_at, locked, pinned)
+        VALUES ('{escape_sql(title)}', '{escape_sql(content)}', '{escape_sql(category)}', {int(admin_id)}, NOW(), FALSE, FALSE)
+        RETURNING id
+    """)
+    
+    discussion_id = cur.fetchone()[0]
+    conn.commit()
+    
+    log_admin_action(cur, conn, admin_id, 'create_discussion', f'Создано обсуждение: {title}', 'discussion', discussion_id)
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Обсуждение создано', 'discussion_id': discussion_id}),
+        'isBase64Encoded': False
+    }
+
+def add_comment(cur, conn, admin_id: str, admin_role: str, body: dict) -> dict:
+    """Добавляет комментарий к обсуждению"""
+    
+    discussion_id = body.get('discussion_id')
+    content = body.get('content', '').strip()
+    image_base64 = body.get('image_base64')
+    image_filename = body.get('image_filename')
+    
+    if not discussion_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Укажите discussion_id'}),
+            'isBase64Encoded': False
+        }
+    
+    if not content:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Комментарий не может быть пустым'}),
+            'isBase64Encoded': False
+        }
+    
+    # Проверяем, не заблокировано ли обсуждение
+    cur.execute(f"""
+        SELECT locked FROM t_p4831367_esport_gta_disaster.discussions 
+        WHERE id = {int(discussion_id)}
+    """)
+    
+    discussion = cur.fetchone()
+    
+    if not discussion:
+        return {
+            'statusCode': 404,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Обсуждение не найдено'}),
+            'isBase64Encoded': False
+        }
+    
+    if discussion[0] and admin_role not in ['admin', 'founder']:
+        return {
+            'statusCode': 403,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Обсуждение заблокировано'}),
+            'isBase64Encoded': False
+        }
+    
+    # Загрузка изображения, если есть
+    image_url = None
+    if image_base64 and image_filename:
+        try:
+            import boto3
+            import base64
+            from datetime import datetime
+            
+            image_data = base64.b64decode(image_base64)
+            
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+            )
+            
+            timestamp = datetime.now().timestamp()
+            filename = f"discussion-comments/{discussion_id}/{timestamp}_{image_filename}"
+            
+            s3.put_object(
+                Bucket='files',
+                Key=filename,
+                Body=image_data,
+                ContentType='image/png' if image_filename.endswith('.png') else 'image/jpeg'
+            )
+            
+            image_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+        except Exception as e:
+            print(f"Error uploading image: {e}", flush=True)
+    
+    # Добавляем комментарий
+    cur.execute(f"""
+        INSERT INTO t_p4831367_esport_gta_disaster.discussion_comments 
+        (discussion_id, author_id, content, image_url, created_at)
+        VALUES ({int(discussion_id)}, {int(admin_id)}, '{escape_sql(content)}', 
+                {'NULL' if not image_url else f"'{image_url}'"}, NOW())
+        RETURNING id
+    """)
+    
+    comment_id = cur.fetchone()[0]
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({'success': True, 'message': 'Комментарий добавлен', 'comment_id': comment_id}),
+        'isBase64Encoded': False
+    }
+
 def get_discussions(cur, conn) -> dict:
     """Получает список обсуждений"""
     

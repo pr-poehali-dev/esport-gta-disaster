@@ -19,6 +19,10 @@ export default function Discussions() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newDiscussionTitle, setNewDiscussionTitle] = useState('');
+  const [newDiscussionContent, setNewDiscussionContent] = useState('');
+  const [newDiscussionCategory, setNewDiscussionCategory] = useState('general');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -155,11 +159,69 @@ export default function Discussions() {
     }
   };
 
+  const handleCreateDiscussion = async () => {
+    if (!newDiscussionTitle.trim() || !newDiscussionContent.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Заполните все поля',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Id': user.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'create_discussion',
+          title: newDiscussionTitle,
+          content: newDiscussionContent,
+          category: newDiscussionCategory,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: 'Успешно',
+          description: data.message,
+        });
+        setShowCreateDialog(false);
+        setNewDiscussionTitle('');
+        setNewDiscussionContent('');
+        setNewDiscussionCategory('general');
+        loadDiscussions();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось создать обсуждение',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredDiscussions = discussions.filter(
     (d) =>
       d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.author_nickname.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const isAdmin = ['admin', 'founder', 'organizer'].includes(user.role);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -167,8 +229,18 @@ export default function Discussions() {
       
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Обсуждения</h1>
-          <p className="text-muted-foreground">Участвуйте в обсуждениях сообщества</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Обсуждения</h1>
+              <p className="text-muted-foreground">Участвуйте в обсуждениях сообщества</p>
+            </div>
+            {isAdmin && (
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Icon name="Plus" size={18} className="mr-2" />
+                Создать обсуждение
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -410,6 +482,70 @@ export default function Discussions() {
       </main>
 
       <Footer />
+
+      {showCreateDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>Создать обсуждение</CardTitle>
+              <CardDescription>Новая тема для обсуждения сообществом</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Название</label>
+                <Input
+                  placeholder="Введите название обсуждения..."
+                  value={newDiscussionTitle}
+                  onChange={(e) => setNewDiscussionTitle(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Категория</label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md bg-background"
+                  value={newDiscussionCategory}
+                  onChange={(e) => setNewDiscussionCategory(e.target.value)}
+                >
+                  <option value="general">Общее</option>
+                  <option value="tournaments">Турниры</option>
+                  <option value="teams">Команды</option>
+                  <option value="rules">Правила</option>
+                  <option value="announcements">Объявления</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Содержание</label>
+                <Textarea
+                  placeholder="Опишите тему обсуждения..."
+                  value={newDiscussionContent}
+                  onChange={(e) => setNewDiscussionContent(e.target.value)}
+                  rows={6}
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateDialog(false);
+                    setNewDiscussionTitle('');
+                    setNewDiscussionContent('');
+                    setNewDiscussionCategory('general');
+                  }}
+                  disabled={loading}
+                >
+                  Отмена
+                </Button>
+                <Button onClick={handleCreateDiscussion} disabled={loading}>
+                  {loading ? 'Создание...' : 'Создать'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
