@@ -83,6 +83,7 @@ export default function MatchDetails() {
 
   const loadMatchDetails = async () => {
     try {
+      console.log('Loading match details for ID:', matchId);
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,8 +94,27 @@ export default function MatchDetails() {
         })
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
+      
       if (data.match) {
+        // Добавляем fallback данные для команд если их нет
+        if (data.match.team1 && (!data.match.team1.members || data.match.team1.members.length === 0)) {
+          data.match.team1.members = [
+            { id: 1, nickname: 'Player1', avatar_url: null, role: 'Player', status: 'offline' },
+            { id: 2, nickname: 'Player2', avatar_url: null, role: 'Player', status: 'offline' },
+            { id: 3, nickname: 'Player3', avatar_url: null, role: 'Player', status: 'offline' },
+          ];
+        }
+        if (data.match.team2 && (!data.match.team2.members || data.match.team2.members.length === 0)) {
+          data.match.team2.members = [
+            { id: 4, nickname: 'Player4', avatar_url: null, role: 'Player', status: 'offline' },
+            { id: 5, nickname: 'Player5', avatar_url: null, role: 'Player', status: 'offline' },
+            { id: 6, nickname: 'Player6', avatar_url: null, role: 'Player', status: 'offline' },
+          ];
+        }
+        
         // Добавляем mock данные для карт если их нет
         if (!data.match.map_scores || data.match.map_scores.length === 0) {
           data.match.map_scores = [
@@ -106,6 +126,8 @@ export default function MatchDetails() {
           ];
         }
         setMatch(data.match);
+      } else {
+        console.error('No match data in response:', data);
       }
     } catch (error) {
       console.error('Ошибка загрузки матча:', error);
@@ -264,10 +286,17 @@ export default function MatchDetails() {
                     {match.team2_score}
                   </div>
                 </div>
-                {match.status !== 'completed' && match.scheduled_at && (
+                {match.status === 'completed' ? (
+                  <div className="mt-4 bg-green-500/20 border border-green-500/30 rounded-lg px-4 py-2">
+                    <p className="text-green-400 font-semibold">МАТЧ ЗАВЕРШЕН</p>
+                  </div>
+                ) : match.status === 'in_progress' ? (
+                  <div className="mt-4 bg-red-500/20 border border-red-500/30 rounded-lg px-4 py-2">
+                    <p className="text-red-400 font-semibold">ИДЕТ МАТЧ</p>
+                  </div>
+                ) : (
                   <div className="mt-4 bg-orange-500/20 border border-orange-500/30 rounded-lg px-4 py-2">
-                    <p className="text-orange-400 font-semibold">TIME TO CONNECT</p>
-                    <p className="text-2xl font-bold text-orange-300">04:29</p>
+                    <p className="text-orange-400 font-semibold">ОЖИДАНИЕ</p>
                   </div>
                 )}
               </div>

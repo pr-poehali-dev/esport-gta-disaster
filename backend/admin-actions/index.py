@@ -60,7 +60,7 @@ def handler(event: dict, context) -> dict:
             body = json.loads(event.get('body', '{}'))
             action = body.get('action')
             
-            public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament', 'register_team', 'get_notifications', 'mark_notification_read', 'mark_all_notifications_read']
+            public_actions = ['get_news', 'get_rules', 'get_support', 'get_tournaments', 'get_tournament', 'register_team', 'get_notifications', 'mark_notification_read', 'mark_all_notifications_read', 'get_match_details', 'get_match_chat']
             
             if action in public_actions:
                 print(f"=== PUBLIC ACTION: {action}", file=sys.stderr, flush=True)
@@ -85,6 +85,10 @@ def handler(event: dict, context) -> dict:
                     return mark_notification_read(cur, conn, body)
                 elif action == 'mark_all_notifications_read':
                     return mark_all_notifications_read(cur, conn, body)
+                elif action == 'get_match_details':
+                    return get_match_details(cur, conn, body)
+                elif action == 'get_match_chat':
+                    return get_match_chat(cur, conn, body)
         
         admin_id = event.get('headers', {}).get('X-Admin-Id') or event.get('headers', {}).get('x-admin-id')
         
