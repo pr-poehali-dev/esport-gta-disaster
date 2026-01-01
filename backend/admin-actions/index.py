@@ -2513,19 +2513,28 @@ def get_staff(cur, conn) -> dict:
     """Получает список сотрудников"""
     
     cur.execute("""
-        SELECT id, username, email, role, created_at
-        FROM users
-        WHERE role IN ('admin', 'founder', 'organizer')
-        ORDER BY role, username
+        SELECT id, nickname, email, role, avatar_url, created_at
+        FROM t_p4831367_esport_gta_disaster.users
+        WHERE role IN ('admin', 'founder', 'organizer', 'referee', 'manager')
+        ORDER BY 
+            CASE role
+                WHEN 'founder' THEN 1
+                WHEN 'admin' THEN 2
+                WHEN 'organizer' THEN 3
+                WHEN 'referee' THEN 4
+                WHEN 'manager' THEN 5
+            END,
+            nickname
     """)
     
     staff = []
     for row in cur.fetchall():
         staff.append({
             'id': row['id'],
-            'username': row['username'],
+            'nickname': row['nickname'],
             'email': row['email'],
             'role': row['role'],
+            'avatar_url': row['avatar_url'],
             'created_at': row['created_at'].isoformat() if row['created_at'] else None
         })
     
