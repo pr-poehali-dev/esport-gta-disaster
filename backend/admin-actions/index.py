@@ -2859,6 +2859,50 @@ def submit_match_score(cur, conn, body: dict) -> dict:
     
     conn.commit()
     
+    try:
+        cur.execute(f"""
+            SELECT bm.team1_id, bm.team2_id,
+                   t1.name as team1_name, t1.captain_id as team1_captain,
+                   t2.name as team2_name, t2.captain_id as team2_captain,
+                   tour.name as tournament_name, tour.id as tournament_id
+            FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.tournament_brackets tb ON bm.bracket_id = tb.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.tournaments tour ON tb.tournament_id = tour.id
+            WHERE bm.id = {int(match_id)}
+        """)
+        match_info = cur.fetchone()
+        
+        if match_info:
+            tournament_name = match_info['tournament_name']
+            tournament_id = match_info['tournament_id']
+            team1_captain = match_info['team1_captain']
+            team2_captain = match_info['team2_captain']
+            
+            reporting_captain = team1_captain if is_team1_captain else team2_captain
+            opponent_captain = team2_captain if is_team1_captain else team1_captain
+            reporting_team = match_info['team1_name'] if is_team1_captain else match_info['team2_name']
+            
+            if opponent_captain:
+                cur.execute(f"""
+                    INSERT INTO t_p4831367_esport_gta_disaster.notifications 
+                    (user_id, type, title, message, link, read, created_at)
+                    VALUES (
+                        {opponent_captain},
+                        'match_update',
+                        '📊 Результат матча отправлен',
+                        'Капитан команды "{escape_sql(reporting_team)}" отправил результат матча в турнире "{escape_sql(tournament_name)}". Счет: {int(team_score) if is_team1_captain else int(opponent_score)}:{int(opponent_score) if is_team1_captain else int(team_score)}. Ожидается подтверждение судьи.',
+                        '/tournaments/{tournament_id}/bracket',
+                        false,
+                        NOW()
+                    )
+                """)
+                conn.commit()
+    except Exception as e:
+        import sys
+        print(f"Warning: Failed to send notification: {str(e)}", file=sys.stderr, flush=True)
+    
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -2878,6 +2922,23 @@ def reset_match_score(cur, conn, admin_id: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
+    try:
+        cur.execute(f"""
+            SELECT bm.team1_id, bm.team2_id,
+                   t1.captain_id as team1_captain,
+                   t2.captain_id as team2_captain,
+                   tour.name as tournament_name, tour.id as tournament_id
+            FROM t_p4831367_esport_gta_disaster.bracket_matches bm
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.tournament_brackets tb ON bm.bracket_id = tb.id
+            LEFT JOIN t_p4831367_esport_gta_disaster.tournaments tour ON tb.tournament_id = tour.id
+            WHERE bm.id = {int(match_id)}
+        """)
+        match_info = cur.fetchone()
+    except Exception as e:
+        match_info = None
+    
     cur.execute(f"""
         UPDATE t_p4831367_esport_gta_disaster.bracket_matches
         SET team1_score = NULL,
@@ -2894,6 +2955,33 @@ def reset_match_score(cur, conn, admin_id: str, body: dict) -> dict:
     conn.commit()
     
     log_admin_action(cur, conn, admin_id, 'reset_match', f'Сбросил счет матча #{match_id}', 'match', int(match_id))
+    
+    try:
+        if match_info:
+            tournament_name = match_info['tournament_name']
+            tournament_id = match_info['tournament_id']
+            team1_captain = match_info['team1_captain']
+            team2_captain = match_info['team2_captain']
+            
+            for captain_id in [team1_captain, team2_captain]:
+                if captain_id:
+                    cur.execute(f"""
+                        INSERT INTO t_p4831367_esport_gta_disaster.notifications 
+                        (user_id, type, title, message, link, read, created_at)
+                        VALUES (
+                            {captain_id},
+                            'match_update',
+                            '🔄 Счет матча сброшен',
+                            'Судья сбросил результат матча в турнире "{escape_sql(tournament_name)}". Необходимо повторно отправить результат.',
+                            '/tournaments/{tournament_id}/bracket',
+                            false,
+                            NOW()
+                        )
+                    """)
+            conn.commit()
+    except Exception as e:
+        import sys
+        print(f"Warning: Failed to send reset notifications: {str(e)}", file=sys.stderr, flush=True)
     
     return {
         'statusCode': 200,
@@ -2973,8 +3061,11 @@ def confirm_match(cur, conn, admin_id: str, body: dict) -> dict:
     
     try:
         cur.execute(f"""
-            SELECT t1.name as team1_name, t2.name as team2_name, tw.name as winner_name,
-                   tour.name as tournament_name, tour.id as tournament_id
+            SELECT t1.name as team1_name, t1.captain_id as team1_captain,
+                   t2.name as team2_name, t2.captain_id as team2_captain,
+                   tw.name as winner_name,
+                   tour.name as tournament_name, tour.id as tournament_id,
+                   bm.team1_score, bm.team2_score
             FROM t_p4831367_esport_gta_disaster.bracket_matches bm
             LEFT JOIN t_p4831367_esport_gta_disaster.teams t1 ON bm.team1_id = t1.id
             LEFT JOIN t_p4831367_esport_gta_disaster.teams t2 ON bm.team2_id = t2.id
@@ -2986,29 +3077,72 @@ def confirm_match(cur, conn, admin_id: str, body: dict) -> dict:
         match_info = cur.fetchone()
         
         if match_info and match_data['team1_id'] and match_data['team2_id']:
-            all_members = []
-            cur.execute(f"SELECT user_id FROM t_p4831367_esport_gta_disaster.team_members WHERE team_id = {match_data['team1_id']} AND status = 'active'")
-            all_members.extend([row['user_id'] for row in cur.fetchall()])
-            cur.execute(f"SELECT user_id FROM t_p4831367_esport_gta_disaster.team_members WHERE team_id = {match_data['team2_id']} AND status = 'active'")
-            all_members.extend([row['user_id'] for row in cur.fetchall()])
+            tournament_name = match_info['tournament_name']
+            winner_name = match_info['winner_name']
+            team1_name = match_info['team1_name']
+            team2_name = match_info['team2_name']
+            score = f"{match_info['team1_score']}:{match_info['team2_score']}"
+            tournament_id = match_info['tournament_id']
             
-            for user_id in all_members:
+            team1_captain = match_info['team1_captain']
+            team2_captain = match_info['team2_captain']
+            
+            cur.execute(f"SELECT user_id FROM t_p4831367_esport_gta_disaster.team_members WHERE team_id = {match_data['team1_id']} AND status = 'active'")
+            team1_members = [row['user_id'] for row in cur.fetchall()]
+            
+            cur.execute(f"SELECT user_id FROM t_p4831367_esport_gta_disaster.team_members WHERE team_id = {match_data['team2_id']} AND status = 'active'")
+            team2_members = [row['user_id'] for row in cur.fetchall()]
+            
+            is_team1_winner = winner_id == match_data['team1_id']
+            
+            for user_id in team1_members:
+                if user_id == team1_captain:
+                    title = '🏆 Победа!' if is_team1_winner else '😔 Поражение'
+                    message = f"Судья подтвердил результат матча в турнире \"{escape_sql(tournament_name)}\". Счет: {score}. {'Ваша команда прошла в следующий раунд!' if is_team1_winner else f'Победитель: {escape_sql(winner_name)}'}"
+                else:
+                    title = 'Матч завершен'
+                    message = f"Матч в турнире \"{escape_sql(tournament_name)}\" завершен. Счет: {score}. Победитель: {escape_sql(winner_name)}"
+                
                 cur.execute(f"""
                     INSERT INTO t_p4831367_esport_gta_disaster.notifications 
                     (user_id, type, title, message, link, read, created_at)
                     VALUES (
                         {user_id},
                         'match_result',
-                        'Матч завершен',
-                        'Матч в турнире "{escape_sql(match_info['tournament_name'])}" завершен. Победитель: {escape_sql(match_info['winner_name'])}',
-                        '/tournaments/{match_info['tournament_id']}/bracket',
+                        '{escape_sql(title)}',
+                        '{escape_sql(message)}',
+                        '/tournaments/{tournament_id}/bracket',
                         false,
                         NOW()
                     )
                 """)
+            
+            for user_id in team2_members:
+                if user_id == team2_captain:
+                    title = '🏆 Победа!' if not is_team1_winner else '😔 Поражение'
+                    message = f"Судья подтвердил результат матча в турнире \"{escape_sql(tournament_name)}\". Счет: {score}. {'Ваша команда прошла в следующий раунд!' if not is_team1_winner else f'Победитель: {escape_sql(winner_name)}'}"
+                else:
+                    title = 'Матч завершен'
+                    message = f"Матч в турнире \"{escape_sql(tournament_name)}\" завершен. Счет: {score}. Победитель: {escape_sql(winner_name)}"
+                
+                cur.execute(f"""
+                    INSERT INTO t_p4831367_esport_gta_disaster.notifications 
+                    (user_id, type, title, message, link, read, created_at)
+                    VALUES (
+                        {user_id},
+                        'match_result',
+                        '{escape_sql(title)}',
+                        '{escape_sql(message)}',
+                        '/tournaments/{tournament_id}/bracket',
+                        false,
+                        NOW()
+                    )
+                """)
+            
             conn.commit()
     except Exception as e:
-        print(f"Warning: Failed to send notifications: {str(e)}")
+        import sys
+        print(f"Warning: Failed to send notifications: {str(e)}", file=sys.stderr, flush=True)
     
     return {
         'statusCode': 200,

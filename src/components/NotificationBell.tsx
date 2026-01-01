@@ -120,6 +120,10 @@ export default function NotificationBell() {
     switch (type) {
       case 'match_start':
         return 'PlayCircle';
+      case 'match_result':
+        return 'CheckCircle';
+      case 'match_update':
+        return 'RefreshCw';
       case 'tournament_update':
         return 'Trophy';
       case 'team_invitation':
