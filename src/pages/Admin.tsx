@@ -127,7 +127,7 @@ export default function Admin() {
           onLogout={handleLogout}
         />
 
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
           {activeSection === 'dashboard' && <DashboardSection />}
           {activeSection === 'users' && (
             <div className="space-y-4">

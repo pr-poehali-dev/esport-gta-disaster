@@ -71,16 +71,16 @@ export function AdminDashboardSection() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold">Главная Панель</h1>
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-3xl md:text-4xl font-bold">Главная Панель</h1>
         <button
           onClick={loadStats}
           disabled={loading}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
         >
           <Icon name={loading ? "Loader2" : "RefreshCw"} size={18} className={loading ? "animate-spin" : ""} />
-          {loading ? 'Обновление...' : 'Обновить данные'}
+          {loading ? 'Обновление...' : 'Обновить'}
         </button>
       </div>
       
@@ -88,41 +88,41 @@ export function AdminDashboardSection() {
         <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="Users" size={32} className="text-primary" />
-              <h3 className="text-2xl font-bold">{stats.total_users}</h3>
-              <p className="text-muted-foreground">Всего пользователей</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <Card className="p-4 md:p-6 space-y-2 hover:shadow-lg transition-all hover:border-primary/50">
+              <Icon name="Users" size={28} className="text-primary" />
+              <h3 className="text-xl md:text-2xl font-bold">{stats.total_users}</h3>
+              <p className="text-sm text-muted-foreground">Всего пользователей</p>
             </Card>
             
-            <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="Trophy" size={32} className="text-secondary" />
-              <h3 className="text-2xl font-bold">{stats.active_tournaments}</h3>
-              <p className="text-muted-foreground">Активных турниров</p>
+            <Card className="p-4 md:p-6 space-y-2 hover:shadow-lg transition-all hover:border-secondary/50">
+              <Icon name="Trophy" size={28} className="text-secondary" />
+              <h3 className="text-xl md:text-2xl font-bold">{stats.active_tournaments}</h3>
+              <p className="text-sm text-muted-foreground">Активных турниров</p>
             </Card>
             
-            <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="Newspaper" size={32} className="text-accent" />
-              <h3 className="text-2xl font-bold">{stats.published_news}</h3>
-              <p className="text-muted-foreground">Опубликовано новостей</p>
+            <Card className="p-4 md:p-6 space-y-2 hover:shadow-lg transition-all hover:border-accent/50">
+              <Icon name="Newspaper" size={28} className="text-accent" />
+              <h3 className="text-xl md:text-2xl font-bold">{stats.published_news}</h3>
+              <p className="text-sm text-muted-foreground">Опубликовано новостей</p>
             </Card>
 
-            <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="Ban" size={32} className="text-red-500" />
-              <h3 className="text-2xl font-bold">{stats.active_bans}</h3>
-              <p className="text-muted-foreground">Активных банов</p>
+            <Card className="p-4 md:p-6 space-y-2 hover:shadow-lg transition-all hover:border-red-500/50">
+              <Icon name="Ban" size={28} className="text-red-500" />
+              <h3 className="text-xl md:text-2xl font-bold">{stats.active_bans}</h3>
+              <p className="text-sm text-muted-foreground">Активных банов</p>
             </Card>
 
-            <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="VolumeX" size={32} className="text-orange-500" />
-              <h3 className="text-2xl font-bold">{stats.active_mutes}</h3>
-              <p className="text-muted-foreground text-sm">Активных мутов</p>
+            <Card className="p-4 md:p-6 space-y-2 hover:shadow-lg transition-all hover:border-orange-500/50">
+              <Icon name="VolumeX" size={28} className="text-orange-500" />
+              <h3 className="text-xl md:text-2xl font-bold">{stats.active_mutes}</h3>
+              <p className="text-sm text-muted-foreground">Активных мутов</p>
             </Card>
 
-            <Card className="p-6 space-y-2 hover:shadow-lg transition-shadow">
-              <Icon name="Shield" size={32} className="text-purple-500" />
-              <h3 className="text-2xl font-bold">{stats.total_teams}</h3>
-              <p className="text-muted-foreground text-sm">Всего команд</p>
+            <Card className="p-4 md:p-6 space-y-2 hover:shadow-lg transition-all hover:border-purple-500/50">
+              <Icon name="Shield" size={28} className="text-purple-500" />
+              <h3 className="text-xl md:text-2xl font-bold">{stats.total_teams}</h3>
+              <p className="text-sm text-muted-foreground">Всего команд</p>
             </Card>
           </div>
 

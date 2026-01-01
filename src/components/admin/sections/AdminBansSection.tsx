@@ -108,44 +108,50 @@ export function AdminBansSection() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-4xl font-bold">Бан-лист</h1>
-        <Button onClick={loadBans} variant="outline">
-          <Icon name="RefreshCw" size={20} className="mr-2" />
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl md:text-4xl font-bold">Бан-лист</h1>
+        <Button onClick={loadBans} variant="outline" size="sm">
+          <Icon name="RefreshCw" size={18} className="mr-2" />
           Обновить
         </Button>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">Загрузка...</div>
+          <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Icon name="Loader2" className="animate-spin" size={20} />
+            Загрузка...
+          </div>
         ) : bans.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">Нет активных банов</div>
+          <div className="p-8 text-center">
+            <Icon name="CheckCircle" className="mx-auto mb-2 text-green-500" size={40} />
+            <p className="text-muted-foreground">Нет активных банов</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-border">
+            <table className="w-full min-w-[800px]">
+              <thead className="border-b border-border bg-muted/30">
                 <tr>
-                  <th className="text-left p-4 font-semibold">Пользователь</th>
-                  <th className="text-left p-4 font-semibold">Администратор</th>
-                  <th className="text-left p-4 font-semibold">Причина</th>
-                  <th className="text-left p-4 font-semibold">Дата бана</th>
-                  <th className="text-left p-4 font-semibold">Длительность</th>
-                  <th className="text-left p-4 font-semibold">Действия</th>
+                  <th className="text-left p-3 md:p-4 font-semibold text-sm">Пользователь</th>
+                  <th className="text-left p-3 md:p-4 font-semibold text-sm">Администратор</th>
+                  <th className="text-left p-3 md:p-4 font-semibold text-sm">Причина</th>
+                  <th className="text-left p-3 md:p-4 font-semibold text-sm">Дата</th>
+                  <th className="text-left p-3 md:p-4 font-semibold text-sm">Срок</th>
+                  <th className="text-left p-3 md:p-4 font-semibold text-sm">Действия</th>
                 </tr>
               </thead>
               <tbody>
                 {bans.map((ban: any) => (
-                  <tr key={ban.id} className="border-b border-border hover:bg-muted/30">
-                    <td className="p-4 font-medium">{ban.username}</td>
-                    <td className="p-4 text-muted-foreground">{ban.admin_name}</td>
-                    <td className="p-4">{ban.reason}</td>
-                    <td className="p-4 text-muted-foreground">
+                  <tr key={ban.id} className="border-b border-border hover:bg-muted/20 transition-colors">
+                    <td className="p-3 md:p-4 font-medium">{ban.username}</td>
+                    <td className="p-3 md:p-4 text-sm text-muted-foreground">{ban.admin_name}</td>
+                    <td className="p-3 md:p-4 text-sm max-w-xs truncate" title={ban.reason}>{ban.reason}</td>
+                    <td className="p-3 md:p-4 text-sm text-muted-foreground whitespace-nowrap">
                       {new Date(ban.ban_start_date).toLocaleDateString('ru-RU')}
                     </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-sm ${
+                    <td className="p-3 md:p-4">
+                      <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap inline-block ${
                         ban.is_permanent 
                           ? 'bg-red-500/20 text-red-500' 
                           : 'bg-yellow-500/20 text-yellow-500'
@@ -153,13 +159,14 @@ export function AdminBansSection() {
                         {formatDuration(ban.ban_start_date, ban.ban_end_date, ban.is_permanent)}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-3 md:p-4">
                       <Button 
                         size="sm" 
                         variant="outline"
                         onClick={() => handleUnban(ban.user_id)}
+                        className="whitespace-nowrap"
                       >
-                        <Icon name="UserCheck" size={16} className="mr-2" />
+                        <Icon name="UserCheck" size={14} className="mr-1" />
                         Разбанить
                       </Button>
                     </td>
