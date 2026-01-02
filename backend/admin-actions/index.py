@@ -252,6 +252,8 @@ def handler(event: dict, context) -> dict:
                 return approve_registration(cur, conn, admin_id, body)
             elif action == 'reject_registration':
                 return reject_registration(cur, conn, admin_id, body)
+            elif action == 'delete_all_tournaments':
+                return delete_all_tournaments(cur, conn, admin_id)
             elif action == 'get_moderation_logs':
                 return get_moderation_logs(cur, conn)
             elif action == 'get_active_bans':
@@ -4856,5 +4858,63 @@ def get_admin_logs(cur, conn, body: dict) -> dict:
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({'error': str(e), 'traceback': error_msg}),
+            'isBase64Encoded': False
+        }
+
+def delete_all_tournaments(cur, conn, admin_id: str) -> dict:
+    """Удаление всех турниров и связанных данных"""
+    try:
+        # Проверка прав доступа
+        cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (int(admin_id),))
+        admin = cur.fetchone()
+        
+        if not admin or admin['role'] not in ['admin', 'founder']:
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Недостаточно прав для удаления турниров'}),
+                'isBase64Encoded': False
+            }
+        
+        # Подсчитываем количество турниров
+        cur.execute("SELECT COUNT(*) as count FROM t_p4831367_esport_gta_disaster.tournaments")
+        count_result = cur.fetchone()
+        total_tournaments = count_result['count']
+        
+        # Удаляем связанные данные
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_brackets")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_exclusions")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_suspensions")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.group_stage_matches")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.bracket_stages")
+        
+        # Удаляем все турниры
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournaments")
+        
+        conn.commit()
+        
+        # Логирование
+        log_admin_action(cur, conn, admin_id, 'delete_all_tournaments', 
+                        f'Удалено {total_tournaments} турниров и все связанные данные', 
+                        'tournaments', None)
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': f'Удалено турниров: {total_tournaments}'}),
+            'isBase64Encoded': False
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        import sys, traceback
+        error_msg = traceback.format_exc()
+        print(f"ERROR in delete_all_tournaments: {error_msg}", file=sys.stderr, flush=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка при удалении турниров: {str(e)}'}),
             'isBase64Encoded': False
         }
