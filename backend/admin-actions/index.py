@@ -4960,7 +4960,12 @@ def delete_all_users_except_founder(cur, conn, admin_id: str) -> dict:
         # Удаляем участников команд кроме ID 2
         cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id != 2")
         
-        # Удаляем команды, где капитан не ID 2
+        # Удаляем команды, где капитан не ID 2 (сначала все зависимые таблицы)
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.match_screenshots WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.match_history WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches WHERE team1_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2) OR team2_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2) OR winner_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.group_stage_matches WHERE team1_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2) OR team2_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.matches WHERE team1_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2) OR team2_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2) OR winner_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
         cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_invitations WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
         cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
         cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2")

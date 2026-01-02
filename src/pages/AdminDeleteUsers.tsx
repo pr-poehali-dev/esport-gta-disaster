@@ -9,6 +9,7 @@ const API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8fee
 export default function AdminDeleteUsers() {
   const [result, setResult] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string>('');
 
   const deleteUsers = async () => {
     if (!confirm('Вы уверены? Это удалит ВСЕ аккаунты кроме ID 2 (founder)!')) {
@@ -20,26 +21,33 @@ export default function AdminDeleteUsers() {
 
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const adminId = user.id?.toString() || '2';
+      setUserId(adminId);
+      
+      console.log('Sending delete request with Admin ID:', adminId);
       
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-Id': user.id?.toString() || '2'
+          'X-Admin-Id': adminId
         },
         body: JSON.stringify({
           action: 'delete_all_users_except_founder'
         })
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
       
       if (data.success) {
         setResult(`✅ Успешно! ${data.message}`);
       } else {
-        setResult(`❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`);
+        setResult(`❌ Ошибка: ${data.error || JSON.stringify(data, null, 2)}`);
       }
     } catch (error: any) {
+      console.error('Delete error:', error);
       setResult(`❌ Ошибка: ${error.message}`);
     } finally {
       setLoading(false);
@@ -53,11 +61,16 @@ export default function AdminDeleteUsers() {
       <main className="flex-1 flex items-center justify-center p-6">
         <Card className="bg-[#1a1f2e] border-red-500/50 p-8 max-w-md w-full">
           <h1 className="text-2xl font-bold text-white mb-4">⚠️ Удаление пользователей</h1>
-          <p className="text-gray-300 mb-6">
+          <p className="text-gray-300 mb-4">
             Эта операция удалит ВСЕ аккаунты кроме ID 2 (founder).
             <br /><br />
             <strong className="text-red-400">Это действие необратимо!</strong>
           </p>
+          {userId && (
+            <p className="text-sm text-gray-400 mb-4">
+              Текущий Admin ID: {userId}
+            </p>
+          )}
 
           <Button 
             onClick={deleteUsers} 
