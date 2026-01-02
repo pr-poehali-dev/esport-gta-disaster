@@ -50,8 +50,9 @@ import AdminDeleteUsers from "./pages/AdminDeleteUsers";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <ErrorBoundary>
+const App = () => {
+  return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <NotificationSystem />
@@ -105,6 +106,7 @@ const App = () => (
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>
-);
+  );
+};
 
 export default App;
