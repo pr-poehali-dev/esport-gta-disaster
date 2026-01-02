@@ -256,6 +256,8 @@ def handler(event: dict, context) -> dict:
                 return delete_all_tournaments(cur, conn, admin_id)
             elif action == 'delete_all_users_except_founder':
                 return delete_all_users_except_founder(cur, conn, admin_id)
+            elif action == 'delete_user_by_id':
+                return delete_user_by_id(cur, conn, admin_id, body)
             elif action == 'get_moderation_logs':
                 return get_moderation_logs(cur, conn)
             elif action == 'get_active_bans':
@@ -4918,6 +4920,118 @@ def delete_all_tournaments(cur, conn, admin_id: str) -> dict:
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({'error': f'Ошибка при удалении турниров: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+def delete_user_by_id(cur, conn, admin_id: str, body: dict) -> dict:
+    """Удаление конкретного пользователя по ID и всех связанных данных"""
+    try:
+        user_id = body.get('user_id')
+        
+        if not user_id:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Не указан ID пользователя'}),
+                'isBase64Encoded': False
+            }
+        
+        user_id_int = int(user_id)
+        
+        # Проверка прав доступа
+        cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (int(admin_id),))
+        admin = cur.fetchone()
+        
+        if not admin or admin['role'] not in ['admin', 'founder']:
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Недостаточно прав для удаления пользователей'}),
+                'isBase64Encoded': False
+            }
+        
+        # Запрет на удаление founder
+        if user_id_int == 2:
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Нельзя удалить founder аккаунт'}),
+                'isBase64Encoded': False
+            }
+        
+        # Получаем информацию о пользователе
+        cur.execute("SELECT email, nickname FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id_int,))
+        user_info = cur.fetchone()
+        
+        if not user_info:
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Пользователь не найден'}),
+                'isBase64Encoded': False
+            }
+        
+        user_email = user_info['email']
+        user_nickname = user_info['nickname']
+        
+        # Удаляем связанные данные пользователя
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.sessions WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_sessions WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_activity WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_activity_sessions WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.login_logs WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.password_reset_tokens WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.notifications WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_notifications WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_achievements WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.bans WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_bans WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.mutes WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_mutes WHERE user_id = %s", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_exclusions WHERE user_id = %s", (user_id_int,))
+        
+        # Удаляем участие в командах
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id = %s", (user_id_int,))
+        
+        # Удаляем команды, где пользователь капитан (сначала все зависимые таблицы)
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.match_screenshots WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s)", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.match_history WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s)", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.bracket_matches WHERE team1_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s) OR team2_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s) OR winner_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s)", (user_id_int, user_id_int, user_id_int))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.group_stage_matches WHERE team1_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s) OR team2_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s)", (user_id_int, user_id_int))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.matches WHERE team1_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s) OR team2_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s) OR winner_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s)", (user_id_int, user_id_int, user_id_int))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_invitations WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s)", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s)", (user_id_int,))
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id = %s", (user_id_int,))
+        
+        # Удаляем приглашения для пользователя
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_invitations WHERE invited_user_id = %s", (user_id_int,))
+        
+        # Удаляем самого пользователя
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (user_id_int,))
+        
+        conn.commit()
+        
+        # Логирование
+        log_admin_action(cur, conn, admin_id, 'delete_user', 
+                        f'Удалён пользователь {user_nickname} ({user_email}) и все связанные данные', 
+                        'user', user_id_int)
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': f'Пользователь {user_nickname} ({user_email}) удалён'}),
+            'isBase64Encoded': False
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        import sys, traceback
+        error_msg = traceback.format_exc()
+        print(f"ERROR in delete_user_by_id: {error_msg}", file=sys.stderr, flush=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка при удалении пользователя: {str(e)}'}),
             'isBase64Encoded': False
         }
 
