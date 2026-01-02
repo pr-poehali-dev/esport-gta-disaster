@@ -10,6 +10,19 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 
+def get_geolocation(ip_address: str) -> tuple:
+    """Получение геолокации по IP (базовая реализация)"""
+    try:
+        import requests
+        response = requests.get(f'http://ip-api.com/json/{ip_address}', timeout=2)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                return data.get('country', 'Unknown'), data.get('city', 'Unknown')
+    except:
+        pass
+    return 'Unknown', 'Unknown'
+
 def format_user(user_data):
     """Форматирование данных пользователя для JSON ответа"""
     if not user_data:
@@ -68,7 +81,7 @@ def handler(event: dict, context) -> dict:
             elif action == 'resend_verification':
                 return resend_verification(cur, conn, body)
             elif action == 'login':
-                return login(cur, conn, body)
+                return login(cur, conn, body, event)
             elif action == 'logout':
                 return logout(cur, conn, event)
             elif action == 'reset_password_request':
@@ -273,10 +286,15 @@ def resend_verification(cur, conn, body: dict) -> dict:
     except Exception as e:
         return error_response(f'Ошибка отправки письма: {str(e)}', 500)
 
-def login(cur, conn, body: dict) -> dict:
+def login(cur, conn, body: dict, event: dict = None) -> dict:
     """Вход в аккаунт (по email или никнейму)"""
     login_identifier = body.get('email', '').strip()
     password = body.get('password', '')
+    
+    # Получаем IP и User-Agent из заголовков
+    headers = event.get('headers', {}) if event else {}
+    ip_address = headers.get('X-Forwarded-For', headers.get('X-Real-IP', 'unknown')).split(',')[0].strip()
+    user_agent = headers.get('User-Agent', 'unknown')
     
     if not login_identifier or not password:
         return error_response('Заполните все поля', 400)
@@ -291,6 +309,19 @@ def login(cur, conn, body: dict) -> dict:
     user = cur.fetchone()
     
     if not user:
+        # Логируем неудачную попытку входа
+        cur.execute("""
+            SELECT id FROM t_p4831367_esport_gta_disaster.users 
+            WHERE LOWER(email) = LOWER(%s) OR LOWER(nickname) = LOWER(%s)
+        """, (login_identifier, login_identifier))
+        user_exists = cur.fetchone()
+        if user_exists:
+            cur.execute("""
+                INSERT INTO t_p4831367_esport_gta_disaster.login_logs 
+                (user_id, ip_address, user_agent, login_successful, login_method)
+                VALUES (%s, %s, %s, FALSE, 'password')
+            """, (user_exists['id'], ip_address, user_agent))
+            conn.commit()
         return error_response('Неверный email или пароль', 401)
     
     user_id = user['id']
@@ -309,7 +340,20 @@ def login(cur, conn, body: dict) -> dict:
     cur.execute("""
         INSERT INTO t_p4831367_esport_gta_disaster.sessions (user_id, session_token, expires_at)
         VALUES (%s, %s, %s)
+        RETURNING id
     """, (user_id, session_token, expires_at))
+    
+    session_id = cur.fetchone()['id']
+    
+    # Получаем геолокацию по IP (базовая реализация)
+    country, city = get_geolocation(ip_address)
+    
+    # Логируем успешный вход
+    cur.execute("""
+        INSERT INTO t_p4831367_esport_gta_disaster.login_logs 
+        (user_id, ip_address, user_agent, country, city, login_successful, login_method, session_id)
+        VALUES (%s, %s, %s, %s, %s, TRUE, 'password', %s)
+    """, (user_id, ip_address, user_agent, country, city, session_id))
     
     conn.commit()
     

@@ -8,6 +8,8 @@ import ProfileBannerSection from '@/components/profile/ProfileBannerSection';
 import ProfileStatsSection from '@/components/profile/ProfileStatsSection';
 import ProfileContentSection from '@/components/profile/ProfileContentSection';
 import ProfileEditDialog from '@/components/profile/ProfileEditDialog';
+import ChangePasswordDialog from '@/components/profile/ChangePasswordDialog';
+import LoginHistoryDialog from '@/components/profile/LoginHistoryDialog';
 
 const PROFILE_API_URL = 'https://functions.poehali.dev/40668e0d-ec0a-41a3-95c1-34a0140e1c15';
 const TEAMS_API = 'https://functions.poehali.dev/a4eec727-e4f2-4b3c-b8d3-06dbb78ab515';
@@ -16,6 +18,8 @@ export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [loginHistoryOpen, setLoginHistoryOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [userTeams, setUserTeams] = useState<any[]>([]);
   
@@ -398,6 +402,8 @@ export default function Profile() {
             handleAvatarUpload={handleAvatarUpload}
             onEditClick={() => setEditDialogOpen(true)}
             onRefreshData={handleRefreshData}
+            onChangePassword={() => setChangePasswordOpen(true)}
+            onViewLoginHistory={() => setLoginHistoryOpen(true)}
           />
 
           <div className="mt-8">
@@ -412,6 +418,16 @@ export default function Profile() {
             setEditData={setEditData}
             handleSaveProfile={handleSaveProfile}
             loading={loading}
+          />
+
+          <ChangePasswordDialog
+            open={changePasswordOpen}
+            onOpenChange={setChangePasswordOpen}
+          />
+
+          <LoginHistoryDialog
+            open={loginHistoryOpen}
+            onOpenChange={setLoginHistoryOpen}
           />
         </div>
       </main>

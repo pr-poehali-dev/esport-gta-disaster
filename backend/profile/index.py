@@ -54,6 +54,10 @@ def handler(event: dict, context) -> dict:
                 return upload_banner(cur, conn, user_id, body)
             elif action == 'track_activity':
                 return track_activity(cur, conn, user_id, body)
+            elif action == 'change_password':
+                return change_password(cur, conn, user_id, body)
+            elif action == 'get_login_history':
+                return get_login_history(cur, user_id, body)
             else:
                 return error_response('Неизвестное действие', 400)
         
@@ -375,6 +379,92 @@ def upload_banner(cur, conn, user_id: int, body: dict) -> dict:
     
     except Exception as e:
         return error_response(f'Ошибка загрузки: {str(e)}', 500)
+
+def change_password(cur, conn, user_id: int, body: dict) -> dict:
+    """Смена пароля пользователя"""
+    import hashlib
+    
+    current_password = body.get('current_password', '')
+    new_password = body.get('new_password', '')
+    
+    if not current_password or not new_password:
+        return error_response('Заполните все поля', 400)
+    
+    if len(new_password) < 6:
+        return error_response('Пароль должен быть не менее 6 символов', 400)
+    
+    # Проверяем текущий пароль
+    current_hash = hashlib.sha256(current_password.encode()).hexdigest()
+    cur.execute("""
+        SELECT password_hash FROM t_p4831367_esport_gta_disaster.users 
+        WHERE id = %s
+    """, (user_id,))
+    
+    result = cur.fetchone()
+    if not result or result[0] != current_hash:
+        return error_response('Неверный текущий пароль', 401)
+    
+    # Обновляем пароль
+    new_hash = hashlib.sha256(new_password.encode()).hexdigest()
+    cur.execute("""
+        UPDATE t_p4831367_esport_gta_disaster.users 
+        SET password_hash = %s, updated_at = NOW()
+        WHERE id = %s
+    """, (new_hash, user_id))
+    
+    conn.commit()
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'success': True,
+            'message': 'Пароль успешно изменен'
+        }),
+        'isBase64Encoded': False
+    }
+
+def get_login_history(cur, user_id: int, body: dict) -> dict:
+    """Получение истории входов пользователя"""
+    limit = body.get('limit', 20)
+    
+    cur.execute("""
+        SELECT 
+            id,
+            ip_address,
+            user_agent,
+            country,
+            city,
+            login_successful,
+            login_method,
+            created_at
+        FROM t_p4831367_esport_gta_disaster.login_logs
+        WHERE user_id = %s
+        ORDER BY created_at DESC
+        LIMIT %s
+    """, (user_id, limit))
+    
+    logs = []
+    for row in cur.fetchall():
+        logs.append({
+            'id': row[0],
+            'ip_address': row[1],
+            'user_agent': row[2],
+            'country': row[3],
+            'city': row[4],
+            'login_successful': row[5],
+            'login_method': row[6],
+            'created_at': row[7].isoformat() if row[7] else None
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps({
+            'login_history': logs
+        }),
+        'isBase64Encoded': False
+    }
 
 def error_response(message: str, status_code: int) -> dict:
     return {

@@ -28,6 +28,8 @@ interface ProfileBannerSectionProps {
   handleAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onEditClick: () => void;
   onRefreshData?: () => void;
+  onChangePassword?: () => void;
+  onViewLoginHistory?: () => void;
 }
 
 export default function ProfileBannerSection({
@@ -37,6 +39,8 @@ export default function ProfileBannerSection({
   handleAvatarUpload,
   onEditClick,
   onRefreshData,
+  onChangePassword,
+  onViewLoginHistory,
 }: ProfileBannerSectionProps) {
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
@@ -122,6 +126,18 @@ export default function ProfileBannerSection({
           </div>
 
           <div className="flex gap-2">
+            {onViewLoginHistory && (
+              <Button variant="outline" className="gap-2" onClick={onViewLoginHistory}>
+                <Icon name="Shield" size={20} />
+                История входов
+              </Button>
+            )}
+            {onChangePassword && (
+              <Button variant="outline" className="gap-2" onClick={onChangePassword}>
+                <Icon name="Lock" size={20} />
+                Сменить пароль
+              </Button>
+            )}
             {onRefreshData && (
               <Button variant="outline" className="gap-2" onClick={onRefreshData}>
                 <Icon name="RefreshCw" size={20} />
