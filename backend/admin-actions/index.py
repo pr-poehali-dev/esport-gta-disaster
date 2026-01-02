@@ -254,6 +254,8 @@ def handler(event: dict, context) -> dict:
                 return reject_registration(cur, conn, admin_id, body)
             elif action == 'delete_all_tournaments':
                 return delete_all_tournaments(cur, conn, admin_id)
+            elif action == 'delete_all_users_except_founder':
+                return delete_all_users_except_founder(cur, conn, admin_id)
             elif action == 'get_moderation_logs':
                 return get_moderation_logs(cur, conn)
             elif action == 'get_active_bans':
@@ -4916,5 +4918,81 @@ def delete_all_tournaments(cur, conn, admin_id: str) -> dict:
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
             'body': json.dumps({'error': f'Ошибка при удалении турниров: {str(e)}'}),
+            'isBase64Encoded': False
+        }
+
+def delete_all_users_except_founder(cur, conn, admin_id: str) -> dict:
+    """Удаление всех пользователей кроме ID 2 (founder) и связанных данных"""
+    try:
+        # Проверка прав доступа
+        cur.execute("SELECT role FROM t_p4831367_esport_gta_disaster.users WHERE id = %s", (int(admin_id),))
+        admin = cur.fetchone()
+        
+        if not admin or admin['role'] not in ['admin', 'founder']:
+            return {
+                'statusCode': 403,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Недостаточно прав для удаления пользователей'}),
+                'isBase64Encoded': False
+            }
+        
+        # Подсчитываем количество пользователей (кроме ID 2)
+        cur.execute("SELECT COUNT(*) as count FROM t_p4831367_esport_gta_disaster.users WHERE id != 2")
+        count_result = cur.fetchone()
+        total_users = count_result['count']
+        
+        # Удаляем связанные данные для пользователей кроме ID 2
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.sessions WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_sessions WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_activity WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_activity_sessions WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.login_logs WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.password_reset_tokens WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.notifications WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_notifications WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_achievements WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.bans WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_bans WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.mutes WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.user_mutes WHERE user_id != 2")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_exclusions WHERE user_id != 2")
+        
+        # Удаляем участников команд кроме ID 2
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_members WHERE user_id != 2")
+        
+        # Удаляем команды, где капитан не ID 2
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_invitations WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.tournament_registrations WHERE team_id IN (SELECT id FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2)")
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.teams WHERE captain_id != 2")
+        
+        # Удаляем приглашения для пользователей кроме ID 2
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.team_invitations WHERE invited_user_id != 2")
+        
+        # Удаляем всех пользователей кроме ID 2
+        cur.execute("DELETE FROM t_p4831367_esport_gta_disaster.users WHERE id != 2")
+        
+        conn.commit()
+        
+        # Логирование
+        log_admin_action(cur, conn, admin_id, 'delete_all_users', 
+                        f'Удалено {total_users} пользователей (кроме founder ID 2) и все связанные данные', 
+                        'users', None)
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True, 'message': f'Удалено пользователей: {total_users}. Founder (ID 2) сохранен.'}),
+            'isBase64Encoded': False
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        import sys, traceback
+        error_msg = traceback.format_exc()
+        print(f"ERROR in delete_all_users_except_founder: {error_msg}", file=sys.stderr, flush=True)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Ошибка при удалении пользователей: {str(e)}'}),
             'isBase64Encoded': False
         }

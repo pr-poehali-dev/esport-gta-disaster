@@ -46,6 +46,7 @@ import NewsDetail from "./pages/NewsDetail";
 import TournamentDetail from "./pages/TournamentDetail";
 import Discussions from "./pages/Discussions";
 import NotFound from "./pages/NotFound";
+import AdminDeleteUsers from "./pages/AdminDeleteUsers";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/admin/tournaments/:id/applications" element={<ProtectedRoute requireAdmin><AdminTournamentApplications /></ProtectedRoute>} />
             <Route path="/admin/tournaments/:tournamentId/group-stage" element={<ProtectedRoute requireAdmin><AdminGroupStage /></ProtectedRoute>} />
             <Route path="/admin/news" element={<ProtectedRoute requireAdmin><AdminNews /></ProtectedRoute>} />
+            <Route path="/admin/delete-users" element={<ProtectedRoute requireAdmin><AdminDeleteUsers /></ProtectedRoute>} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/verify" element={<VerifyEmail />} />
