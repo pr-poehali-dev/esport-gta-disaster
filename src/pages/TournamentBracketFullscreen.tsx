@@ -14,6 +14,7 @@ import EsportsBracket from '@/components/brackets/EsportsBracket';
 import CyberpunkBracket from '@/components/brackets/CyberpunkBracket';
 import MinimalBracket from '@/components/brackets/MinimalBracket';
 import ChampionshipBracket from '@/components/brackets/ChampionshipBracket';
+import GoldDeagleBracket from '@/components/brackets/GoldDeagleBracket';
 import MatchManagementDialog from '@/components/match/MatchManagementDialog';
 
 const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
@@ -198,6 +199,8 @@ export default function TournamentBracketFullscreen() {
         return 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50';
       case 'championship':
         return 'bg-[#0a0e1a]';
+      case 'gold-deagle':
+        return 'bg-gradient-to-br from-[#1a1a1a] via-[#2d2d2d] to-[#1a1a1a]';
       default:
         return 'bg-[#0a0e1a]';
     }
@@ -210,6 +213,8 @@ export default function TournamentBracketFullscreen() {
       return 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10';
     } else if (bracketStyle === 'championship') {
       return 'border-white/10 text-white hover:bg-white/5';
+    } else if (bracketStyle === 'gold-deagle') {
+      return 'border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/10';
     }
     return 'border-white/10 text-white hover:bg-white/5';
   };
@@ -273,6 +278,14 @@ export default function TournamentBracketFullscreen() {
             )}
             {bracketStyle === 'championship' && (
               <ChampionshipBracket
+                matches={matches}
+                canEdit={canEdit}
+                onMatchClick={(match) => setSelectedMatchId(match.id)}
+                onEditMatch={setEditMatch}
+              />
+            )}
+            {bracketStyle === 'gold-deagle' && (
+              <GoldDeagleBracket
                 matches={matches}
                 canEdit={canEdit}
                 onMatchClick={(match) => setSelectedMatchId(match.id)}

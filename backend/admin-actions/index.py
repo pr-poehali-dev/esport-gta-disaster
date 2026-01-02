@@ -679,8 +679,11 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     name = body.get('name')
     description = body.get('description')
     game = body.get('game_project', 'GTA V')
+    game_mode = body.get('game_mode')
     start_date = body.get('start_date')
     end_date = body.get('end_date')
+    registration_start = body.get('registration_start')
+    registration_end = body.get('registration_end')
     max_teams = body.get('max_participants', 16)
     prize_pool = body.get('prize_pool')
     rules = body.get('rules')
@@ -688,6 +691,9 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     location = body.get('location')
     team_size = body.get('team_size')
     best_of = body.get('best_of')
+    map_pool = body.get('map_pool')
+    bracket_style = body.get('bracket_style', 'esports')
+    starting_stage = body.get('starting_stage', 16)
     
     if not name or not start_date:
         return {
@@ -697,13 +703,22 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
+    # Конвертируем map_pool в JSON строку
+    map_pool_json = None
+    if map_pool and isinstance(map_pool, list):
+        map_pool_json = json.dumps(map_pool)
+    
     try:
         cur.execute("""
             INSERT INTO t_p4831367_esport_gta_disaster.tournaments 
-            (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format, created_by, location, team_size, best_of, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming')
+            (name, description, game, game_mode, start_date, end_date, registration_start, registration_end, 
+             max_teams, prize_pool, rules, format, created_by, location, team_size, best_of, map_pool, 
+             bracket_style, starting_stage, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming')
             RETURNING id
-        """, (name, description, game, start_date, end_date, max_teams, prize_pool, rules, format_value, admin_id, location, team_size, best_of))
+        """, (name, description, game, game_mode, start_date, end_date, registration_start, registration_end,
+              max_teams, prize_pool, rules, format_value, admin_id, location, team_size, best_of, map_pool_json,
+              bracket_style, starting_stage))
         
         tournament_id = cur.fetchone()['id']
         conn.commit()
@@ -1981,9 +1996,9 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
         }
     
     try:
-        # Получаем информацию о турнире
+        # Получаем информацию о турнире включая starting_stage
         cur.execute(f"""
-            SELECT max_teams FROM t_p4831367_esport_gta_disaster.tournaments
+            SELECT max_teams, starting_stage FROM t_p4831367_esport_gta_disaster.tournaments
             WHERE id = {tournament_id}
         """)
         tournament_data = cur.fetchone()
@@ -1996,7 +2011,9 @@ def generate_bracket(cur, conn, admin_id: str, body: dict) -> dict:
                 'isBase64Encoded': False
             }
         
-        max_teams = tournament_data['max_teams'] or 16  # По умолчанию 16 команд
+        # Используем starting_stage вместо max_teams для определения размера сетки
+        starting_stage = tournament_data.get('starting_stage') or tournament_data.get('max_teams') or 16
+        max_teams = starting_stage  # Размер сетки определяется starting_stage
         
         # Получаем все одобренные регистрации (статус approved или confirmed)
         cur.execute(f"""
@@ -2133,10 +2150,12 @@ def get_bracket(cur, conn, body: dict) -> dict:
             'isBase64Encoded': False
         }
     
-    # Получаем bracket_id
+    # Получаем bracket_id и tournament bracket_style
     cur.execute(f"""
-        SELECT id, format, style FROM t_p4831367_esport_gta_disaster.tournament_brackets
-        WHERE tournament_id = {tournament_id}
+        SELECT tb.id, tb.format, tb.style, t.bracket_style as tournament_bracket_style
+        FROM t_p4831367_esport_gta_disaster.tournament_brackets tb
+        LEFT JOIN t_p4831367_esport_gta_disaster.tournaments t ON tb.tournament_id = t.id
+        WHERE tb.tournament_id = {tournament_id}
     """)
     bracket_data = cur.fetchone()
     
@@ -2150,7 +2169,7 @@ def get_bracket(cur, conn, body: dict) -> dict:
     
     bracket_id = bracket_data['id']
     bracket_format = bracket_data['format']
-    bracket_style = bracket_data.get('style', 'esports')
+    bracket_style = bracket_data.get('tournament_bracket_style') or bracket_data.get('style', 'esports')
     
     # Получаем все матчи
     cur.execute(f"""

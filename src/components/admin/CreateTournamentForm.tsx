@@ -17,6 +17,7 @@ interface FormData {
   team_size: number;
   best_of: number;
   start_date: string;
+  starting_stage?: number;
 }
 
 interface CreateTournamentFormProps {
@@ -99,7 +100,7 @@ export default function CreateTournamentForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div>
             <Label className="text-white mb-2 block">Формат</Label>
             <Input
@@ -128,6 +129,20 @@ export default function CreateTournamentForm({
               onChange={(e) => onFormDataChange({ best_of: parseInt(e.target.value) || 0 })}
               className="bg-[#1a1f2e] border-white/10 text-white"
             />
+          </div>
+
+          <div>
+            <Label className="text-white mb-2 block">Стартовая стадия</Label>
+            <select
+              value={formData.starting_stage || 16}
+              onChange={(e) => onFormDataChange({ starting_stage: parseInt(e.target.value) })}
+              className="w-full h-10 px-3 rounded-md bg-[#1a1f2e] border border-white/10 text-white"
+            >
+              <option value="16">1/16 (16 команд)</option>
+              <option value="32">1/32 (32 команды)</option>
+              <option value="64">1/64 (64 команды)</option>
+              <option value="128">1/128 (128 команд)</option>
+            </select>
           </div>
         </div>
 

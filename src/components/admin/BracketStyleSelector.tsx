@@ -63,6 +63,17 @@ const bracketStyles: BracketStyle[] = [
       secondary: '#1a1f2e',
       accent: '#ec4899'
     }
+  },
+  {
+    id: 'gold-deagle',
+    name: 'GOLD DEAGLE',
+    description: 'GTA San Andreas стиль с золотым Desert Eagle',
+    preview: '🔫',
+    colors: {
+      primary: '#FFD700',
+      secondary: '#FFA500',
+      accent: '#1a1a1a'
+    }
   }
 ];
 
@@ -82,7 +93,7 @@ export default function BracketStyleSelector({ onSelect, onCancel }: BracketStyl
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {bracketStyles.map((style) => (
             <Card
               key={style.id}

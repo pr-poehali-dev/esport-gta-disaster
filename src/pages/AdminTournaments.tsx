@@ -43,7 +43,8 @@ export default function AdminTournaments() {
     format: '5v5',
     team_size: 5,
     best_of: 1,
-    start_date: ''
+    start_date: '',
+    starting_stage: 16
   });
 
   const [mapInput, setMapInput] = useState('');
@@ -141,7 +142,8 @@ export default function AdminTournaments() {
           format: '5v5',
           team_size: 5,
           best_of: 1,
-          start_date: ''
+          start_date: '',
+          starting_stage: 16
         });
         loadTournaments();
       } else {
