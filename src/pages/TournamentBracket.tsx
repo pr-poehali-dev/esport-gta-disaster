@@ -1,22 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import EsportsBracket from '@/components/brackets/EsportsBracket';
-import CyberpunkBracket from '@/components/brackets/CyberpunkBracket';
-import MinimalBracket from '@/components/brackets/MinimalBracket';
-import ChampionshipBracket from '@/components/brackets/ChampionshipBracket';
-import GoldDeagleBracket from '@/components/brackets/GoldDeagleBracket';
+import BracketHeader from '@/components/tournament-bracket/BracketHeader';
+import EmptyBracketPlaceholder from '@/components/tournament-bracket/EmptyBracketPlaceholder';
+import BracketRenderer from '@/components/tournament-bracket/BracketRenderer';
+import MatchEditDialog from '@/components/tournament-bracket/MatchEditDialog';
 import MatchManagementDialog from '@/components/match/MatchManagementDialog';
 
 const ADMIN_API_URL = 'https://functions.poehali.dev/6a86c22f-65cf-4eae-a945-4fc8d8feee41';
@@ -37,7 +27,6 @@ interface Match {
 
 export default function TournamentBracket() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -194,118 +183,6 @@ export default function TournamentBracket() {
     }
   };
 
-
-
-  const renderMatch = (match: Match) => (
-    <div key={match.id} className="relative group">
-      {canEdit && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/90"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditMatch(match);
-          }}
-        >
-          <Icon name="Edit" className="h-4 w-4" />
-        </Button>
-      )}
-      
-      <div 
-        className="bg-gradient-to-br from-purple-900/40 via-purple-800/30 to-purple-900/40 backdrop-blur-sm rounded-xl border-2 border-purple-500/30 p-4 cursor-pointer hover:border-purple-400/60 transition-all hover:shadow-lg hover:shadow-purple-500/20 hover:scale-105 hover:-translate-y-1"
-        onClick={() => setSelectedMatchId(match.id)}
-      >
-        <div className="space-y-2">
-          <div 
-            className={`flex items-center justify-between p-3 rounded-lg backdrop-blur-md ${
-              match.winner_id === match.team1?.id 
-                ? 'bg-purple-500/30 border-2 border-purple-400' 
-                : 'bg-black/30 border border-purple-500/20'
-            } transition-all`}
-          >
-            <div className="flex items-center gap-3 flex-1">
-              {match.team1?.logo_url && (
-                <img src={match.team1.logo_url} alt="" className="w-8 h-8 rounded-full border-2 border-purple-400/50" />
-              )}
-              <span className={`font-bold text-sm ${
-                match.winner_id === match.team1?.id ? 'text-purple-200' : 'text-gray-300'
-              }`}>
-                {match.team1?.name || 'TBD'}
-              </span>
-            </div>
-            <span className="text-xl font-black text-purple-100 min-w-[40px] text-right">
-              {match.score_team1}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-center">
-            <div className="w-8 h-[2px] bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
-          </div>
-
-          <div 
-            className={`flex items-center justify-between p-3 rounded-lg backdrop-blur-md ${
-              match.winner_id === match.team2?.id 
-                ? 'bg-purple-500/30 border-2 border-purple-400' 
-                : 'bg-black/30 border border-purple-500/20'
-            } transition-all`}
-          >
-            <div className="flex items-center gap-3 flex-1">
-              {match.team2?.logo_url && (
-                <img src={match.team2.logo_url} alt="" className="w-8 h-8 rounded-full border-2 border-purple-400/50" />
-              )}
-              <span className={`font-bold text-sm ${
-                match.winner_id === match.team2?.id ? 'text-purple-200' : 'text-gray-300'
-              }`}>
-                {match.team2?.name || 'TBD'}
-              </span>
-            </div>
-            <span className="text-xl font-black text-purple-100 min-w-[40px] text-right">
-              {match.score_team2}
-            </span>
-          </div>
-        </div>
-
-        {(match.map_name || match.scheduled_at) && (
-          <div className="mt-3 pt-3 border-t border-purple-500/20 space-y-1">
-            {match.map_name && (
-              <div className="flex items-center gap-2 text-xs text-purple-300">
-                <Icon name="Map" className="h-3 w-3" />
-                <span>{match.map_name}</span>
-              </div>
-            )}
-            {match.scheduled_at && (
-              <div className="flex items-center gap-2 text-xs text-purple-300">
-                <Icon name="Calendar" className="h-3 w-3" />
-                <span>{new Date(match.scheduled_at).toLocaleString('ru-RU')}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const groupByRound = (matches: Match[]) => {
-    const rounds: { [key: number]: Match[] } = {};
-    matches.forEach(match => {
-      if (!rounds[match.round]) rounds[match.round] = [];
-      rounds[match.round].push(match);
-    });
-    return rounds;
-  };
-
-  const getRoundName = (round: number, totalRounds: number) => {
-    const roundsLeft = totalRounds - round + 1;
-    if (roundsLeft === 1) return 'ФИНАЛ';
-    if (roundsLeft === 2) return 'ПОЛУФИНАЛ';
-    if (roundsLeft === 3) return 'ЧЕТВЕРТЬФИНАЛ';
-    return `1/${Math.pow(2, roundsLeft - 1)}`;
-  };
-
-  const rounds = groupByRound(matches);
-  const totalRounds = Object.keys(rounds).length;
-
   const openFullscreen = () => {
     const url = `/tournaments/${id}/bracket/fullscreen`;
     window.open(url, '_blank');
@@ -328,116 +205,28 @@ export default function TournamentBracket() {
     }
   };
 
-  const getButtonClasses = () => {
-    if (bracketStyle === 'minimal') {
-      return {
-        outline: 'border-slate-300 text-slate-900 hover:bg-slate-100',
-        primary: 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white'
-      };
-    } else if (bracketStyle === 'cyberpunk') {
-      return {
-        outline: 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10',
-        primary: 'bg-amber-500 hover:bg-amber-600 text-black font-bold'
-      };
-    } else if (bracketStyle === 'championship') {
-      return {
-        outline: 'border-white/10 text-white hover:bg-white/5',
-        primary: 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white'
-      };
-    } else if (bracketStyle === 'gold-deagle') {
-      return {
-        outline: 'border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/10',
-        primary: 'bg-gradient-to-r from-[#FFD700] to-[#FFA500] hover:from-[#FFA500] hover:to-[#FFD700] text-black font-bold'
-      };
-    }
-    return {
-      outline: 'border-white/10 text-white hover:bg-white/5',
-      primary: 'bg-purple-600 hover:bg-purple-700'
-    };
-  };
-
-  const buttonStyles = getButtonClasses();
-
   return (
     <div className={`min-h-screen flex flex-col ${getBackgroundClass()} relative overflow-hidden`}>
       <Header />
 
       <main className="flex-1 py-8">
         <div className="max-w-[98vw] mx-auto px-4">
-          <div className="mb-6 flex justify-between items-center">
-            <Button variant="outline" onClick={() => navigate(`/tournaments/${id}`)} className={buttonStyles.outline}>
-              <Icon name="ArrowLeft" className="h-4 w-4 mr-2" />
-              Назад к турниру
-            </Button>
-            <Button onClick={openFullscreen} className={buttonStyles.primary}>
-              <Icon name="Maximize" className="h-4 w-4 mr-2" />
-              На весь экран
-            </Button>
-          </div>
+          <BracketHeader 
+            tournamentId={id}
+            bracketStyle={bracketStyle}
+            onFullscreen={openFullscreen}
+          />
 
           {matches.length === 0 ? (
-            <div className="text-center py-20">
-              <div className={`inline-block p-8 rounded-xl border ${
-                bracketStyle === 'minimal' 
-                  ? 'bg-white border-slate-200 shadow-xl' 
-                  : bracketStyle === 'cyberpunk'
-                  ? 'bg-black border-amber-500/30'
-                  : 'bg-[#1a1f2e] border-white/10'
-              }`}>
-                <Icon name="GitBranch" className={`h-16 w-16 mx-auto mb-4 ${
-                  bracketStyle === 'minimal' ? 'text-purple-500' : bracketStyle === 'cyberpunk' ? 'text-amber-500' : 'text-purple-400'
-                }`} />
-                <h3 className={`text-xl font-bold mb-2 ${
-                  bracketStyle === 'minimal' ? 'text-slate-900' : 'text-white'
-                }`}>Турнирная сетка не сгенерирована</h3>
-                <p className={bracketStyle === 'minimal' ? 'text-slate-600' : 'text-gray-400'}>
-                  Администратор должен сгенерировать сетку в админ-панели
-                </p>
-              </div>
-            </div>
+            <EmptyBracketPlaceholder bracketStyle={bracketStyle} />
           ) : (
-            <>
-              {bracketStyle === 'esports' && (
-                <EsportsBracket
-                  matches={matches}
-                  canEdit={canEdit}
-                  onMatchClick={(match) => setSelectedMatchId(match.id)}
-                  onEditMatch={setEditMatch}
-                />
-              )}
-              {bracketStyle === 'cyberpunk' && (
-                <CyberpunkBracket
-                  matches={matches}
-                  canEdit={canEdit}
-                  onMatchClick={(match) => setSelectedMatchId(match.id)}
-                  onEditMatch={setEditMatch}
-                />
-              )}
-              {bracketStyle === 'minimal' && (
-                <MinimalBracket
-                  matches={matches}
-                  canEdit={canEdit}
-                  onMatchClick={(match) => setSelectedMatchId(match.id)}
-                  onEditMatch={setEditMatch}
-                />
-              )}
-              {bracketStyle === 'championship' && (
-                <ChampionshipBracket
-                  matches={matches}
-                  canEdit={canEdit}
-                  onMatchClick={(match) => setSelectedMatchId(match.id)}
-                  onEditMatch={setEditMatch}
-                />
-              )}
-              {bracketStyle === 'gold-deagle' && (
-                <GoldDeagleBracket
-                  matches={matches}
-                  canEdit={canEdit}
-                  onMatchClick={(match) => setSelectedMatchId(match.id)}
-                  onEditMatch={setEditMatch}
-                />
-              )}
-            </>
+            <BracketRenderer
+              bracketStyle={bracketStyle}
+              matches={matches}
+              canEdit={canEdit}
+              onMatchClick={(match) => setSelectedMatchId(match.id)}
+              onEditMatch={setEditMatch}
+            />
           )}
         </div>
       </main>
@@ -448,64 +237,12 @@ export default function TournamentBracket() {
         onUpdate={loadBracket}
       />
 
-      {editMatch && (
-        <Dialog open={!!editMatch} onOpenChange={() => setEditMatch(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Редактировать матч</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm mb-2 block">Счет {editMatch.team1?.name}</label>
-                  <Input
-                    type="number"
-                    defaultValue={editMatch.score_team1}
-                    onChange={(e) => setEditMatch({ ...editMatch, score_team1: parseInt(e.target.value) })}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm mb-2 block">Счет {editMatch.team2?.name}</label>
-                  <Input
-                    type="number"
-                    defaultValue={editMatch.score_team2}
-                    onChange={(e) => setEditMatch({ ...editMatch, score_team2: parseInt(e.target.value) })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm mb-2 block">Карта</label>
-                <Input
-                  defaultValue={editMatch.map_name || ''}
-                  onChange={(e) => setEditMatch({ ...editMatch, map_name: e.target.value })}
-                  placeholder="de_dust2"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm mb-2 block">Дата и время</label>
-                <Input
-                  type="datetime-local"
-                  defaultValue={editMatch.scheduled_at ? new Date(editMatch.scheduled_at).toISOString().slice(0, 16) : ''}
-                  onChange={(e) => setEditMatch({ ...editMatch, scheduled_at: e.target.value })}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => updateMatch(editMatch.id, editMatch.score_team1, editMatch.score_team2)}>
-                  <Icon name="Save" className="h-4 w-4 mr-2" />
-                  Сохранить счет
-                </Button>
-                <Button variant="secondary" onClick={() => completeMatch(editMatch.id)}>
-                  <Icon name="Check" className="h-4 w-4 mr-2" />
-                  Завершить матч
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <MatchEditDialog
+        match={editMatch}
+        onClose={() => setEditMatch(null)}
+        onUpdateMatch={updateMatch}
+        onCompleteMatch={completeMatch}
+      />
 
       <Footer />
     </div>
