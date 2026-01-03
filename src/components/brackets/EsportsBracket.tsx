@@ -43,159 +43,131 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
     return `РАУНД ${round}`;
   };
 
-  const MATCH_HEIGHT = 120;
-  const getMatchSpacing = (round: number) => Math.pow(2, round - 1) * MATCH_HEIGHT;
+  const MATCH_HEIGHT = 100;
+  const MATCH_WIDTH = 280;
+  const HORIZONTAL_GAP = 80;
 
   return (
-    <div className="relative overflow-x-auto bg-[#0a0e1a]">
-      <div className="flex min-w-max p-8" style={{ gap: '80px' }}>
-        {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
-          const roundMatches = getRoundMatches(round);
-          const spacing = getMatchSpacing(round);
-          
-          return (
-            <div key={round} className="relative" style={{ minWidth: '280px' }}>
-              <div className="sticky top-0 z-20 mb-8 flex justify-center">
-                <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 rounded-lg shadow-lg border border-purple-400/30">
-                  <Icon name="Trophy" size={16} className="text-white" />
-                  <h3 className="text-sm font-bold text-white tracking-wider uppercase">
-                    {getRoundName(round)}
-                  </h3>
+    <div className="relative overflow-x-auto bg-[#0a0e1a] pb-16">
+      <div className="relative p-8">
+        <div className="flex" style={{ gap: `${HORIZONTAL_GAP}px`, minWidth: 'max-content' }}>
+          {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
+            const roundMatches = getRoundMatches(round);
+            const verticalGap = round === 1 ? 20 : Math.pow(2, round - 1) * 60;
+
+            return (
+              <div key={round} className="relative" style={{ width: `${MATCH_WIDTH}px` }}>
+                <div className="mb-6 flex justify-center sticky top-4 z-30">
+                  <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow-lg border border-purple-400/30">
+                    <Icon name="Trophy" size={16} className="text-white" />
+                    <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                      {getRoundName(round)}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="relative flex flex-col" style={{ gap: `${verticalGap}px` }}>
+                  {roundMatches.map((match, idx) => (
+                    <div key={match.id} className="relative" style={{ height: `${MATCH_HEIGHT}px` }}>
+                      {/* Линии соединения */}
+                      {round < rounds && (
+                        <svg 
+                          className="absolute pointer-events-none" 
+                          style={{
+                            left: `${MATCH_WIDTH}px`,
+                            top: `${MATCH_HEIGHT / 2}px`,
+                            width: `${HORIZONTAL_GAP}px`,
+                            height: idx % 2 === 0 ? `${verticalGap + MATCH_HEIGHT / 2}px` : '2px',
+                            overflow: 'visible'
+                          }}
+                        >
+                          {idx % 2 === 0 ? (
+                            <>
+                              <line x1="0" y1="0" x2={HORIZONTAL_GAP / 2} y2="0" stroke="rgba(168, 85, 247, 0.6)" strokeWidth="3" />
+                              <line x1={HORIZONTAL_GAP / 2} y1="0" x2={HORIZONTAL_GAP / 2} y2={verticalGap + MATCH_HEIGHT / 2} stroke="rgba(168, 85, 247, 0.6)" strokeWidth="3" />
+                              <line x1={HORIZONTAL_GAP / 2} y1={(verticalGap + MATCH_HEIGHT / 2) / 2} x2={HORIZONTAL_GAP} y2={(verticalGap + MATCH_HEIGHT / 2) / 2} stroke="rgba(168, 85, 247, 0.6)" strokeWidth="3" />
+                            </>
+                          ) : (
+                            <line x1="0" y1="0" x2={HORIZONTAL_GAP / 2} y2="0" stroke="rgba(168, 85, 247, 0.6)" strokeWidth="3" />
+                          )}
+                        </svg>
+                      )}
+
+                      {canEdit && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="absolute -top-2 -right-2 opacity-0 hover:opacity-100 transition-opacity z-20 bg-purple-600/90 hover:bg-purple-500"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditMatch(match);
+                          }}
+                        >
+                          <Icon name="Edit" className="h-4 w-4 text-white" />
+                        </Button>
+                      )}
+
+                      <Card 
+                        className="relative bg-[#1a1f2e] border-2 border-purple-500/30 cursor-pointer hover:border-purple-400 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300 overflow-hidden group h-full"
+                        onClick={() => onMatchClick(match)}
+                      >
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        <div className="p-3 flex flex-col justify-around h-full">
+                          <div 
+                            className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
+                              match.winner_id === match.team1?.id 
+                                ? 'bg-purple-600/40 border border-purple-400/60' 
+                                : 'bg-[#0a0e1a]/60 border border-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {match.team1?.logo_url && (
+                                <img src={match.team1.logo_url} alt="" className="w-6 h-6 rounded-full border border-purple-400 flex-shrink-0" />
+                              )}
+                              <span className={`text-sm font-semibold truncate ${
+                                match.winner_id === match.team1?.id ? 'text-white' : 'text-gray-300'
+                              }`}>
+                                {match.team1?.name || 'TBD'}
+                              </span>
+                            </div>
+                            <span className="text-lg font-bold text-white ml-2 min-w-[30px] text-right">
+                              {match.score_team1}
+                            </span>
+                          </div>
+
+                          <div className="h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
+
+                          <div 
+                            className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
+                              match.winner_id === match.team2?.id 
+                                ? 'bg-purple-600/40 border border-purple-400/60' 
+                                : 'bg-[#0a0e1a]/60 border border-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {match.team2?.logo_url && (
+                                <img src={match.team2.logo_url} alt="" className="w-6 h-6 rounded-full border border-purple-400 flex-shrink-0" />
+                              )}
+                              <span className={`text-sm font-semibold truncate ${
+                                match.winner_id === match.team2?.id ? 'text-white' : 'text-gray-300'
+                              }`}>
+                                {match.team2?.name || 'TBD'}
+                              </span>
+                            </div>
+                            <span className="text-lg font-bold text-white ml-2 min-w-[30px] text-right">
+                              {match.score_team2}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              <div className="relative">
-                {roundMatches.map((match, idx) => (
-                  <div 
-                    key={match.id} 
-                    className="relative"
-                    style={{ 
-                      marginTop: idx === 0 ? `${spacing / 4}px` : `${spacing / 2}px`
-                    }}
-                  >
-                    {canEdit && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute -top-2 -right-2 opacity-0 hover:opacity-100 transition-opacity z-10 bg-purple-600/90 hover:bg-purple-500"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditMatch(match);
-                        }}
-                      >
-                        <Icon name="Edit" className="h-4 w-4 text-white" />
-                      </Button>
-                    )}
-                    
-                    <Card 
-                      className="relative bg-[#1a1f2e] border-2 border-purple-500/30 cursor-pointer hover:border-purple-400 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300 overflow-hidden group"
-                      onClick={() => onMatchClick(match)}
-                    >
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                      
-                      <div className="p-3">
-                        <div 
-                          className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
-                            match.winner_id === match.team1?.id 
-                              ? 'bg-purple-600/40 border border-purple-400/60' 
-                              : 'bg-[#0a0e1a]/60 border border-white/5'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {match.team1?.logo_url && (
-                              <img src={match.team1.logo_url} alt="" className="w-6 h-6 rounded-full border border-purple-400 flex-shrink-0" />
-                            )}
-                            <span className={`text-sm font-semibold truncate ${
-                              match.winner_id === match.team1?.id ? 'text-white' : 'text-gray-300'
-                            }`}>
-                              {match.team1?.name || 'TBD'}
-                            </span>
-                          </div>
-                          <span className="text-lg font-bold text-white ml-2 min-w-[30px] text-right">
-                            {match.score_team1}
-                          </span>
-                        </div>
-
-                        <div className="h-px my-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
-
-                        <div 
-                          className={`flex items-center justify-between px-3 py-2 rounded transition-all ${
-                            match.winner_id === match.team2?.id 
-                              ? 'bg-purple-600/40 border border-purple-400/60' 
-                              : 'bg-[#0a0e1a]/60 border border-white/5'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {match.team2?.logo_url && (
-                              <img src={match.team2.logo_url} alt="" className="w-6 h-6 rounded-full border border-purple-400 flex-shrink-0" />
-                            )}
-                            <span className={`text-sm font-semibold truncate ${
-                              match.winner_id === match.team2?.id ? 'text-white' : 'text-gray-300'
-                            }`}>
-                              {match.team2?.name || 'TBD'}
-                            </span>
-                          </div>
-                          <span className="text-lg font-bold text-white ml-2 min-w-[30px] text-right">
-                            {match.score_team2}
-                          </span>
-                        </div>
-                      </div>
-                    </Card>
-
-                    {/* Соединительные линии */}
-                    {round < rounds && idx % 2 === 0 && (
-                      <svg 
-                        className="absolute left-full pointer-events-none" 
-                        style={{ 
-                          width: '80px', 
-                          height: `${spacing + MATCH_HEIGHT}px`,
-                          top: '0'
-                        }}
-                      >
-                        {/* Горизонтальная линия от первого матча */}
-                        <line 
-                          x1="0" 
-                          y1={`${MATCH_HEIGHT / 2}`} 
-                          x2="40" 
-                          y2={`${MATCH_HEIGHT / 2}`} 
-                          stroke="rgba(168, 85, 247, 0.6)" 
-                          strokeWidth="2"
-                        />
-                        {/* Вертикальная соединительная линия */}
-                        <line 
-                          x1="40" 
-                          y1={`${MATCH_HEIGHT / 2}`} 
-                          x2="40" 
-                          y2={`${spacing + MATCH_HEIGHT / 2}`} 
-                          stroke="rgba(168, 85, 247, 0.6)" 
-                          strokeWidth="2"
-                        />
-                        {/* Горизонтальная линия от второго матча */}
-                        <line 
-                          x1="0" 
-                          y1={`${spacing + MATCH_HEIGHT / 2}`} 
-                          x2="40" 
-                          y2={`${spacing + MATCH_HEIGHT / 2}`} 
-                          stroke="rgba(168, 85, 247, 0.6)" 
-                          strokeWidth="2"
-                        />
-                        {/* Линия к следующему раунду */}
-                        <line 
-                          x1="40" 
-                          y1={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
-                          x2="80" 
-                          y2={`${spacing / 2 + MATCH_HEIGHT / 2}`} 
-                          stroke="rgba(168, 85, 247, 0.6)" 
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
