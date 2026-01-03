@@ -46,7 +46,22 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
   const MATCH_HEIGHT = 100;
   const MATCH_WIDTH = 280;
   const HORIZONTAL_GAP = 80;
-  const BASE_GAP = 20; // Минимальное расстояние между матчами
+  const BASE_GAP = 20;
+
+  // Функция для вычисления Y-позиции карточки
+  const getMatchY = (round: number, matchIndex: number): number => {
+    if (round === 1) {
+      // Первый раунд: карточки идут подряд
+      return matchIndex * (MATCH_HEIGHT + BASE_GAP);
+    }
+    
+    // Для следующих раундов: карточка должна быть между двумя карточками предыдущего раунда
+    const prevMatch1Y = getMatchY(round - 1, matchIndex * 2);
+    const prevMatch2Y = getMatchY(round - 1, matchIndex * 2 + 1);
+    
+    // Центр между двумя предыдущими карточками
+    return (prevMatch1Y + prevMatch2Y) / 2 + MATCH_HEIGHT / 2;
+  };
 
   return (
     <div className="relative overflow-x-auto bg-[#0a0e1a] pb-16">
@@ -55,29 +70,12 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
           {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
             const roundMatches = getRoundMatches(round);
             
-            // Расстояние между матчами удваивается каждый раунд
-            const matchesInRound = Math.pow(2, rounds - round);
-            const verticalGap = round === 1 
-              ? BASE_GAP 
-              : BASE_GAP + (MATCH_HEIGHT + BASE_GAP) * (Math.pow(2, round - 1) - 1);
-            
-            // Отступ сверху - карточка должна быть на уровне центра линии
-            let topPadding = 0;
-            if (round === 2) {
-              // Полуфинал: центр между первыми двумя матчами четвертьфинала
-              topPadding = (MATCH_HEIGHT + BASE_GAP) / 2;
-            } else if (round === 3) {
-              // Финал: центр между двумя матчами полуфинала
-              const semiGap = BASE_GAP + (MATCH_HEIGHT + BASE_GAP) * (Math.pow(2, 1) - 1);
-              topPadding = (MATCH_HEIGHT + BASE_GAP) / 2 + (MATCH_HEIGHT + semiGap) / 2;
-            } else if (round > 3) {
-              // Для бОльших турниров
-              const prevGap = BASE_GAP + (MATCH_HEIGHT + BASE_GAP) * (Math.pow(2, round - 2) - 1);
-              topPadding = (MATCH_HEIGHT + prevGap) / 2;
-            }
+            // Вычисляем высоту контейнера для этого раунда
+            const lastMatchY = getMatchY(round, roundMatches.length - 1);
+            const containerHeight = lastMatchY + MATCH_HEIGHT + 100;
 
             return (
-              <div key={round} className="relative" style={{ width: `${MATCH_WIDTH}px` }}>
+              <div key={round} className="relative" style={{ width: `${MATCH_WIDTH}px`, height: `${containerHeight}px` }}>
                 <div className="mb-6 flex justify-center sticky top-4 z-30">
                   <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow-lg border border-purple-400/30">
                     <Icon name="Trophy" size={16} className="text-white" />
@@ -87,18 +85,37 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                   </div>
                 </div>
 
-                <div className="relative flex flex-col" style={{ gap: `${verticalGap}px`, paddingTop: `${topPadding}px` }}>
-                  {roundMatches.map((match, idx) => (
-                    <div key={match.id} className="relative" style={{ height: `${MATCH_HEIGHT}px` }}>
+                <div className="relative" style={{ height: `${containerHeight}px` }}>
+                  {roundMatches.map((match, idx) => {
+                    const matchY = getMatchY(round, idx);
+                    const nextMatchY = round < rounds ? getMatchY(round + 1, Math.floor(idx / 2)) : 0;
+                    
+                    return (
+                    <div 
+                      key={match.id} 
+                      className="absolute" 
+                      style={{ 
+                        top: `${matchY}px`,
+                        left: 0,
+                        width: `${MATCH_WIDTH}px`,
+                        height: `${MATCH_HEIGHT}px` 
+                      }}
+                    >
                       {/* П-образные линии соединения (рисуем только для верхнего матча в паре) */}
-                      {round < rounds && idx % 2 === 0 && (
+                      {round < rounds && idx % 2 === 0 && (() => {
+                        const match1Y = matchY;
+                        const match2Y = getMatchY(round, idx + 1);
+                        const nextY = nextMatchY;
+                        const lineHeight = match2Y - match1Y + MATCH_HEIGHT;
+                        
+                        return (
                         <svg 
                           className="absolute pointer-events-none" 
                           style={{
                             left: `${MATCH_WIDTH}px`,
                             top: `${MATCH_HEIGHT / 2}px`,
                             width: `${HORIZONTAL_GAP}px`,
-                            height: `${verticalGap + MATCH_HEIGHT}px`,
+                            height: `${lineHeight}px`,
                             overflow: 'visible'
                           }}
                         >
@@ -117,7 +134,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                             x1={HORIZONTAL_GAP / 2} 
                             y1="0" 
                             x2={HORIZONTAL_GAP / 2} 
-                            y2={verticalGap + MATCH_HEIGHT} 
+                            y2={lineHeight - MATCH_HEIGHT / 2} 
                             stroke="rgba(168, 85, 247, 0.6)" 
                             strokeWidth="3" 
                           />
@@ -125,9 +142,9 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                           {/* Горизонтальная линия от нижнего матча */}
                           <line 
                             x1="0" 
-                            y1={verticalGap + MATCH_HEIGHT} 
+                            y1={lineHeight - MATCH_HEIGHT / 2} 
                             x2={HORIZONTAL_GAP / 2} 
-                            y2={verticalGap + MATCH_HEIGHT} 
+                            y2={lineHeight - MATCH_HEIGHT / 2} 
                             stroke="rgba(168, 85, 247, 0.6)" 
                             strokeWidth="3" 
                           />
@@ -135,14 +152,15 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                           {/* Горизонтальная линия из центра перемычки к следующему раунду */}
                           <line 
                             x1={HORIZONTAL_GAP / 2} 
-                            y1={(verticalGap + MATCH_HEIGHT) / 2} 
+                            y1={(lineHeight - MATCH_HEIGHT / 2) / 2} 
                             x2={HORIZONTAL_GAP} 
-                            y2={(verticalGap + MATCH_HEIGHT) / 2} 
+                            y2={(lineHeight - MATCH_HEIGHT / 2) / 2} 
                             stroke="rgba(168, 85, 247, 0.6)" 
                             strokeWidth="3" 
                           />
                         </svg>
-                      )}
+                        );
+                      })()}
 
                       {canEdit && (
                         <Button
@@ -213,7 +231,8 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                         </div>
                       </Card>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
