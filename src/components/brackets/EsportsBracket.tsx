@@ -59,8 +59,8 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
     const prevMatch1Y = getMatchY(round - 1, matchIndex * 2);
     const prevMatch2Y = getMatchY(round - 1, matchIndex * 2 + 1);
     
-    // Центр между двумя предыдущими карточками
-    return (prevMatch1Y + prevMatch2Y) / 2 + MATCH_HEIGHT / 2;
+    // Центр между двумя предыдущими карточками (верхний край первой + высота + половина расстояния)
+    return prevMatch1Y + (prevMatch2Y - prevMatch1Y) / 2;
   };
 
   return (
