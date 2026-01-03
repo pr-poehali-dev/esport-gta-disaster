@@ -46,17 +46,27 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
   const MATCH_HEIGHT = 100;
   const MATCH_WIDTH = 280;
   const HORIZONTAL_GAP = 80;
+  const VERTICAL_SPACING = 40; // Базовое расстояние между матчами в первом раунде
 
   return (
     <div className="relative overflow-x-auto bg-[#0a0e1a] pb-16">
       <div className="relative p-8">
-        <div className="flex" style={{ gap: `${HORIZONTAL_GAP}px`, minWidth: 'max-content' }}>
+        <div className="flex items-start" style={{ gap: `${HORIZONTAL_GAP}px`, minWidth: 'max-content' }}>
           {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
             const roundMatches = getRoundMatches(round);
-            const verticalGap = Math.pow(2, round - 1) * MATCH_HEIGHT + Math.pow(2, round - 1) * 40 - 40;
-            // Каждая карточка следующего раунда должна быть на уровне центра между двумя карточками предыдущего раунда
-            const prevVerticalGap = round === 1 ? 0 : Math.pow(2, round - 2) * MATCH_HEIGHT + Math.pow(2, round - 2) * 40 - 40;
-            const topPadding = round === 1 ? 0 : (prevVerticalGap + MATCH_HEIGHT) / 2;
+            
+            // Расстояние между матчами в текущем раунде (только gap, без высоты карточки)
+            const verticalGap = round === 1 
+              ? VERTICAL_SPACING 
+              : (MATCH_HEIGHT + VERTICAL_SPACING) * Math.pow(2, round - 1) - VERTICAL_SPACING;
+            
+            // Отступ сверху чтобы выровнять карточки по центру линий
+            let topPadding = 0;
+            if (round > 1) {
+              // Накопленный отступ: берём gap предыдущего раунда + половину высоты карточки
+              const prevGap = (MATCH_HEIGHT + VERTICAL_SPACING) * Math.pow(2, round - 2) - VERTICAL_SPACING;
+              topPadding = (prevGap + MATCH_HEIGHT) / 2;
+            }
 
             return (
               <div key={round} className="relative" style={{ width: `${MATCH_WIDTH}px` }}>
