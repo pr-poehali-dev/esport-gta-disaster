@@ -205,25 +205,25 @@ export default function TeamProfile() {
                   <p className="text-muted-foreground mb-4">{team.description}</p>
                 )}
                 
-                <div className="grid grid-cols-5 gap-6 mb-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Рейтинг</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 mb-6">
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">Рейтинг</div>
                     <div className={`text-3xl font-black ${getRatingColor(team.rating)}`}>{team.rating}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Очки</div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">Очки</div>
                     <div className="text-3xl font-black text-primary">{team.points || 200}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Побед</div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">Побед</div>
                     <div className="text-3xl font-black text-green-500">{team.wins}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Поражений</div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">Поражений</div>
                     <div className="text-3xl font-black text-red-500">{team.losses}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Винрейт</div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">Винрейт</div>
                     <div className="text-3xl font-black text-primary">{winRate}%</div>
                   </div>
                 </div>
