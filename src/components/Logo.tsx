@@ -126,9 +126,9 @@ export default function Logo({ className = "", showText = true, animated = true 
       </div>
       
       {showText && (
-        <div className="hidden lg:flex flex-col leading-none">
+        <div className="hidden md:flex flex-col leading-none">
           <span 
-            className={`text-lg font-black tracking-tight bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent relative whitespace-nowrap ${glitchActive ? 'text-glitch' : ''}`}
+            className={`text-base md:text-lg font-black tracking-tight bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent relative whitespace-nowrap ${glitchActive ? 'text-glitch' : ''}`}
             style={{ 
               filter: glitchActive ? 'none' : 'drop-shadow(0 0 4px rgba(13, 148, 231, 0.3))',
               transition: 'filter 0.3s ease'

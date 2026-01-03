@@ -86,8 +86,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-r from-background via-background/98 to-background backdrop-blur-xl border-b border-primary/20 shadow-lg shadow-primary/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center h-16 gap-4">
-          <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center justify-between h-16 gap-4">
+          <div className="flex items-center gap-3 flex-shrink-0 min-w-[80px]">
             {!isHomePage && (
               <Button
                 variant="ghost"
@@ -101,18 +101,18 @@ export default function Header() {
             )}
           </div>
 
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 flex justify-center items-center">
             <Logo showText={true} animated={true} />
           </div>
 
-          <nav className="hidden lg:flex items-center gap-3">
+          <nav className="hidden xl:flex items-center gap-4">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-xs font-bold text-muted-foreground hover:text-primary transition-all duration-300 uppercase tracking-wide relative group whitespace-nowrap hover:scale-105"
+                className="text-xs font-bold text-muted-foreground hover:text-primary transition-all duration-300 uppercase tracking-wide relative group whitespace-nowrap hover:scale-105 px-1"
               >
                 {link.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary group-hover:w-full transition-all duration-300" />
@@ -120,7 +120,7 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-2 flex-shrink-0 min-w-[80px] justify-end">
             {!isAuthenticated ? (
               <>
                 <Button
@@ -191,7 +191,7 @@ export default function Header() {
           </div>
 
           <button
-            className="lg:hidden p-2 text-foreground"
+            className="xl:hidden p-2 text-foreground flex-shrink-0"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -201,7 +201,7 @@ export default function Header() {
       </div>
 
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-border bg-card/95 backdrop-blur-xl">
+        <div className="xl:hidden border-t border-border bg-card/95 backdrop-blur-xl">
           <div className="px-4 py-6 space-y-4">
             {!isAuthenticated ? (
               <div className="space-y-3 mb-6">
