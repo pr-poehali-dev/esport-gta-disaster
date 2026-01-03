@@ -711,12 +711,12 @@ def create_tournament(cur, conn, admin_id: str, body: dict) -> dict:
     try:
         cur.execute("""
             INSERT INTO t_p4831367_esport_gta_disaster.tournaments 
-            (name, description, game, game_mode, start_date, end_date, registration_start, registration_end, 
+            (name, description, game, start_date, end_date, 
              max_teams, prize_pool, rules, format, created_by, location, team_size, best_of, map_pool, 
              bracket_style, starting_stage, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming')
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'upcoming')
             RETURNING id
-        """, (name, description, game, game_mode, start_date, end_date, registration_start, registration_end,
+        """, (name, description, game, start_date, end_date,
               max_teams, prize_pool, rules, format_value, admin_id, location, team_size, best_of, map_pool_json,
               bracket_style, starting_stage))
         
