@@ -54,7 +54,9 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
           {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
             const roundMatches = getRoundMatches(round);
             const verticalGap = Math.pow(2, round - 1) * MATCH_HEIGHT + Math.pow(2, round - 1) * 40 - 40;
-            const topPadding = round === 1 ? 0 : (Math.pow(2, round - 2) * MATCH_HEIGHT + Math.pow(2, round - 2) * 40 - 20) / 2 + MATCH_HEIGHT / 2;
+            // Каждая карточка следующего раунда должна быть на уровне центра между двумя карточками предыдущего раунда
+            const prevVerticalGap = round === 1 ? 0 : Math.pow(2, round - 2) * MATCH_HEIGHT + Math.pow(2, round - 2) * 40 - 40;
+            const topPadding = round === 1 ? 0 : (prevVerticalGap + MATCH_HEIGHT) / 2;
 
             return (
               <div key={round} className="relative" style={{ width: `${MATCH_WIDTH}px` }}>
