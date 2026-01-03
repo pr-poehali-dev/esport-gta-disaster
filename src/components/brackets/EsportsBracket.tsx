@@ -106,7 +106,12 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                         const match1Y = matchY;
                         const match2Y = getMatchY(round, idx + 1);
                         const nextY = nextMatchY;
-                        const lineHeight = match2Y - match1Y + MATCH_HEIGHT;
+                        
+                        // Расстояние между центрами двух карточек текущего раунда
+                        const verticalDistance = match2Y - match1Y + MATCH_HEIGHT;
+                        
+                        // Y-координата центра следующей карточки относительно центра текущей
+                        const nextCenterOffset = nextY - match1Y + MATCH_HEIGHT / 2;
                         
                         return (
                         <svg 
@@ -115,7 +120,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                             left: `${MATCH_WIDTH}px`,
                             top: `${MATCH_HEIGHT / 2}px`,
                             width: `${HORIZONTAL_GAP}px`,
-                            height: `${lineHeight}px`,
+                            height: `${verticalDistance}px`,
                             overflow: 'visible'
                           }}
                         >
@@ -134,7 +139,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                             x1={HORIZONTAL_GAP / 2} 
                             y1="0" 
                             x2={HORIZONTAL_GAP / 2} 
-                            y2={lineHeight - MATCH_HEIGHT / 2} 
+                            y2={verticalDistance - MATCH_HEIGHT / 2} 
                             stroke="rgba(168, 85, 247, 0.6)" 
                             strokeWidth="3" 
                           />
@@ -142,9 +147,9 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                           {/* Горизонтальная линия от нижнего матча */}
                           <line 
                             x1="0" 
-                            y1={lineHeight - MATCH_HEIGHT / 2} 
+                            y1={verticalDistance - MATCH_HEIGHT / 2} 
                             x2={HORIZONTAL_GAP / 2} 
-                            y2={lineHeight - MATCH_HEIGHT / 2} 
+                            y2={verticalDistance - MATCH_HEIGHT / 2} 
                             stroke="rgba(168, 85, 247, 0.6)" 
                             strokeWidth="3" 
                           />
@@ -152,9 +157,9 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                           {/* Горизонтальная линия из центра перемычки к следующему раунду */}
                           <line 
                             x1={HORIZONTAL_GAP / 2} 
-                            y1={(lineHeight - MATCH_HEIGHT / 2) / 2} 
+                            y1={nextCenterOffset} 
                             x2={HORIZONTAL_GAP} 
-                            y2={(lineHeight - MATCH_HEIGHT / 2) / 2} 
+                            y2={nextCenterOffset} 
                             stroke="rgba(168, 85, 247, 0.6)" 
                             strokeWidth="3" 
                           />
