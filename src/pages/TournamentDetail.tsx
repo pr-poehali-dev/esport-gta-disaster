@@ -205,8 +205,8 @@ export default function TournamentDetail() {
               <CardHeader>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <CardTitle className="text-3xl mb-2">{tournament.name}</CardTitle>
-                    <CardDescription className="text-base">{tournament.description}</CardDescription>
+                    <CardTitle className="text-2xl mb-2">{tournament.name}</CardTitle>
+                    <CardDescription className="text-sm">{tournament.description}</CardDescription>
                   </div>
                   <Badge variant={tournament.registration_open ? 'default' : 'outline'}>
                     {tournament.registration_open ? 'Регистрация открыта' : 'Регистрация закрыта'}
@@ -267,7 +267,7 @@ export default function TournamentDetail() {
                             className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 transition-colors cursor-pointer hover:bg-accent/50"
                             onClick={() => navigate(`/teams/${reg.team_id}`)}
                           >
-                            <div className="text-2xl font-bold w-8 text-center text-muted-foreground">#{index + 1}</div>
+                            <div className="text-lg font-bold w-8 text-center text-muted-foreground">#{index + 1}</div>
                             {reg.team_logo ? (
                               <img src={reg.team_logo} alt={reg.team_name} className="w-12 h-12 rounded object-cover" />
                             ) : (
@@ -277,7 +277,7 @@ export default function TournamentDetail() {
                             )}
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <p className="font-semibold">{reg.team_name}</p>
+                                <p className="text-base font-semibold">{reg.team_name}</p>
                                 {reg.team_tag && <span className="text-xs text-muted-foreground">[{reg.team_tag}]</span>}
                               </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">

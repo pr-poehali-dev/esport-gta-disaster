@@ -319,7 +319,7 @@ export default function Discussions() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">Обсуждения</h1>
-              <p className="text-muted-foreground">Участвуйте в обсуждениях сообщества</p>
+              <p className="text-sm text-muted-foreground">Участвуйте в обсуждениях сообщества</p>
             </div>
             {isAdmin && (
               <Button onClick={() => setShowCreateDialog(true)}>

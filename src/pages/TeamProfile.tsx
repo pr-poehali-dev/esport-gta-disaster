@@ -205,26 +205,26 @@ export default function TeamProfile() {
                   <p className="text-muted-foreground mb-4">{team.description}</p>
                 )}
                 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 mb-6">
-                  <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">Рейтинг</div>
-                    <div className={`text-3xl font-black ${getRatingColor(team.rating)}`}>{team.rating}</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Рейтинг</div>
+                    <div className={`text-2xl font-bold ${getRatingColor(team.rating)}`}>{team.rating}</div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">Очки</div>
-                    <div className="text-3xl font-black text-primary">{team.points || 200}</div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Очки</div>
+                    <div className="text-2xl font-bold text-primary">{team.points || 200}</div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">Побед</div>
-                    <div className="text-3xl font-black text-green-500">{team.wins}</div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Побед</div>
+                    <div className="text-2xl font-bold text-green-500">{team.wins}</div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">Поражений</div>
-                    <div className="text-3xl font-black text-red-500">{team.losses}</div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Поражений</div>
+                    <div className="text-2xl font-bold text-red-500">{team.losses}</div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">Винрейт</div>
-                    <div className="text-3xl font-black text-primary">{winRate}%</div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Винрейт</div>
+                    <div className="text-2xl font-bold text-primary">{winRate}%</div>
                   </div>
                 </div>
 

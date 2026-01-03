@@ -43,8 +43,8 @@ export default function Tournaments() {
       <Header />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Турниры</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold mb-3">Турниры</h1>
+          <p className="text-sm text-muted-foreground">
             Актуальные и предстоящие киберспортивные турниры от DISASTER ESPORTS
           </p>
         </div>
@@ -61,7 +61,7 @@ export default function Tournaments() {
               >
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">
-                    <CardTitle className="text-xl">{tournament.name}</CardTitle>
+                    <CardTitle className="text-lg">{tournament.name}</CardTitle>
                     {getStatusBadge(tournament.registrationOpen)}
                   </div>
                   <Badge variant="outline" className="w-fit">

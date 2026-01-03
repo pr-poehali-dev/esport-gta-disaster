@@ -62,8 +62,8 @@ export default function Teams() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-5xl font-black mb-2">Команды</h1>
-              <p className="text-muted-foreground">Зарегистрированные команды и рейтинги игроков</p>
+              <h1 className="text-3xl font-bold mb-2">Команды</h1>
+              <p className="text-sm text-muted-foreground">Зарегистрированные команды и рейтинги игроков</p>
             </div>
             <Button onClick={() => navigate('/teams/create')}>
               <Icon name="Plus" className="h-4 w-4 mr-2" />
@@ -87,14 +87,14 @@ export default function Teams() {
                   <Card key={team.id} className="p-6 hover:border-primary transition-colors cursor-pointer" onClick={() => navigate(`/teams/${team.id}`)}>
                     <div className="flex items-center gap-6">
                       <div className="flex items-center gap-4 flex-1">
-                        <span className="w-12 text-center text-3xl font-black text-muted-foreground">#{index + 1}</span>
+                        <span className="w-12 text-center text-2xl font-bold text-muted-foreground">#{index + 1}</span>
                         <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                           {team.logo_url ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-cover rounded-lg" /> : <Icon name="Shield" className="h-8 w-8 text-primary" />}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <TeamLevelBadge level={team.level || 2} size="md" />
-                            <h3 className="text-2xl font-bold">{team.name}</h3>
+                            <h3 className="text-xl font-semibold">{team.name}</h3>
                             <Badge variant={getRatingBadge(team.rating).variant}>{getRatingBadge(team.rating).label}</Badge>
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -108,13 +108,13 @@ export default function Teams() {
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className="text-sm text-muted-foreground mb-1">Очки</div>
-                          <div className="text-2xl font-bold text-primary">{team.points || 200}</div>
+                        <div className="text-right min-w-[70px]">
+                          <div className="text-xs text-muted-foreground mb-1">Очки</div>
+                          <div className="text-lg font-bold text-primary">{team.points || 200}</div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm text-muted-foreground mb-1">Рейтинг</div>
-                          <div className={`text-3xl font-black ${getRatingColor(team.rating)}`}>{team.rating}</div>
+                        <div className="text-right min-w-[80px]">
+                          <div className="text-xs text-muted-foreground mb-1">Рейтинг</div>
+                          <div className={`text-2xl font-bold ${getRatingColor(team.rating)}`}>{team.rating}</div>
                         </div>
                         <Button variant="ghost" size="sm"><Icon name="ChevronRight" className="h-5 w-5" /></Button>
                       </div>
@@ -129,13 +129,13 @@ export default function Teams() {
                 <Card key={player.id} className="p-6 hover:border-primary transition-colors cursor-pointer" onClick={() => navigate(`/user/${player.id}`)}>
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-4 flex-1">
-                      <span className="w-12 text-center text-3xl font-black text-muted-foreground">#{index + 1}</span>
+                      <span className="w-12 text-center text-2xl font-bold text-muted-foreground">#{index + 1}</span>
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                         {player.avatar_url ? <img src={player.avatar_url} alt={player.nickname} className="w-full h-full object-cover rounded-full" /> : <Icon name="User" className="h-8 w-8 text-primary" />}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-2xl font-bold">{player.nickname}</h3>
+                          <h3 className="text-xl font-semibold">{player.nickname}</h3>
                           <Badge variant={getRatingBadge(player.rating).variant}>{getRatingBadge(player.rating).label}</Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -148,9 +148,9 @@ export default function Teams() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="text-sm text-muted-foreground mb-1">Рейтинг</div>
-                        <div className={`text-3xl font-black ${getRatingColor(player.rating)}`}>{player.rating}</div>
+                      <div className="text-right min-w-[80px]">
+                        <div className="text-xs text-muted-foreground mb-1">Рейтинг</div>
+                        <div className={`text-2xl font-bold ${getRatingColor(player.rating)}`}>{player.rating}</div>
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/profile/${player.id}`)}><Icon name="ChevronRight" className="h-5 w-5" /></Button>
                     </div>
