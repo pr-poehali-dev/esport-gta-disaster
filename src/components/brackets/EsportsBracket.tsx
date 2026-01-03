@@ -61,12 +61,18 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
               ? BASE_GAP 
               : BASE_GAP + (MATCH_HEIGHT + BASE_GAP) * (Math.pow(2, round - 1) - 1);
             
-            // Отступ сверху = половина блока из предыдущего раунда
+            // Отступ сверху - карточка должна быть на уровне центра линии
             let topPadding = 0;
-            if (round > 1) {
-              const prevGap = round === 2 
-                ? BASE_GAP 
-                : BASE_GAP + (MATCH_HEIGHT + BASE_GAP) * (Math.pow(2, round - 2) - 1);
+            if (round === 2) {
+              // Полуфинал: центр между первыми двумя матчами четвертьфинала
+              topPadding = (MATCH_HEIGHT + BASE_GAP) / 2;
+            } else if (round === 3) {
+              // Финал: центр между двумя матчами полуфинала
+              const semiGap = BASE_GAP + (MATCH_HEIGHT + BASE_GAP) * (Math.pow(2, 1) - 1);
+              topPadding = (MATCH_HEIGHT + BASE_GAP) / 2 + (MATCH_HEIGHT + semiGap) / 2;
+            } else if (round > 3) {
+              // Для бОльших турниров
+              const prevGap = BASE_GAP + (MATCH_HEIGHT + BASE_GAP) * (Math.pow(2, round - 2) - 1);
               topPadding = (MATCH_HEIGHT + prevGap) / 2;
             }
 
