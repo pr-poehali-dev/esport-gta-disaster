@@ -54,6 +54,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
           {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
             const roundMatches = getRoundMatches(round);
             const verticalGap = Math.pow(2, round - 1) * MATCH_HEIGHT + Math.pow(2, round - 1) * 40 - 40;
+            const topPadding = round === 1 ? 0 : (Math.pow(2, round - 2) * MATCH_HEIGHT + Math.pow(2, round - 2) * 40 - 20) / 2 + MATCH_HEIGHT / 2;
 
             return (
               <div key={round} className="relative" style={{ width: `${MATCH_WIDTH}px` }}>
@@ -66,7 +67,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                   </div>
                 </div>
 
-                <div className="relative flex flex-col" style={{ gap: `${verticalGap}px` }}>
+                <div className="relative flex flex-col" style={{ gap: `${verticalGap}px`, paddingTop: `${topPadding}px` }}>
                   {roundMatches.map((match, idx) => (
                     <div key={match.id} className="relative" style={{ height: `${MATCH_HEIGHT}px` }}>
                       {/* П-образные линии соединения (рисуем только для верхнего матча в паре) */}
