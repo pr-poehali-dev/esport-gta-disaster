@@ -262,7 +262,11 @@ export default function TournamentDetail() {
                     {tournament.registered_teams && tournament.registered_teams.length > 0 ? (
                       <div className="space-y-3">
                         {tournament.registered_teams.map((reg, index) => (
-                          <div key={reg.id} className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 transition-colors">
+                          <div 
+                            key={reg.id} 
+                            className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 transition-colors cursor-pointer hover:bg-accent/50"
+                            onClick={() => navigate(`/teams/${reg.team_id}`)}
+                          >
                             <div className="text-2xl font-bold w-8 text-center text-muted-foreground">#{index + 1}</div>
                             {reg.team_logo ? (
                               <img src={reg.team_logo} alt={reg.team_name} className="w-12 h-12 rounded object-cover" />
