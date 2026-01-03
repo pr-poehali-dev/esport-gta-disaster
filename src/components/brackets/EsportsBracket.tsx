@@ -53,7 +53,7 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
         <div className="flex" style={{ gap: `${HORIZONTAL_GAP}px`, minWidth: 'max-content' }}>
           {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
             const roundMatches = getRoundMatches(round);
-            const verticalGap = round === 1 ? 20 : Math.pow(2, round - 1) * 60;
+            const verticalGap = Math.pow(2, round - 1) * MATCH_HEIGHT + Math.pow(2, round - 1) * 40 - 40;
 
             return (
               <div key={round} className="relative" style={{ width: `${MATCH_WIDTH}px` }}>
@@ -103,9 +103,9 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                           
                           {/* Горизонтальная линия от нижнего матча */}
                           <line 
-                            x1={HORIZONTAL_GAP / 2} 
+                            x1="0" 
                             y1={verticalGap + MATCH_HEIGHT} 
-                            x2="0" 
+                            x2={HORIZONTAL_GAP / 2} 
                             y2={verticalGap + MATCH_HEIGHT} 
                             stroke="rgba(168, 85, 247, 0.6)" 
                             strokeWidth="3" 
