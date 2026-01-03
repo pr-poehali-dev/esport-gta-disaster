@@ -69,61 +69,57 @@ export default function EsportsBracket({ matches, canEdit, onMatchClick, onEditM
                 <div className="relative flex flex-col" style={{ gap: `${verticalGap}px` }}>
                   {roundMatches.map((match, idx) => (
                     <div key={match.id} className="relative" style={{ height: `${MATCH_HEIGHT}px` }}>
-                      {/* Линии соединения */}
-                      {round < rounds && (
+                      {/* П-образные линии соединения (рисуем только для верхнего матча в паре) */}
+                      {round < rounds && idx % 2 === 0 && (
                         <svg 
                           className="absolute pointer-events-none" 
                           style={{
                             left: `${MATCH_WIDTH}px`,
-                            top: idx % 2 === 0 ? `${MATCH_HEIGHT / 2}px` : `-${verticalGap + MATCH_HEIGHT / 2}px`,
+                            top: `${MATCH_HEIGHT / 2}px`,
                             width: `${HORIZONTAL_GAP}px`,
                             height: `${verticalGap + MATCH_HEIGHT}px`,
                             overflow: 'visible'
                           }}
                         >
-                          {idx % 2 === 0 ? (
-                            <>
-                              {/* Горизонтальная линия от верхнего матча */}
-                              <line 
-                                x1="0" 
-                                y1="0" 
-                                x2={HORIZONTAL_GAP / 2} 
-                                y2="0" 
-                                stroke="rgba(168, 85, 247, 0.6)" 
-                                strokeWidth="3" 
-                              />
-                              {/* Вертикальная линия соединения */}
-                              <line 
-                                x1={HORIZONTAL_GAP / 2} 
-                                y1="0" 
-                                x2={HORIZONTAL_GAP / 2} 
-                                y2={verticalGap + MATCH_HEIGHT} 
-                                stroke="rgba(168, 85, 247, 0.6)" 
-                                strokeWidth="3" 
-                              />
-                              {/* Горизонтальная линия к следующему раунду */}
-                              <line 
-                                x1={HORIZONTAL_GAP / 2} 
-                                y1={(verticalGap + MATCH_HEIGHT) / 2} 
-                                x2={HORIZONTAL_GAP} 
-                                y2={(verticalGap + MATCH_HEIGHT) / 2} 
-                                stroke="rgba(168, 85, 247, 0.6)" 
-                                strokeWidth="3" 
-                              />
-                            </>
-                          ) : (
-                            <>
-                              {/* Горизонтальная линия от нижнего матча */}
-                              <line 
-                                x1="0" 
-                                y1={verticalGap + MATCH_HEIGHT} 
-                                x2={HORIZONTAL_GAP / 2} 
-                                y2={verticalGap + MATCH_HEIGHT} 
-                                stroke="rgba(168, 85, 247, 0.6)" 
-                                strokeWidth="3" 
-                              />
-                            </>
-                          )}
+                          {/* Горизонтальная линия от верхнего матча */}
+                          <line 
+                            x1="0" 
+                            y1="0" 
+                            x2={HORIZONTAL_GAP / 2} 
+                            y2="0" 
+                            stroke="rgba(168, 85, 247, 0.6)" 
+                            strokeWidth="3" 
+                          />
+                          
+                          {/* Вертикальная перемычка между парой матчей */}
+                          <line 
+                            x1={HORIZONTAL_GAP / 2} 
+                            y1="0" 
+                            x2={HORIZONTAL_GAP / 2} 
+                            y2={verticalGap + MATCH_HEIGHT} 
+                            stroke="rgba(168, 85, 247, 0.6)" 
+                            strokeWidth="3" 
+                          />
+                          
+                          {/* Горизонтальная линия от нижнего матча */}
+                          <line 
+                            x1={HORIZONTAL_GAP / 2} 
+                            y1={verticalGap + MATCH_HEIGHT} 
+                            x2="0" 
+                            y2={verticalGap + MATCH_HEIGHT} 
+                            stroke="rgba(168, 85, 247, 0.6)" 
+                            strokeWidth="3" 
+                          />
+                          
+                          {/* Горизонтальная линия из центра перемычки к следующему раунду */}
+                          <line 
+                            x1={HORIZONTAL_GAP / 2} 
+                            y1={(verticalGap + MATCH_HEIGHT) / 2} 
+                            x2={HORIZONTAL_GAP} 
+                            y2={(verticalGap + MATCH_HEIGHT) / 2} 
+                            stroke="rgba(168, 85, 247, 0.6)" 
+                            strokeWidth="3" 
+                          />
                         </svg>
                       )}
 
