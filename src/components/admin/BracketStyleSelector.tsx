@@ -79,9 +79,9 @@ const bracketStyles: BracketStyle[] = [
 
 export default function BracketStyleSelector({ onSelect, onCancel }: BracketStyleSelectorProps) {
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="bg-[#1a1f2e] border-white/10 p-6 max-w-4xl w-full">
-        <div className="flex justify-between items-center mb-6">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <Card className="bg-[#1a1f2e] border-white/10 p-6 max-w-6xl w-full my-8 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6 sticky top-0 bg-[#1a1f2e] z-10 pb-4">
           <h2 className="text-2xl font-bold text-white">Выберите стиль турнирной сетки</h2>
           <Button
             onClick={onCancel}
@@ -93,7 +93,7 @@ export default function BracketStyleSelector({ onSelect, onCancel }: BracketStyl
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           {bracketStyles.map((style) => (
             <Card
               key={style.id}
